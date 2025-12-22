@@ -6,6 +6,9 @@ const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs').promises;
 
+// Import URL constructor utilities
+const { AnimeListUrlConstructor, ApiParameterValidator, AnimeListCache } = require('./urlConstructor');
+
 // 尝试引入Puppeteer
 let puppeteer;
 try {
@@ -142,7 +145,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // 静态文件服务（前端页面）
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // 请求头配置 - 模拟真实浏览器
 const DEFAULT_HEADERS = {
@@ -167,6 +170,18 @@ app.use((req, res, next) => {
 // 简单的内存缓存（生产环境建议使用Redis）
 const episodeCache = new Map();
 const CACHE_TTL = 10 * 60 * 1000; // 10分钟缓存
+
+// Initialize anime list cache and URL constructor
+const animeListCache = new AnimeListCache(10 * 60 * 1000); // 10 minutes cache
+const urlConstructor = new AnimeListUrlConstructor();
+
+// Initialize separate cache for weekly schedule
+const weeklyScheduleCache = new Map(); // Simple Map for weekly schedule
+
+// Clear caches on startup to ensure fresh data
+animeListCache.clear();
+weeklyScheduleCache.clear();
+console.log('🧹 已清除所有缓存');
 
 // 获取动画真实集数的辅助函数（带缓存和快速失败）
 async function getAnimeEpisodeCount(animeId) {
@@ -253,7 +268,7 @@ async function getAnimeEpisodeCount(animeId) {
 
 // 主页路由
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
 // API路由 - 获取剧集信息
@@ -311,14 +326,68 @@ app.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
 // API路由 - 获取动画列表
 app.get('/api/anime-list', async (req, res) => {
     try {
-        const { page = 1, limit = 24, search = '', genre = '', year = '', sort = 'time' } = req.query;
-        const listUrl = search
-            ? `https://www.cycani.org/search?wd=${encodeURIComponent(search)}`
-            : `https://www.cycani.org/show/20.html?page=${page}`;
+        // Extract and validate parameters
+        const {
+            page = 1,
+            limit = 24,
+            search = '',
+            genre = '',
+            year = '',
+            letter = '',
+            channel = 'tv',
+            sort = 'time'
+        } = req.query;
 
-        console.log(`🔍 获取动画列表: ${listUrl}`);
+        // Convert page to number
+        const pageNum = parseInt(page);
 
-        const response = await axios.get(listUrl, {
+        // Validate parameters
+        const validationErrors = ApiParameterValidator.validateAnimeListFilters({
+            search, genre, year, letter, sort, page: pageNum, channel
+        });
+
+        if (validationErrors.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid parameters',
+                details: validationErrors
+            });
+        }
+
+        // Check cache first
+        const cacheKey = { search, genre, year, letter, sort, channel, page: pageNum };
+        const cachedData = animeListCache.get(cacheKey);
+        if (cachedData) {
+            console.log(`📋 使用缓存数据: ${search || 'no-search'} ${genre || 'no-genre'} ${year || 'no-year'} ${letter || 'no-letter'} ${channel} ${sort} page:${pageNum}`);
+            return res.json({
+                success: true,
+                data: {
+                    ...cachedData,
+                    fromCache: true
+                }
+            });
+        }
+
+        // Construct target URL using the new URL constructor
+        // NOTE: We need to handle pagination mapping
+        // User requests page X with limit Y (e.g., page=4, limit=24)
+        // But original website has 48 items per page
+        // So we need to calculate which source page to request and extract the needed portion
+
+        const ITEMS_PER_PAGE_ON_SOURCE = 48; // Original website has 48 items per page
+        const startItem = (pageNum - 1) * limit; // Starting item index (0-based)
+        const sourcePage = Math.floor(startItem / ITEMS_PER_PAGE_ON_SOURCE) + 1;
+        const offsetInSourcePage = startItem % ITEMS_PER_PAGE_ON_SOURCE;
+
+        console.log(`📊 分页映射: 用户请求第${pageNum}页(limit=${limit}), 起始项=${startItem}, 原网站第${sourcePage}页, 偏移=${offsetInSourcePage}`);
+
+        const targetUrl = urlConstructor.construct({
+            search, genre, year, letter, sort, channel, page: sourcePage
+        });
+
+        console.log(`🔍 获取动画列表: ${targetUrl}`);
+
+        const response = await axios.get(targetUrl, {
             headers: DEFAULT_HEADERS,
             timeout: 15000
         });
@@ -326,7 +395,7 @@ app.get('/api/anime-list', async (req, res) => {
         const $ = cheerio.load(response.data);
         const animeList = [];
 
-        // 解析动画列表 - 使用正确的选择器
+        // Parse anime list with improved selectors
         for (const element of $('.public-list-box').toArray()) {
             const $box = $(element);
             const $link = $box.find('a[href*="/bangumi/"]');
@@ -340,22 +409,16 @@ app.get('/api/anime-list', async (req, res) => {
                 if (animeId && animeId[1]) {
                     const title = $img.attr('alt') || $link.attr('title') || '';
 
-                    // 处理图片URL - 获取真实图片URL
+                    // Process image URL
                     let imgSrc = $img.attr('data-src') || $img.attr('src') || '';
-
-                    // 如果是百度图片URL，直接使用
-                    if (imgSrc && imgSrc.includes('baidu.com')) {
-                        imgSrc = `/api/image-proxy?url=${encodeURIComponent(imgSrc)}`;
-                    } else if (imgSrc && imgSrc.startsWith('https://')) {
+                    if (imgSrc && (imgSrc.includes('baidu.com') || imgSrc.startsWith('https://'))) {
                         imgSrc = `/api/image-proxy?url=${encodeURIComponent(imgSrc)}`;
                     } else {
                         imgSrc = '/api/placeholder-image';
                     }
 
-                    // 解析字幕信息获取集数和状态 - 尝试多种选择器
+                    // Parse subtitle information for episodes and status
                     let subtitleText = $subtitle.text().trim();
-
-                    // 如果第一个选择器没有找到内容，尝试其他选择器
                     if (!subtitleText) {
                         const alternativeSubtitles = [
                             '.public-list-subtitle',
@@ -376,7 +439,7 @@ app.get('/api/anime-list', async (req, res) => {
                         }
                     }
 
-                    // 如果仍然没有找到，尝试在整个盒子中搜索状态信息
+                    // Try to find status information in box text
                     if (!subtitleText) {
                         const boxText = $box.text();
                         if (boxText.includes('已完结')) {
@@ -390,13 +453,11 @@ app.get('/api/anime-list', async (req, res) => {
                     let status = '连载中';
 
                     if (subtitleText) {
-                        // 匹配集数信息，如 "12集全"、"更新至12集"等
                         const episodeMatches = subtitleText.match(/(\d+)集/);
                         if (episodeMatches) {
                             episodes = episodeMatches[1];
                         }
 
-                        // 更精确的状态判断
                         if (subtitleText.includes('已完结') || subtitleText.includes('全')) {
                             status = '已完结';
                         } else if (subtitleText.includes('更新至') || subtitleText.includes('连载中') ||
@@ -405,14 +466,8 @@ app.get('/api/anime-list', async (req, res) => {
                         }
                     }
 
-                    // 暂时禁用真实集数获取以提高性能
-                    // 如果需要准确集数，可以在详情页面查看
-
-                    // 解析评分 - 使用多种选择器尝试
+                    // Parse rating with multiple selectors
                     let score = '7.5';
-                    let scoreText = '';
-
-                    // 尝试多种评分选择器
                     const scoreSelectors = [
                         '.public-list-prb i',
                         '.public-list-prb',
@@ -428,7 +483,7 @@ app.get('/api/anime-list', async (req, res) => {
                     for (const selector of scoreSelectors) {
                         const $score = $box.find(selector);
                         if ($score.length) {
-                            scoreText = $score.text().trim();
+                            const scoreText = $score.text().trim();
                             if (scoreText) {
                                 const scoreMatch = scoreText.match(/(\d+\.?\d*)/);
                                 if (scoreMatch) {
@@ -439,12 +494,11 @@ app.get('/api/anime-list', async (req, res) => {
                         }
                     }
 
-                    // 如果仍然没有找到有效评分，尝试在整个盒子中搜索数字
+                    // Try to find score in box text if still default
                     if (score === '7.5') {
                         const boxText = $box.text();
                         const decimalMatch = boxText.match(/(\d\.\d+)/g);
                         if (decimalMatch && decimalMatch.length > 0) {
-                            // 找到最可能是评分的数字（0-10之间）
                             const possibleScore = decimalMatch.find(num => {
                                 const parsed = parseFloat(num);
                                 return parsed >= 0 && parsed <= 10;
@@ -455,7 +509,7 @@ app.get('/api/anime-list', async (req, res) => {
                         }
                     }
 
-                    // 避免重复添加同一个动画
+                    // Avoid duplicates
                     const exists = animeList.find(anime => anime.id === animeId[1]);
                     if (!exists && title) {
                         animeList.push({
@@ -464,16 +518,17 @@ app.get('/api/anime-list', async (req, res) => {
                             cover: imgSrc,
                             url: `https://www.cycani.org${href}`,
                             type: 'TV',
-                            year: year,
+                            year: '', // Will be parsed from individual anime details if needed
                             episodes: episodes,
                             status: status,
-                            score: score
+                            score: score,
+                            channel: channel
                         });
 
-                        // 调试信息 - 只打印前3个动画的详细信息
+                        // Debug info for first few items
                         if (animeList.length <= 3) {
                             console.log(`📺 动画 ${animeList.length}: ${title}`);
-                            console.log(`   状态: ${status}, 集数: ${episodes}`);
+                            console.log(`   状态: ${status}, 集数: ${episodes}, 评分: ${score}`);
                             console.log(`   原始字幕信息: "${subtitleText}"`);
                         }
                     }
@@ -481,76 +536,153 @@ app.get('/api/anime-list', async (req, res) => {
             }
         }
 
-        // 获取总页数信息
+        // Get pagination information
         let totalPages = 1;
-        const pageLinks = $('.pagelink a');
-        if (pageLinks.length > 0) {
-            // 尝试获取最后一页的页码
-            const lastPageLink = pageLinks.last();
-            const lastPageText = lastPageLink.text().trim();
-            const pageMatch = lastPageText.match(/\d+/);
-            if (pageMatch) {
-                totalPages = parseInt(pageMatch[0]);
-            } else {
-                // 如果最后一页没有数字，尝试寻找所有包含数字的链接
-                pageLinks.each((i, link) => {
-                    const text = $(link).text().trim();
-                    const match = text.match(/\d+/);
-                    if (match) {
-                        const pageNum = parseInt(match[0]);
-                        if (pageNum > totalPages) {
-                            totalPages = pageNum;
-                        }
+
+        // Method 1: Look for text showing page info like "1 / 85页" or "当前1/64页"
+        const pageInfoText = $('body').text();
+        const pageInfoMatch = pageInfoText.match(/(?:\/|当前)(\d+)页/);
+        if (pageInfoMatch) {
+            totalPages = parseInt(pageInfoMatch[1]);
+        }
+
+        // Method 2: Look for pagination links (try multiple selectors)
+        if (totalPages === 1) {
+            const paginationSelectors = [
+                '.pagelink a',
+                '.pagination a',
+                '[class*="page"] a',
+                'a:contains("尾页")',
+                'a:contains("下一页")'
+            ];
+
+            for (const selector of paginationSelectors) {
+                try {
+                    const $links = $(selector);
+                    if ($links.length > 0) {
+                        // Look for the highest page number
+                        $links.each((i, link) => {
+                            const text = $(link).text().trim();
+                            const match = text.match(/\d+/);
+                            if (match) {
+                                const pageNum = parseInt(match[0]);
+                                if (pageNum > totalPages) {
+                                    totalPages = pageNum;
+                                }
+                            }
+
+                            // Also check URL for page numbers
+                            const href = $(link).attr('href');
+                            if (href) {
+                                const urlMatch = href.match(/\/page\/(\d+)\.html/);
+                                if (urlMatch) {
+                                    const pageNum = parseInt(urlMatch[1]);
+                                    if (pageNum > totalPages) {
+                                        totalPages = pageNum;
+                                    }
+                                }
+                            }
+                        });
                     }
-                });
+                } catch (e) {
+                    // Selector might be invalid, continue to next
+                }
             }
         }
 
         console.log(`📄 网站总页数: ${totalPages} 页`);
 
-        // 应用筛选
-        let filteredList = animeList;
-        if (genre) {
-            // 这里可以添加更详细的类型筛选逻辑
-        }
-        if (year) {
-            filteredList = filteredList.filter(anime => anime.year === year);
-        }
+        // Note: We no longer do client-side filtering/sorting since URLs handle this
+        // But we need to extract the correct slice based on pagination mapping
+        const startIndex = offsetInSourcePage; // Start from the calculated offset
+        const endIndex = Math.min(startIndex + limit, animeList.length);
 
-        // 应用排序
-        if (sort === 'hits') {
-            // 按热度排序（这里可以添加真实的排序逻辑）
-        } else if (sort === 'score') {
-            console.log('🔢 开始按评分排序...');
-            filteredList.sort((a, b) => {
-                try {
-                    const scoreA = parseFloat(a.score || '0');
-                    const scoreB = parseFloat(b.score || '0');
-                    return scoreB - scoreA;
-                } catch (error) {
-                    console.error('评分排序错误:', error);
-                    return 0;
+        // Check if we need to fetch the next page from source website
+        let finalAnimeList = [];
+        if (endIndex > animeList.length && sourcePage < totalPages) {
+            // Need to fetch next page from source
+            console.log(`📄 需要从原网站第${sourcePage + 1}页获取更多数据...`);
+            try {
+                const nextUrl = urlConstructor.construct({
+                    search, genre, year, letter, sort, channel, page: sourcePage + 1
+                });
+                const nextResponse = await axios.get(nextUrl, {
+                    headers: DEFAULT_HEADERS,
+                    timeout: 15000
+                });
+                const $next = cheerio.load(nextResponse.data);
+
+                // Parse next page with same logic
+                for (const element of $('.public-list-box').toArray()) {
+                    const $box = $(element);
+                    const $link = $box.find('a[href*="/bangumi/"]');
+                    const $img = $box.find('img');
+
+                    if ($link.length && $img.length) {
+                        const href = $link.attr('href');
+                        const animeId = href?.match(/\/bangumi\/(\d+)\.html/);
+                        if (animeId && animeId[1]) {
+                            const title = $img.attr('alt') || $link.attr('title') || '';
+                            let imgSrc = $img.attr('data-src') || $img.attr('src') || '';
+                            if (imgSrc && (imgSrc.includes('baidu.com') || imgSrc.startsWith('https://'))) {
+                                imgSrc = `/api/image-proxy?url=${encodeURIComponent(imgSrc)}`;
+                            } else {
+                                imgSrc = '/api/placeholder-image';
+                            }
+
+                            const exists = animeList.find(anime => anime.id === animeId[1]);
+                            if (!exists && title) {
+                                animeList.push({
+                                    id: animeId[1],
+                                    title: title,
+                                    cover: imgSrc,
+                                    url: `https://www.cycani.org${href}`,
+                                    type: 'TV',
+                                    year: '',
+                                    episodes: '未知',
+                                    status: '已完结',
+                                    score: '5.5',
+                                    channel: channel
+                                });
+                            }
+                        }
+                    }
                 }
-            });
-            console.log(`✅ 评分排序完成，最高评分: ${filteredList[0]?.title}(${filteredList[0]?.score})`);
+            } catch (nextError) {
+                console.warn('⚠️ 无法获取下一页数据:', nextError.message);
+            }
         }
 
-        // 分页处理
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedList = filteredList.slice(startIndex, endIndex);
+        // Extract the slice we need
+        finalAnimeList = animeList.slice(startIndex, startIndex + limit);
 
-        console.log(`✅ 解析到 ${animeList.length} 个动画，筛选后 ${filteredList.length} 个，当前页 ${paginatedList.length} 个`);
+        // Calculate user-facing pagination
+        const totalItems = totalPages * ITEMS_PER_PAGE_ON_SOURCE; // Approximate total
+        const userTotalPages = Math.ceil(totalItems / limit); // User-facing total pages
+
+        console.log(`✅ 解析到 ${animeList.length} 个动画，提取 ${finalAnimeList.length} 个 (offset ${startIndex})`);
+
+        const responseData = {
+            animeList: finalAnimeList,
+            currentPage: pageNum,
+            totalPages: userTotalPages,
+            totalCount: totalItems,
+            filters: {
+                search,
+                genre,
+                year,
+                letter,
+                sort,
+                channel
+            }
+        };
+
+        // Cache the results
+        animeListCache.set(cacheKey, responseData);
 
         res.json({
             success: true,
-            data: {
-                animeList: paginatedList,
-                currentPage: parseInt(page),
-                totalPages: totalPages, // 使用网站实际的总页数
-                totalCount: filteredList.length,
-                searchQuery: search
-            }
+            data: responseData
         });
 
     } catch (error) {
@@ -708,6 +840,242 @@ app.get('/api/last-position/:animeId/:season/:episode', async (req, res) => {
         });
     }
 });
+
+// API路由 - 每周番剧时间表
+app.get('/api/weekly-schedule', async (req, res) => {
+    try {
+        const { day = 'all' } = req.query; // day: 'monday', 'tuesday', ..., 'all'
+
+        // Check cache first (24-hour cache for weekly schedule)
+        const cacheKey = `weekly-schedule-${day}`;
+        const cachedEntry = weeklyScheduleCache.get(cacheKey);
+        if (cachedEntry && Date.now() - cachedEntry.timestamp < 24 * 60 * 60 * 1000) {
+            console.log(`📋 使用每周时间表缓存数据: ${day}`);
+            return res.json({
+                success: true,
+                data: {
+                    schedule: cachedEntry.data,
+                    updated: new Date(cachedEntry.timestamp).toISOString(),
+                    filter: day,
+                    fromCache: true
+                }
+            });
+        }
+
+        console.log(`🔍 获取每周番剧时间表: ${day}`);
+
+        // Scrape homepage for weekly schedule
+        console.log(`📅 开始抓取每周时间表数据...`);
+        const scheduleData = await scrapeWeeklySchedule(day);
+        console.log(`📅 抓取完成，数据长度: ${JSON.stringify(scheduleData).length}`);
+
+        const responseData = {
+            schedule: scheduleData,
+            updated: new Date().toISOString(),
+            filter: day
+        };
+
+        // Cache for 24 hours
+        weeklyScheduleCache.set(`weekly-schedule-${day}`, {
+            data: scheduleData,
+            timestamp: Date.now()
+        });
+
+        res.json({
+            success: true,
+            data: responseData
+        });
+
+    } catch (error) {
+        console.error('❌ 获取每周番剧时间表失败:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// 每周时间表解析函数
+async function scrapeWeeklySchedule(dayFilter = 'all') {
+    const scheduleData = {
+        monday: [],
+        tuesday: [],
+        wednesday: [],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: []
+    };
+
+    try {
+        // Try to get schedule from dedicated weekly page first
+        const weeklyUrl = 'https://www.cycani.org/index.php/label/weekday.html';
+
+        try {
+            const response = await axios.get(weeklyUrl, {
+                headers: DEFAULT_HEADERS,
+                timeout: 10000
+            });
+
+            const $ = cheerio.load(response.data);
+
+            // Parse weekly schedule from the page
+            // Look for content that might contain daily schedules
+            $('.content, .schedule, .weekday, .daily, .main, .container').each((_, element) => {
+                const $section = $(element);
+                const text = $section.text().trim();
+
+                // Try to identify day patterns and extract anime info
+                const dayPatterns = [
+                    { day: 'monday', pattern: /周一|星期一|Monday/i },
+                    { day: 'tuesday', pattern: /周二|星期二|Tuesday/i },
+                    { day: 'wednesday', pattern: /周三|星期三|Wednesday/i },
+                    { day: 'thursday', pattern: /周四|星期四|Thursday/i },
+                    { day: 'friday', pattern: /周五|星期五|Friday/i },
+                    { day: 'saturday', pattern: /周六|星期六|Saturday/i },
+                    { day: 'sunday', pattern: /周日|星期日|Sunday/i }
+                ];
+
+                for (const { day, pattern } of dayPatterns) {
+                    if (pattern.test(text)) {
+                        // Extract anime information for this day
+                        // Look for both /bangumi/ and /watch/ links
+                        const $animeLinks = $section.find('a[href*="/bangumi/"], a[href*="/watch/"]');
+                        $animeLinks.each((_, link) => {
+                            const $link = $(link);
+                            const href = $link.attr('href');
+                            const title = $link.text().trim() || $link.attr('title') || '';
+
+                            // Skip if no meaningful title
+                            if (!title || title.length < 2) return;
+
+                            // Extract anime ID from different URL patterns
+                            let animeId = null;
+                            if (href?.includes('/bangumi/')) {
+                                const match = href.match(/\/bangumi\/(\d+)\.html/);
+                                if (match) animeId = match[1];
+                            } else if (href?.includes('/watch/')) {
+                                const match = href.match(/\/watch\/(\d+)\/\d+\/\d+\.html/);
+                                if (match) animeId = match[1];
+                            }
+
+                            if (animeId) {
+                                // Try to extract additional info like broadcast time
+                                const $parent = $link.closest('div, li, span, p');
+                                const parentText = $parent.text().trim();
+
+                                // Extract broadcast time pattern (e.g., "11|周一24:05后")
+                                const timeMatch = parentText.match(/(\d+\|[^|\s]+)/);
+                                const broadcastTime = timeMatch ? timeMatch[1] : '';
+
+                                // Extract rating pattern (look for numbers like 6.5, 4.0, etc.)
+                                const ratingMatch = parentText.match(/(\d\.\d)/);
+                                const rating = ratingMatch ? ratingMatch[1] : '';
+
+                                // Check if completed
+                                const isCompleted = parentText.includes('已完结') || parentText.includes('完结');
+
+                                // Construct proper URL for the anime details page
+                                const detailUrl = href.includes('/bangumi/') ?
+                                    `https://www.cycani.org${href}` :
+                                    `https://www.cycani.org/bangumi/${animeId}.html`;
+
+                                scheduleData[day].push({
+                                    id: animeId,
+                                    title: title,
+                                    cover: '', // Will be filled later if needed
+                                    rating: rating,
+                                    status: isCompleted ? '已完结' : '连载中',
+                                    broadcastTime: broadcastTime,
+                                    url: detailUrl,
+                                    watchUrl: href.includes('/watch/') ? `https://www.cycani.org${href}` : null,
+                                    day: day
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+        } catch (weeklyError) {
+            console.log('⚠️ 无法获取专用每周时间表页面，尝试首页:', weeklyError.message);
+        }
+
+        // If weekly page doesn't work, try homepage
+        if (Object.values(scheduleData).every(dayList => dayList.length === 0)) {
+            try {
+                const homeResponse = await axios.get('https://www.cycani.org/', {
+                    headers: DEFAULT_HEADERS,
+                    timeout: 10000
+                });
+
+                const $ = cheerio.load(homeResponse.data);
+
+                // Look for weekly schedule section on homepage
+                // Common selectors for weekly anime sections
+                const weeklySelectors = [
+                    '.weekly',
+                    '.schedule',
+                    '.new-anime',
+                    '.weekday',
+                    '.daily-update',
+                    '[class*="week"]',
+                    '[class*="schedule"]',
+                    '[class*="update"]'
+                ];
+
+                for (const selector of weeklySelectors) {
+                    $(selector).each((_, element) => {
+                        const $section = $(element);
+                        const text = $section.text().trim();
+
+                        // Check if this contains weekly schedule information
+                        if (text.includes('周一') || text.includes('周二') || text.includes('新番')) {
+                            // Extract anime links
+                            const $animeLinks = $section.find('a[href*="/bangumi/"]');
+                            $animeLinks.each((_, link) => {
+                                const $link = $(link);
+                                const href = $link.attr('href');
+                                const animeId = href?.match(/\/bangumi\/(\d+)\.html/);
+
+                                if (animeId && animeId[1]) {
+                                    const title = $link.text().trim() || $link.attr('title') || '';
+                                    if (title && !scheduleData.monday.some(anime => anime.id === animeId[1])) {
+                                        // For homepage, we'll put everything in Monday as default
+                                        scheduleData.monday.push({
+                                            id: animeId[1],
+                                            title: title,
+                                            cover: '',
+                                            rating: '',
+                                            status: '连载中',
+                                            broadcastTime: '',
+                                            url: `https://www.cycani.org${href}`,
+                                            day: 'monday'
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            } catch (homeError) {
+                console.log('⚠️ 首页解析也失败，返回空时间表:', homeError.message);
+            }
+        }
+
+        console.log(`📅 解析到每周时间表:`, Object.entries(scheduleData).map(([day, animes]) => `${day}: ${animes.length}个`).join(', '));
+
+        // Apply day filter if specified
+        if (dayFilter !== 'all' && scheduleData[dayFilter]) {
+            return { [dayFilter]: scheduleData[dayFilter] };
+        }
+
+        return scheduleData;
+
+    } catch (error) {
+        console.error('解析每周时间表失败:', error);
+        return scheduleData;
+    }
+}
 
 // API路由 - 搜索动画
 app.get('/api/search-anime', async (req, res) => {

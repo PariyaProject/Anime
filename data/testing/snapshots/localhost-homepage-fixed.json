@@ -1,0 +1,4 @@
+uid=4_0 RootWebArea url="http://localhost:3006/"
+  uid=4_1 StaticText "{"success":false,"error":"内部服务器错误"}"
+  uid=4_2 StaticText "美观输出"
+  uid=4_3 checkbox "美观输出"

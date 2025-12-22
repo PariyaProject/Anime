@@ -1,0 +1,12 @@
+uid=3_0 RootWebArea url="http://localhost:3006/"
+  uid=3_1 ignored
+    uid=3_2 ignored
+      uid=3_3 generic
+        uid=3_4 StaticText "{"success":false,"error":"内部服务器错误"}"
+          uid=3_5 InlineTextBox "{"success":false,"error":"内部服务器错误"}"
+      uid=3_6 generic
+        uid=3_7 generic
+          uid=3_8 LabelText
+            uid=3_9 StaticText "美观输出"
+              uid=3_10 InlineTextBox "美观输出"
+            uid=3_11 checkbox "美观输出"

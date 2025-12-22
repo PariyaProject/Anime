@@ -41,7 +41,8 @@
       "Bash(openspec:*)",
       "Bash(tree:*)",
       "Bash(mkdir:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "mcp__chrome-devtools__get_console_message"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,499 @@
+uid=1_0 RootWebArea "次元城动画 - 海量蓝光番剧免费看！" url="https://www.cycani.org/"
+  uid=1_1 ignored
+    uid=1_2 generic
+      uid=1_3 generic
+        uid=1_4 ignored
+          uid=1_5 generic
+            uid=1_6 link "次元城动画 - 海量蓝光番剧免费看！" url="https://www.cycani.org/"
+              uid=1_7 image "次元城动画 - 海量蓝光番剧免费看！" url="https://www.cycani.org/upload/site/20240319-1/23324d2df3da86834984e523293636cf.png"
+          uid=1_8 generic
+            uid=1_9 list
+              uid=1_10 group "1 / 4"
+                uid=1_11 link "首页" url="https://www.cycani.org/"
+                  uid=1_12 emphasis
+                    uid=1_13 ignored
+                      uid=1_14 StaticText ""
+                        uid=1_15 InlineTextBox ""
+                  uid=1_16 StaticText "首页"
+                    uid=1_17 InlineTextBox "首页"
+              uid=1_18 group "2 / 4"
+                uid=1_19 link "4K专区" url="https://www.cycani.org/show/26.html"
+                  uid=1_20 emphasis
+                  uid=1_21 StaticText "4K专区"
+                    uid=1_22 InlineTextBox "4K专区"
+              uid=1_23 group "3 / 4"
+                uid=1_24 link "剧场番组" url="https://www.cycani.org/show/21.html"
+                  uid=1_25 emphasis
+                  uid=1_26 StaticText "剧场番组"
+                    uid=1_27 InlineTextBox "剧场番组"
+              uid=1_28 group "4 / 4"
+                uid=1_29 link "TV番组" url="https://www.cycani.org/show/20.html"
+                  uid=1_30 emphasis
+                  uid=1_31 StaticText "TV番组"
+                    uid=1_32 InlineTextBox "TV番组"
+              uid=1_33 listitem level="1"
+                uid=1_34 link "更多" url="javascript:"
+                  uid=1_35 emphasis
+                    uid=1_36 StaticText ""
+                      uid=1_37 InlineTextBox ""
+                  uid=1_38 StaticText "更多"
+                    uid=1_39 InlineTextBox "更多"
+            uid=1_40 generic
+        uid=1_41 ignored
+          uid=1_42 generic
+            uid=1_43 link "" url="javascript:"
+              uid=1_44 emphasis
+                uid=1_45 ignored
+                  uid=1_46 StaticText ""
+                    uid=1_47 InlineTextBox ""
+          uid=1_48 generic
+            uid=1_49 link "" url="javascript:"
+              uid=1_50 emphasis
+                uid=1_51 ignored
+                  uid=1_52 StaticText ""
+                    uid=1_53 InlineTextBox ""
+          uid=1_54 generic
+            uid=1_55 link "" url="javascript:"
+              uid=1_56 ignored
+                uid=1_57 StaticText ""
+                  uid=1_58 InlineTextBox ""
+          uid=1_59 ignored
+            uid=1_60 link "客户端下载" url="https://www.cycity.pro/"
+              uid=1_61 StaticText "客户端下载"
+                uid=1_62 InlineTextBox "客户端下载"
+      uid=1_63 ignored
+      uid=1_64 generic
+        uid=1_65 generic
+          uid=1_66 generic
+            uid=1_67 group "6 / 6"
+              uid=1_68 generic
+              uid=1_69 link url="https://www.cycani.org/bangumi/3933.html"
+              uid=1_70 generic
+                uid=1_71 generic
+                  uid=1_72 heading "夏日口袋" level="3"
+                    uid=1_73 StaticText "夏日口袋"
+                      uid=1_74 InlineTextBox "夏日口袋"
+                  uid=1_75 list
+                    uid=1_76 listitem level="1"
+                      uid=1_77 StaticText "已完结"
+                        uid=1_78 InlineTextBox "已完结"
+                    uid=1_79 listitem level="1"
+                      uid=1_80 ignored
+                        uid=1_81 StaticText "TV番组"
+                          uid=1_82 InlineTextBox "TV番组"
+                    uid=1_83 listitem level="1"
+                      uid=1_84 generic
+                        uid=1_85 ignored
+                          uid=1_86 StaticText ""
+                            uid=1_87 InlineTextBox ""
+                      uid=1_88 ignored
+                        uid=1_89 StaticText "476915 Views"
+                          uid=1_90 InlineTextBox "476915 Views"
+                  uid=1_91 generic
+                    uid=1_92 StaticText "唯有那份眩目，未曾忘却。为了整理去世祖母的遗物，主人公鹰原羽依里利用暑假来到了鸟白岛。在帮忙收拾祖母的回忆之物的同时，他一边对首次接触的“岛上生活”感到困惑，一边逐渐适应。与眺望大"
+                      uid=1_93 InlineTextBox "唯有那份眩目，未曾忘却。为了整理去世祖母的遗物，主人公鹰原羽依里利用暑假来到了鸟白岛。在帮忙收拾祖母的回忆之物的同时，他一边对"
+                      uid=1_94 InlineTextBox "首次接触的“岛上生活”感到困惑，一边逐渐适应。与眺望大"
+            uid=1_95 group "1 / 6"
+              uid=1_96 generic
+              uid=1_97 link url="https://www.cycani.org/bangumi/4013.html"
+              uid=1_98 generic
+                uid=1_99 generic
+                  uid=1_100 heading "琉璃的宝石" level="3"
+                    uid=1_101 StaticText "琉璃的宝石"
+                      uid=1_102 InlineTextBox "琉璃的宝石"
+                  uid=1_103 list
+                    uid=1_104 listitem level="1"
+                      uid=1_105 StaticText "已完结"
+                        uid=1_106 InlineTextBox "已完结"
+                    uid=1_107 listitem level="1"
+                      uid=1_108 ignored
+                        uid=1_109 StaticText "TV番组"
+                          uid=1_110 InlineTextBox "TV番组"
+                    uid=1_111 listitem level="1"
+                      uid=1_112 generic
+                        uid=1_113 ignored
+                          uid=1_114 StaticText ""
+                            uid=1_115 InlineTextBox ""
+                      uid=1_116 ignored
+                        uid=1_117 StaticText "135823 Views"
+                          uid=1_118 InlineTextBox "135823 Views"
+                  uid=1_119 generic
+                    uid=1_120 StaticText "キラキラしたものが大好きな女子高生・谷川たにがわ瑠璃るりは、「自分でも見つけられるかも！」と水晶を探しに山へと向かう。そこで鉱物学を専攻する大学院生・荒あら砥と凪なぎと出会い、一緒に鉱物採集をすること"
+                      uid=1_121 InlineTextBox "キラキラしたものが大好きな女子高生・谷川たにがわ瑠璃るりは、「自分でも見つけられるかも！」と水晶を探しに山へと向かう。そこで鉱"
+                      uid=1_122 InlineTextBox "物学を専攻する大学院生・荒あら砥と凪なぎと出会い、一緒に鉱物採集をすること"
+            uid=1_123 group "2 / 6"
+              uid=1_124 generic
+              uid=1_125 link url="https://www.cycani.org/bangumi/4007.html"
+              uid=1_126 generic
+                uid=1_127 generic
+                  uid=1_128 heading "更衣人偶坠入爱河 第二季" level="3"
+                    uid=1_129 StaticText "更衣人偶坠入爱河 第二季"
+                      uid=1_130 InlineTextBox "更衣人偶坠入爱河 第二季"
+                  uid=1_131 list
+                    uid=1_132 listitem level="1"
+                      uid=1_133 StaticText "已完结"
+                        uid=1_134 InlineTextBox "已完结"
+                    uid=1_135 listitem level="1"
+                      uid=1_136 ignored
+                        uid=1_137 StaticText "TV番组"
+                          uid=1_138 InlineTextBox "TV番组"
+                    uid=1_139 listitem level="1"
+                      uid=1_140 generic
+                        uid=1_141 ignored
+                          uid=1_142 StaticText ""
+                            uid=1_143 InlineTextBox ""
+                      uid=1_144 ignored
+                        uid=1_145 StaticText "601264 Views"
+                          uid=1_146 InlineTextBox "601264 Views"
+                  uid=1_147 generic
+                    uid=1_148 StaticText "ある日の出会いをきっかけに、コスプレを通して交流を深めていく喜多川海夢まりんと五条新菜わかな。まだまだやりたいコスプレ、作りたい衣装はいっぱい。クラスメイトたちとの交流や、新しいコスプレ仲"
+                      uid=1_149 InlineTextBox "ある日の出会いをきっかけに、コスプレを通して交流を深めていく喜多川海夢まりんと五条新菜わかな。まだまだやりたいコスプレ、作りた"
+                      uid=1_150 InlineTextBox "い衣装はいっぱい。クラスメイトたちとの交流や、新しいコスプレ仲"
+            uid=1_151 group "3 / 6"
+              uid=1_152 generic
+              uid=1_153 link url="https://www.cycani.org/bangumi/4005.html"
+              uid=1_154 generic
+                uid=1_155 generic
+                  uid=1_156 heading "青春猪头少年不会梦到圣诞服女郎" level="3"
+                    uid=1_157 StaticText "青春猪头少年不会梦到圣诞服女郎"
+                      uid=1_158 InlineTextBox "青春猪头少年不会梦到圣诞服女郎"
+                  uid=1_159 list
+                    uid=1_160 listitem level="1"
+                      uid=1_161 StaticText "已完结"
+                        uid=1_162 InlineTextBox "已完结"
+                    uid=1_163 listitem level="1"
+                      uid=1_164 ignored
+                        uid=1_165 StaticText "TV番组"
+                          uid=1_166 InlineTextBox "TV番组"
+                    uid=1_167 listitem level="1"
+                      uid=1_168 generic
+                        uid=1_169 ignored
+                          uid=1_170 StaticText ""
+                            uid=1_171 InlineTextBox ""
+                      uid=1_172 ignored
+                        uid=1_173 StaticText "319853 Views"
+                          uid=1_174 InlineTextBox "319853 Views"
+                  uid=1_175 generic
+                    uid=1_176 StaticText "思春期症候群――不安定な精神状態によって引き起こされると噂の不思議現象。高校時代に様々な思春期症候群を発症した少女たちに出会ってきた“梓川咲太”も大学生になった。国民的人気女優であ"
+                      uid=1_177 InlineTextBox "思春期症候群――不安定な精神状態によって引き起こされると噂の不思議現象。高校時代に様々な思春期症候群を発症した少女たちに出会って"
+                      uid=1_178 InlineTextBox "きた“梓川咲太”も大学生になった。国民的人気女優であ"
+            uid=1_179 group "4 / 6"
+              uid=1_180 generic
+              uid=1_181 link url="https://www.cycani.org/bangumi/3999.html"
+              uid=1_182 generic
+                uid=1_183 generic
+                  uid=1_184 heading "彻夜之歌 第二季" level="3"
+                    uid=1_185 StaticText "彻夜之歌 第二季"
+                      uid=1_186 InlineTextBox "彻夜之歌 第二季"
+                  uid=1_187 list
+                    uid=1_188 listitem level="1"
+                      uid=1_189 StaticText "已完结"
+                        uid=1_190 InlineTextBox "已完结"
+                    uid=1_191 listitem level="1"
+                      uid=1_192 ignored
+                        uid=1_193 StaticText "TV番组"
+                          uid=1_194 InlineTextBox "TV番组"
+                    uid=1_195 listitem level="1"
+                      uid=1_196 generic
+                        uid=1_197 ignored
+                          uid=1_198 StaticText ""
+                            uid=1_199 InlineTextBox ""
+                      uid=1_200 ignored
+                        uid=1_201 StaticText "212705 Views"
+                          uid=1_202 InlineTextBox "212705 Views"
+                  uid=1_203 generic
+                    uid=1_204 StaticText "“夜はまだ終わらない”吸血鬼になることへの戸惑いを乗り越え、ナズナを“好き”になることを決めたコウと、コウに“惚れさせる”決意をしたナズナ。「恋」が一体なんなのか、わからないまま二人の夜は加速していく"
+                      uid=1_205 InlineTextBox "“夜はまだ終わらない”吸血鬼になることへの戸惑いを乗り越え、ナズナを“好き”になることを決めたコウと、コウに“惚れさせる”決意をしたナ"
+                      uid=1_206 InlineTextBox "ズナ。「恋」が一体なんなのか、わからないまま二人の夜は加速していく"
+            uid=1_207 group "5 / 6"
+              uid=1_208 generic
+              uid=1_209 link url="https://www.cycani.org/bangumi/3994.html"
+              uid=1_210 generic
+                uid=1_211 generic
+                  uid=1_212 heading "胆大党 第二季" level="3"
+                    uid=1_213 StaticText "胆大党 第二季"
+                      uid=1_214 InlineTextBox "胆大党 第二季"
+                  uid=1_215 list
+                    uid=1_216 listitem level="1"
+                      uid=1_217 StaticText "已完结"
+                        uid=1_218 InlineTextBox "已完结"
+                    uid=1_219 listitem level="1"
+                      uid=1_220 ignored
+                        uid=1_221 StaticText "TV番组"
+                          uid=1_222 InlineTextBox "TV番组"
+                    uid=1_223 listitem level="1"
+                      uid=1_224 generic
+                        uid=1_225 ignored
+                          uid=1_226 StaticText ""
+                            uid=1_227 InlineTextBox ""
+                      uid=1_228 ignored
+                        uid=1_229 StaticText "561558 Views"
+                          uid=1_230 InlineTextBox "561558 Views"
+                  uid=1_231 generic
+                    uid=1_232 StaticText "霊媒師の家系に生まれた女子高生・モモ＜綾瀬桃＞と、同級生でオカルトマニアのオカルン＜高倉健＞。モモがクラスのいじめっ子からオカルンを助けたことをきっかけに話すようになった2人だったが、"
+                      uid=1_233 InlineTextBox "霊媒師の家系に生まれた女子高生・モモ＜綾瀬桃＞と、同級生でオカルトマニアのオカルン＜高倉健＞。モモがクラスのいじめっ子からオカ"
+                      uid=1_234 InlineTextBox "ルンを助けたことをきっかけに話すようになった2人だったが、"
+            uid=1_235 group "6 / 6"
+              uid=1_236 generic
+              uid=1_237 link url="https://www.cycani.org/bangumi/3933.html"
+              uid=1_238 generic
+                uid=1_239 generic
+                  uid=1_240 heading "夏日口袋" level="3"
+                    uid=1_241 StaticText "夏日口袋"
+                      uid=1_242 InlineTextBox "夏日口袋"
+                  uid=1_243 list
+                    uid=1_244 listitem level="1"
+                      uid=1_245 StaticText "已完结"
+                        uid=1_246 InlineTextBox "已完结"
+                    uid=1_247 listitem level="1"
+                      uid=1_248 ignored
+                        uid=1_249 StaticText "TV番组"
+                          uid=1_250 InlineTextBox "TV番组"
+                    uid=1_251 listitem level="1"
+                      uid=1_252 generic
+                        uid=1_253 ignored
+                          uid=1_254 StaticText ""
+                            uid=1_255 InlineTextBox ""
+                      uid=1_256 ignored
+                        uid=1_257 StaticText "476915 Views"
+                          uid=1_258 InlineTextBox "476915 Views"
+                  uid=1_259 generic
+                    uid=1_260 StaticText "唯有那份眩目，未曾忘却。为了整理去世祖母的遗物，主人公鹰原羽依里利用暑假来到了鸟白岛。在帮忙收拾祖母的回忆之物的同时，他一边对首次接触的“岛上生活”感到困惑，一边逐渐适应。与眺望大"
+                      uid=1_261 InlineTextBox "唯有那份眩目，未曾忘却。为了整理去世祖母的遗物，主人公鹰原羽依里利用暑假来到了鸟白岛。在帮忙收拾祖母的回忆之物的同时，他一边对"
+                      uid=1_262 InlineTextBox "首次接触的“岛上生活”感到困惑，一边逐渐适应。与眺望大"
+            uid=1_263 group "1 / 6"
+              uid=1_264 generic
+              uid=1_265 link url="https://www.cycani.org/bangumi/4013.html"
+              uid=1_266 generic
+                uid=1_267 generic
+                  uid=1_268 heading "琉璃的宝石" level="3"
+                    uid=1_269 StaticText "琉璃的宝石"
+                      uid=1_270 InlineTextBox "琉璃的宝石"
+                  uid=1_271 list
+                    uid=1_272 listitem level="1"
+                      uid=1_273 StaticText "已完结"
+                        uid=1_274 InlineTextBox "已完结"
+                    uid=1_275 listitem level="1"
+                      uid=1_276 ignored
+                        uid=1_277 StaticText "TV番组"
+                          uid=1_278 InlineTextBox "TV番组"
+                    uid=1_279 listitem level="1"
+                      uid=1_280 generic
+                        uid=1_281 ignored
+                          uid=1_282 StaticText ""
+                            uid=1_283 InlineTextBox ""
+                      uid=1_284 ignored
+                        uid=1_285 StaticText "135823 Views"
+                          uid=1_286 InlineTextBox "135823 Views"
+                  uid=1_287 generic
+                    uid=1_288 StaticText "キラキラしたものが大好きな女子高生・谷川たにがわ瑠璃るりは、「自分でも見つけられるかも！」と水晶を探しに山へと向かう。そこで鉱物学を専攻する大学院生・荒あら砥と凪なぎと出会い、一緒に鉱物採集をすること"
+                      uid=1_289 InlineTextBox "キラキラしたものが大好きな女子高生・谷川たにがわ瑠璃るりは、「自分でも見つけられるかも！」と水晶を探しに山へと向かう。そこで鉱"
+                      uid=1_290 InlineTextBox "物学を専攻する大学院生・荒あら砥と凪なぎと出会い、一緒に鉱物採集をすること"
+          uid=1_291 generic
+      uid=1_292 generic
+        uid=1_293 ignored
+          uid=1_294 link "imageUrl" url="https://zdbc.8f8mi.com/tad/?channel=vmv8ZN"
+            uid=1_295 image "imageUrl" url="https://img.meituan.net/portalweb/bacd2460cd0d0185f9ccc2d45c86a301413308.gif"
+            uid=1_296 ignored
+        uid=1_297 ignored
+          uid=1_298 link "imageUrl" url="https://ozke.69m1c.com/oij/?channel=SpsL61"
+            uid=1_299 image "imageUrl" url="https://img.meituan.net/portalweb/552a08182499c606d50e7c7b6141df3c153459.png"
+            uid=1_300 ignored
+      uid=1_301 ignored
+        uid=1_302 ignored
+      uid=1_303 ignored
+        uid=1_304 ignored
+      uid=1_305 ignored
+        uid=1_306 ignored
+      uid=1_307 ignored
+        uid=1_308 ignored
+      uid=1_309 ignored
+        uid=1_310 ignored
+      uid=1_311 ignored
+        uid=1_312 ignored
+      uid=1_313 generic
+        uid=1_314 ignored
+          uid=1_315 link "imageUrl" url="https://bs2806.braktokritalkrolan.com/ck/16705/oxbkb1bk"
+            uid=1_316 image "imageUrl" url="https://picgg.cycimg.me/ads/bika0408.gif"
+            uid=1_317 ignored
+        uid=1_318 ignored
+          uid=1_319 link "imageUrl" url="https://www.mujika.pro/"
+            uid=1_320 image "imageUrl" url="https://picgg.cycimg.me/mujika-1920x300.png"
+            uid=1_321 ignored
+      uid=1_322 ignored
+        uid=1_323 ignored
+      uid=1_324 ignored
+        uid=1_325 ignored
+      uid=1_326 ignored
+        uid=1_327 ignored
+      uid=1_328 ignored
+        uid=1_329 ignored
+      uid=1_330 ignored
+        uid=1_331 ignored
+      uid=1_332 ignored
+        uid=1_333 ignored
+      uid=1_334 ignored
+        uid=1_335 ignored
+      uid=1_336 ignored
+        uid=1_337 ignored
+      uid=1_338 ignored
+        uid=1_339 ignored
+      uid=1_340 ignored
+        uid=1_341 ignored
+      uid=1_342 ignored
+        uid=1_343 ignored
+      uid=1_344 ignored
+        uid=1_345 ignored
+      uid=1_346 ignored
+        uid=1_347 ignored
+      uid=1_348 ignored
+        uid=1_349 ignored
+      uid=1_350 ignored
+        uid=1_351 ignored
+      uid=1_352 ignored
+        uid=1_353 ignored
+      uid=1_354 ignored
+        uid=1_355 ignored
+      uid=1_356 ignored
+        uid=1_357 ignored
+      uid=1_358 ignored
+        uid=1_359 ignored
+      uid=1_360 ignored
+        uid=1_361 ignored
+      uid=1_362 ignored
+        uid=1_363 ignored
+      uid=1_364 ignored
+        uid=1_365 ignored
+      uid=1_366 ignored
+        uid=1_367 ignored
+      uid=1_368 ignored
+        uid=1_369 ignored
+      uid=1_370 ignored
+        uid=1_371 ignored
+      uid=1_372 ignored
+        uid=1_373 ignored
+      uid=1_374 ignored
+        uid=1_375 ignored
+      uid=1_376 ignored
+        uid=1_377 ignored
+      uid=1_378 ignored
+        uid=1_379 ignored
+      uid=1_380 ignored
+        uid=1_381 ignored
+      uid=1_382 ignored
+        uid=1_383 ignored
+      uid=1_384 ignored
+        uid=1_385 ignored
+      uid=1_386 ignored
+        uid=1_387 generic
+          uid=1_388 generic
+            uid=1_389 StaticText "最佳体验，尽在次元城客户端"
+              uid=1_390 InlineTextBox "最佳体验，尽在次元城客户端"
+          uid=1_391 ignored
+            uid=1_392 ignored
+              uid=1_393 StaticText "APP DOWNLOAD"
+                uid=1_394 InlineTextBox "APP DOWNLOAD"
+            uid=1_395 link "前往下载" url="https://www.cycity.pro/"
+              uid=1_396 StaticText "前往下载"
+                uid=1_397 InlineTextBox "前往下载"
+        uid=1_398 ignored
+          uid=1_399 ignored
+            uid=1_400 generic
+              uid=1_401 StaticText "© 2025 "
+                uid=1_402 InlineTextBox "© 2025 "
+              uid=1_403 link "www.cycani.org" url="https://www.cycani.org/"
+                uid=1_404 StaticText "www.cycani.org"
+                  uid=1_405 InlineTextBox "www.cycani.org"
+              uid=1_406 StaticText " All rights reservd."
+                uid=1_407 InlineTextBox " All rights reservd."
+            uid=1_408 generic
+              uid=1_409 link "Telegram群" url="https://t.me/cyc_chat"
+                uid=1_410 StaticText "Telegram群"
+                  uid=1_411 InlineTextBox "Telegram群"
+              uid=1_412 link "网站地图" url="https://www.cycani.org/rss/baidu.xml"
+                uid=1_413 StaticText "网站地图"
+                  uid=1_414 InlineTextBox "网站地图"
+      uid=1_415 generic
+        uid=1_416 link "繁" url="javascript:"
+          uid=1_417 StaticText "繁"
+            uid=1_418 InlineTextBox "繁"
+        uid=1_419 link "" url="javascript:"
+          uid=1_420 StaticText ""
+            uid=1_421 InlineTextBox ""
+        uid=1_422 link "" url="javascript:"
+          uid=1_423 ignored
+            uid=1_424 StaticText ""
+              uid=1_425 InlineTextBox ""
+      uid=1_426 generic
+        uid=1_427 generic
+          uid=1_428 generic
+            uid=1_429 generic
+              uid=1_430 textbox "搜索精彩内容"
+                uid=1_431 ignored
+                uid=1_432 generic
+              uid=1_433 button ""
+                uid=1_434 ignored
+                  uid=1_435 StaticText ""
+                    uid=1_436 InlineTextBox ""
+              uid=1_437 button "视频"
+                uid=1_438 StaticText "视频"
+                  uid=1_439 InlineTextBox "视频"
+                uid=1_440 StaticText ""
+                  uid=1_441 InlineTextBox ""
+        uid=1_442 ignored
+        uid=1_443 ignored
+          uid=1_444 ignored
+            uid=1_445 heading "搜索历史" level="5"
+              uid=1_446 StaticText "搜索历史"
+                uid=1_447 InlineTextBox "搜索历史"
+            uid=1_448 generic
+              uid=1_449 ignored
+                uid=1_450 ignored
+                  uid=1_451 StaticText ""
+                    uid=1_452 InlineTextBox ""
+              uid=1_453 StaticText "删除"
+                uid=1_454 InlineTextBox "删除"
+          uid=1_455 generic
+            uid=1_456 StaticText "没有搜索记录哦"
+              uid=1_457 InlineTextBox "没有搜索记录哦"
+        uid=1_458 ignored
+          uid=1_459 ignored
+            uid=1_460 heading "热门搜索" level="5"
+              uid=1_461 StaticText "热门搜索"
+                uid=1_462 InlineTextBox "热门搜索"
+          uid=1_463 list
+            uid=1_464 listitem level="1"
+              uid=1_465 link "NO 1" url="https://www.cycani.org/search.html"
+                uid=1_466 ignored
+                  uid=1_467 StaticText "NO"
+                    uid=1_468 InlineTextBox "NO"
+                uid=1_469 ignored
+                  uid=1_470 StaticText "1"
+                    uid=1_471 InlineTextBox "1"
+                uid=1_472 ignored
+      uid=1_473 generic
+        uid=1_474 ignored
+          uid=1_475 generic
+            uid=1_476 link "本地记录" url="javascript:"
+              uid=1_477 StaticText "本地记录"
+                uid=1_478 InlineTextBox "本地记录"
+          uid=1_479 generic
+            uid=1_480 link "云端记录" url="javascript:"
+              uid=1_481 StaticText "云端记录"
+                uid=1_482 InlineTextBox "云端记录"
+        uid=1_483 ignored
+          uid=1_484 ignored
+            uid=1_485 list
+              uid=1_486 listitem level="1"
+                uid=1_487 link "[TV番组]外星人姆姆 [TV番组]外星人姆姆 第14集" description="[TV番组]外星人姆姆" url="https://www.cycani.org/watch/3944/1/14.html"
+                  uid=1_488 image "[TV番组]外星人姆姆"
+                  uid=1_489 ignored
+                    uid=1_490 generic
+                      uid=1_491 StaticText "[TV番组]外星人姆姆"
+                        uid=1_492 InlineTextBox "[TV番组]外星人姆姆"
+                    uid=1_493 generic
+                      uid=1_494 StaticText "第14集"
+                        uid=1_495 InlineTextBox "第14集"
+            uid=1_496 button "清空记录"
+              uid=1_497 StaticText "清空记录"
+                uid=1_498 InlineTextBox "清空记录"
