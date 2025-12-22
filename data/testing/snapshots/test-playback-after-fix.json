@@ -1,0 +1,242 @@
+uid=13_0 RootWebArea "Cycani视频代理 MVP" url="http://localhost:3006/"
+  uid=13_1 ignored
+    uid=13_2 generic
+      uid=13_3 ignored
+        uid=13_4 navigation
+          uid=13_5 ignored
+            uid=13_6 link "🎬 Cycani视频代理 MVP" url="http://localhost:3006/#"
+              uid=13_7 StaticText "🎬 Cycani视频代理 MVP"
+                uid=13_8 InlineTextBox "🎬 Cycani视频代理 MVP"
+            uid=13_9 generic
+              uid=13_10 button "📜 播放历史 " expandable
+                uid=13_11 StaticText "📜 播放历史 "
+                  uid=13_12 InlineTextBox "📜 播放历史 "
+                uid=13_13 generic
+            uid=13_14 generic
+              uid=13_15 button "🔧 设置 " expandable
+                uid=13_16 StaticText "🔧 设置 "
+                  uid=13_17 InlineTextBox "🔧 设置 "
+                uid=13_18 generic
+              uid=13_19 ignored
+                uid=13_20 ignored
+            uid=13_21 generic
+              uid=13_22 StaticText "✅ 服务器连接正常"
+                uid=13_23 InlineTextBox "✅ 服务器连接正常"
+        uid=13_24 ignored
+          uid=13_25 generic
+            uid=13_26 ignored
+              uid=13_27 generic
+                uid=13_28 ignored
+                  uid=13_29 heading "📺 继续观看" level="5"
+                    uid=13_30 StaticText "📺 继续观看"
+                      uid=13_31 InlineTextBox "📺 继续观看"
+                  uid=13_32 generic
+                    uid=13_33 StaticText "上次未看完的内容"
+                      uid=13_34 InlineTextBox "上次未看完的内容"
+                uid=13_35 ignored
+                  uid=13_36 generic
+                    uid=13_37 ignored
+                      uid=13_38 generic
+                        uid=13_39 generic
+                          uid=13_40 image "赛马娘 芦毛灰姑娘 第2部分" url="http://localhost:3006/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2Ff8%2Fee%2F530377_B3tg1.jpg"
+                          uid=13_41 generic
+                            uid=13_42 ignored
+                              uid=13_43 ignored
+                        uid=13_44 ignored
+                          uid=13_45 heading "赛马娘 芦毛灰姑娘 第2部分" level="6"
+                            uid=13_46 StaticText "赛马娘 芦毛灰姑娘 第2部分"
+                              uid=13_47 InlineTextBox "赛马娘 芦毛灰姑娘 第2部"
+                              uid=13_48 InlineTextBox "分"
+                          uid=13_49 paragraph
+                            uid=13_50 StaticText "赛马娘 芦毛灰姑娘 第2部分_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！"
+                              uid=13_51 InlineTextBox "赛马娘 芦毛灰姑娘 第2部"
+                              uid=13_52 InlineTextBox "分_第01集_TV番组 - 次元"
+                              uid=13_53 InlineTextBox "城动画 - 海量蓝光番剧免费"
+                              uid=13_54 InlineTextBox "看！"
+                          uid=13_55 paragraph
+                            uid=13_56 StaticText "2:28 / 23:48"
+                              uid=13_57 InlineTextBox "2:28 / 23:48"
+                          uid=13_58 button "继续观看"
+                            uid=13_59 StaticText "继续观看"
+                              uid=13_60 InlineTextBox "继续观看"
+          uid=13_61 ignored
+            uid=13_62 ignored
+              uid=13_63 generic
+                uid=13_64 ignored
+                  uid=13_65 heading "🔍 动画筛选与搜索" level="5"
+                    uid=13_66 StaticText "🔍 动画筛选与搜索"
+                      uid=13_67 InlineTextBox "🔍 动画筛选与搜索"
+                  uid=13_68 button "🎯 ID跳转"
+                    uid=13_69 StaticText "🎯 ID跳转"
+                      uid=13_70 InlineTextBox "🎯 ID跳转"
+                uid=13_71 ignored
+                  uid=13_72 ignored
+                    uid=13_73 ignored
+                      uid=13_74 textbox "搜索动画名称..."
+                        uid=13_75 ignored
+                        uid=13_76 generic
+                    uid=13_77 ignored
+                      uid=13_78 combobox expandable haspopup="menu" value="所有类型"
+                        uid=13_79 MenuListPopup
+                          uid=13_80 option "所有类型" selectable selected value="所有类型"
+                          uid=13_81 option "原创" selectable value="原创"
+                          uid=13_82 option "漫画改" selectable value="漫画改"
+                          uid=13_83 option "小说改" selectable value="小说改"
+                          uid=13_84 option "游戏改" selectable value="游戏改"
+                          uid=13_85 option "热血" selectable value="热血"
+                          uid=13_86 option "科幻" selectable value="科幻"
+                          uid=13_87 option "治愈" selectable value="治愈"
+                          uid=13_88 option "校园" selectable value="校园"
+                          uid=13_89 option "恋爱" selectable value="恋爱"
+                          uid=13_90 option "奇幻" selectable value="奇幻"
+                    uid=13_91 ignored
+                      uid=13_92 combobox expandable haspopup="menu" value="年份"
+                        uid=13_93 MenuListPopup
+                          uid=13_94 option "年份" selectable selected value="年份"
+                          uid=13_95 option "2025" selectable value="2025"
+                          uid=13_96 option "2024" selectable value="2024"
+                          uid=13_97 option "2023" selectable value="2023"
+                          uid=13_98 option "2022" selectable value="2022"
+                          uid=13_99 option "2021" selectable value="2021"
+                          uid=13_100 option "2020" selectable value="2020"
+                    uid=13_101 ignored
+                      uid=13_102 combobox expandable haspopup="menu" value="月份"
+                        uid=13_103 MenuListPopup
+                          uid=13_104 option "月份" selectable selected value="月份"
+                          uid=13_105 option "1月" selectable value="1月"
+                          uid=13_106 option "2月" selectable value="2月"
+                          uid=13_107 option "3月" selectable value="3月"
+                          uid=13_108 option "4月" selectable value="4月"
+                          uid=13_109 option "5月" selectable value="5月"
+                          uid=13_110 option "6月" selectable value="6月"
+                          uid=13_111 option "7月" selectable value="7月"
+                          uid=13_112 option "8月" selectable value="8月"
+                          uid=13_113 option "9月" selectable value="9月"
+                          uid=13_114 option "10月" selectable value="10月"
+                          uid=13_115 option "11月" selectable value="11月"
+                          uid=13_116 option "12月" selectable value="12月"
+                    uid=13_117 ignored
+                      uid=13_118 combobox expandable haspopup="menu" value="按最新"
+                        uid=13_119 MenuListPopup
+                          uid=13_120 option "按最新" selectable selected value="按最新"
+                          uid=13_121 option "按最热" selectable value="按最热"
+                          uid=13_122 option "按评分" selectable value="按评分"
+                    uid=13_123 generic
+                      uid=13_124 button "筛选中..." disableable disabled
+                        uid=13_125 generic
+                          uid=13_126 StaticText "筛选中..."
+                            uid=13_127 InlineTextBox "筛选中..."
+                        uid=13_128 status
+          uid=13_129 ignored
+            uid=13_130 ignored
+              uid=13_131 ignored
+                uid=13_132 heading "📺 动画列表" level="5"
+                  uid=13_133 StaticText "📺 动画列表"
+                    uid=13_134 InlineTextBox "📺 动画列表"
+                uid=13_135 generic
+                  uid=13_136 StaticText "共 48 部动画"
+                    uid=13_137 InlineTextBox "共 48 部动画"
+              uid=13_138 generic
+                uid=13_139 ignored
+                  uid=13_140 ignored
+                    uid=13_141 status
+                      uid=13_142 ignored
+                        uid=13_143 StaticText "加载中..."
+                          uid=13_144 InlineTextBox "加载中..."
+                    uid=13_145 generic
+                      uid=13_146 StaticText "正在加载动画列表..."
+                        uid=13_147 InlineTextBox "正在加载动画列表..."
+              uid=13_148 generic
+                uid=13_149 navigation "动画列表分页"
+                  uid=13_150 list
+                    uid=13_151 listitem level="1"
+                      uid=13_152 link "1" url="http://localhost:3006/#"
+                        uid=13_153 StaticText "1"
+                          uid=13_154 InlineTextBox "1"
+                    uid=13_155 listitem level="1"
+                      uid=13_156 link "2" url="http://localhost:3006/#"
+                        uid=13_157 StaticText "2"
+                          uid=13_158 InlineTextBox "2"
+                    uid=13_159 listitem level="1"
+                      uid=13_160 link "3" url="http://localhost:3006/#"
+                        uid=13_161 StaticText "3"
+                          uid=13_162 InlineTextBox "3"
+                    uid=13_163 listitem level="1"
+                      uid=13_164 link "下一页" url="http://localhost:3006/#"
+                        uid=13_165 StaticText "下一页"
+                          uid=13_166 InlineTextBox "下一页"
+          uid=13_167 ignored
+          uid=13_168 ignored
+          uid=13_169 ignored
+          uid=13_170 ignored
+          uid=13_171 ignored
+          uid=13_172 ignored
+          uid=13_173 ignored
+          uid=13_174 ignored
+          uid=13_175 ignored
+          uid=13_176 ignored
+          uid=13_177 ignored
+          uid=13_178 ignored
+          uid=13_179 ignored
+          uid=13_180 ignored
+          uid=13_181 ignored
+            uid=13_182 ignored
+              uid=13_183 ignored
+              uid=13_184 ignored
+                uid=13_185 ignored
+              uid=13_186 ignored
+                uid=13_187 ignored
+                  uid=13_188 ignored
+                  uid=13_189 ignored
+                    uid=13_190 ignored
+                      uid=13_191 ignored
+                    uid=13_192 ignored
+                    uid=13_193 ignored
+                      uid=13_194 ignored
+                      uid=13_195 ignored
+                      uid=13_196 ignored
+                    uid=13_197 ignored
+                      uid=13_198 ignored
+                    uid=13_199 ignored
+                      uid=13_200 ignored
+                  uid=13_201 ignored
+              uid=13_202 ignored
+              uid=13_203 ignored
+              uid=13_204 ignored
+              uid=13_205 ignored
+              uid=13_206 ignored
+                uid=13_207 ignored
+                uid=13_208 ignored
+                uid=13_209 ignored
+                uid=13_210 ignored
+                uid=13_211 ignored
+                uid=13_212 ignored
+                uid=13_213 ignored
+                uid=13_214 ignored
+                uid=13_215 ignored
+                uid=13_216 ignored
+          uid=13_217 ignored
+          uid=13_218 ignored
+          uid=13_219 ignored
+          uid=13_220 ignored
+          uid=13_221 ignored
+          uid=13_222 ignored
+            uid=13_223 ignored
+              uid=13_224 generic
+                uid=13_225 ignored
+                  uid=13_226 heading "🔧 调试信息" level="5"
+                    uid=13_227 StaticText "🔧 调试信息"
+                      uid=13_228 InlineTextBox "🔧 调试信息"
+                uid=13_229 ignored
+      uid=13_230 ignored
+        uid=13_231 ignored
+      uid=13_232 ignored
+        uid=13_233 ignored
+      uid=13_234 ignored
+      uid=13_235 ignored
+      uid=13_236 ignored
+        uid=13_237 ignored
+      uid=13_238 ignored
+      uid=13_239 ignored
+        uid=13_240 ignored
+      uid=13_241 ignored

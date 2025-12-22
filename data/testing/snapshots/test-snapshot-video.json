@@ -1,0 +1,162 @@
+uid=2_0 RootWebArea "Cycani视频代理 MVP" url="http://localhost:3006/"
+  uid=2_1 navigation
+    uid=2_2 StaticText "🎬 Cycani视频代理 MVP"
+    uid=2_3 StaticText "✅ 服务器连接正常"
+  uid=2_4 heading "📺 继续观看" level="5"
+  uid=2_5 StaticText "上次未看完的内容"
+  uid=2_6 image "赛马娘 芦毛灰姑娘 第2部分" url="http://localhost:3006/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2Ff8%2Fee%2F530377_B3tg1.jpg"
+  uid=2_7 heading "赛马娘 芦毛灰姑娘 第2部分" level="6"
+  uid=2_8 StaticText "赛马娘 芦毛灰姑娘 第2部分_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！"
+  uid=2_9 StaticText "3:17 / 23:48"
+  uid=2_10 button "继续观看"
+  uid=2_11 heading "📺 动画列表" level="5"
+  uid=2_12 StaticText "共 48 部动画"
+  uid=2_13 navigation "动画列表分页"
+    uid=2_14 link "1" url="http://localhost:3006/#"
+      uid=2_15 StaticText "1"
+    uid=2_16 link "2" url="http://localhost:3006/#"
+      uid=2_17 StaticText "2"
+    uid=2_18 link "3" url="http://localhost:3006/#"
+      uid=2_19 StaticText "3"
+    uid=2_20 link "下一页" url="http://localhost:3006/#"
+      uid=2_21 StaticText "下一页"
+  uid=2_22 heading "赛马娘 芦毛灰姑娘 第2部分_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！" level="5"
+  uid=2_23 button "自动播放: 开"
+  uid=2_24 button "下一集"
+  uid=2_25 button "返回列表"
+  uid=2_26 button "Pause" pressed
+  uid=2_27 slider "Seek" orientation="horizontal" value="6.317200183868408" valuemax="1428.052001953125" valuemin="0" valuetext="00:06 of 23:48"
+  uid=2_28 StaticText "00:00"
+  uid=2_29 StaticText "00:06"
+  uid=2_30 StaticText "⁄"
+  uid=2_31 StaticText "23:48"
+  uid=2_32 button "Mute"
+  uid=2_33 slider "Volume" orientation="horizontal" value="100" valuemax="100" valuemin="0" valuetext="100.0%"
+  uid=2_34 button "Settings" expandable haspopup="menu"
+  uid=2_35 button "PIP"
+  uid=2_36 button "Enter fullscreen"
+  uid=2_37 StaticText "当前集数:"
+  uid=2_38 StaticText " "
+  uid=2_39 StaticText "S1E1"
+  uid=2_40 StaticText "视频源:"
+  uid=2_41 StaticText " "
+  uid=2_42 StaticText "p3-dcd-sign.byteimg.com"
+  uid=2_43 heading "快速跳转" level="6"
+  uid=2_44 textbox "动画ID (可选)"
+  uid=2_45 spinbutton "季度" value="1" valuemax="0" valuemin="1" valuetext="1"
+  uid=2_46 spinbutton "集数" valuemax="0" valuemin="1" valuetext=""
+  uid=2_47 button "跳转播放"
+  uid=2_48 heading "选集列表" level="6"
+  uid=2_49 StaticText "共20集"
+  uid=2_50 StaticText "S1E1"
+  uid=2_51 StaticText "第01集"
+  uid=2_52 StaticText "S1E2"
+  uid=2_53 StaticText "第02集"
+  uid=2_54 StaticText "S1E3"
+  uid=2_55 StaticText "第03集"
+  uid=2_56 StaticText "S1E4"
+  uid=2_57 StaticText "第04集"
+  uid=2_58 StaticText "S1E5"
+  uid=2_59 StaticText "第05集"
+  uid=2_60 StaticText "S1E6"
+  uid=2_61 StaticText "第06集"
+  uid=2_62 StaticText "S1E7"
+  uid=2_63 StaticText "第07集"
+  uid=2_64 StaticText "S1E8"
+  uid=2_65 StaticText "第08集"
+  uid=2_66 StaticText "S1E9"
+  uid=2_67 StaticText "第09集"
+  uid=2_68 StaticText "S1E10"
+  uid=2_69 StaticText "第10集"
+  uid=2_70 StaticText "S2E1"
+  uid=2_71 StaticText "第01集"
+  uid=2_72 StaticText "S2E2"
+  uid=2_73 StaticText "第02集"
+  uid=2_74 StaticText "S2E3"
+  uid=2_75 StaticText "第03集"
+  uid=2_76 StaticText "S2E4"
+  uid=2_77 StaticText "第04集"
+  uid=2_78 StaticText "S2E5"
+  uid=2_79 StaticText "第05集"
+  uid=2_80 StaticText "S2E6"
+  uid=2_81 StaticText "第06集"
+  uid=2_82 StaticText "S2E7"
+  uid=2_83 StaticText "第07集"
+  uid=2_84 StaticText "S2E8"
+  uid=2_85 StaticText "第08集"
+  uid=2_86 StaticText "S2E9"
+  uid=2_87 StaticText "第09集"
+  uid=2_88 StaticText "S2E10"
+  uid=2_89 StaticText "第10集"
+  uid=2_90 heading "🔧 调试信息" level="5"
+  uid=2_91 StaticText "
+                                等待操作...
+                            "
+  uid=2_92 StaticText "[20:32:48] [INFO] 初始化应用...
+"
+  uid=2_93 StaticText "[20:32:48] [SUCCESS] 应用初始化完成
+"
+  uid=2_94 StaticText "[20:32:48] [SUCCESS] 服务器连接成功
+"
+  uid=2_95 StaticText "[20:32:48] [SUCCESS] 播放器初始化完成
+"
+  uid=2_96 StaticText "[20:32:48] [SUCCESS] 加载了 1 个继续观看项目
+"
+  uid=2_97 StaticText "[20:32:49] [SUCCESS] 成功加载 48 部动画
+"
+  uid=2_98 StaticText "[20:32:54] [INFO] 选择动画: 赛马娘 芦毛灰姑娘 第2部分 (ID: 5998)
+"
+  uid=2_99 StaticText "[20:32:55] [INFO] 请求加载剧集: BangumiID=5998, Season=1, Episode=1
+"
+  uid=2_100 StaticText "[20:33:00] [INFO] 收到剧集数据:
+"
+  uid=2_101 StaticText "[20:33:00] [INFO] {
+  "bangumiId": "5998",
+  "season": "1",
+  "episode": "1",
+  "originalUrl": "https://www.cycani.org/watch/5998/1/1.html",
+  "title": "赛马娘 芦毛灰姑娘 第2部分_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
+  "videoUrl": "JTYzJTc5JTYzJTYxJTZFJTY5JTJEJTY0JTYzJTY0JTMwJTMxJTJEJTM3JTMzJTMwJTYxJTY0JTY0JTMyJTY2JTMwJTYzJTMxJTM2JTM0JTY2JTMzJTM5JTM1JTM1JTMxJTYxJTM1JTM2JTYzJTYzJTMwJTM5JTYzJTMxJTYxJTYxJTMyJTM1JTMxJTM3JTM2JTM0JTM2JTMwJTM4JTM1JTMzJTM3",
+  "decryptedVideoUrl": "cycani-dcd01-730add2f0c164f39551a56cc09c1aa251764608537",
+  "nextUrl": "JTYzJTc5JTYzJTYxJTZFJTY5JTJEJTY0JTYzJTY0JTMwJTMxJTJEJTM5JTMwJTMwJTM1JTYyJTY2JTY2JTYyJTY0JTM5JTYxJTMzJTY1JTY2JTYzJTM4JTY0JTY1JTM5JTYyJTM5JTM5JTM4JTMzJTMzJTY1JTY0JTM4JTMzJTMxJTY0JTM5JTMxJTM3JTM2JTM0JTM2JTMwJTM4JTM1JTM3JTM0",
+  "decryptedNextUrl": "cycani-dcd01-9005bffbd9a3efc8de9b99833ed831d91764608574",
+  "videoData": {
+    "flag": "play",
+    "encrypt": 2,
+    "trysee": 0,
+    "points": 0,
+    "link": "/watch/5998/1/1.html",
+    "link_next": "/watch/5998/1/2.html",
+    "link_pre": "",
+    "vod_data": {
+      "vod_name": "赛马娘 芦毛灰姑娘 第2部分",
+      "vod_actor": "福元陽介・佐々木啓悟・宮原拓也,,,",
+      "vod_director": "みうらたけひろ",
+      "vod_class": "2025年10月,CygamesPictures,漫画改,运动"
+    },
+    "url": "JTYzJTc5JTYzJTYxJTZFJTY5JTJEJTY0JTYzJTY0JTMwJTMxJTJEJTM3JTMzJTMwJTYxJTY0JTY0JTMyJTY2JTMwJTYzJTMxJTM2JTM0JTY2JTMzJTM5JTM1JTM1JTMxJTYxJTM1JTM2JTYzJTYzJTMwJTM5JTYzJTMxJTYxJTYxJTMyJTM1JTMxJTM3JTM2JTM0JTM2JTMwJTM4JTM1JTMzJTM3",
+    "url_next": "JTYzJTc5JTYzJTYxJTZFJTY5JTJEJTY0JTYzJTY0JTMwJTMxJTJEJTM5JTMwJTMwJTM1JTYyJTY2JTY2JTYyJTY0JTM5JTYxJTMzJTY1JTY2JTYzJTM4JTY0JTY1JTM5JTYyJTM5JTM5JTM4JTMzJTMzJTY1JTY0JTM4JTMzJTMxJTY0JTM5JTMxJTM3JTM2JTM0JTM2JTMwJTM4JTM1JTM3JTM0",
+    "from": "dcd01",
+    "server": "no",
+    "note": "",
+    "id": "5998",
+    "sid": 1,
+    "nid": 1
+  },
+  "realVideoUrl": "https://p3-dcd-sign.byteimg.com/tos-cn-i-f042mdwyw7/cc9132885413489ab28537d3ce5f4ed3~tplv-jxcbcipi3j-image.image?lk3s=13ddc783&x-expires=1766323857&x-signature=kKiO3FJaOVUITqLQ%2BpUxLxOpVX0%3D"
+}
+"
+  uid=2_102 StaticText "[20:33:00] [INFO] 加载动画 5998 的选集列表
+"
+  uid=2_103 StaticText "[20:33:01] [SUCCESS] 成功加载 20 集
+"
+  uid=2_104 StaticText "[20:33:01] [INFO] 加载视频: https://p3-dcd-sign.byteimg.com/tos-cn-i-f042mdwyw7/cc9132885413489ab28537d3ce5f4ed3~tplv-jxcbcipi3j-image.image?lk3s=13ddc783&x-expires=1766323857&x-signature=kKiO3FJaOVUITqLQ%2BpUxLxOpVX0%3D
+"
+  uid=2_105 StaticText "[20:33:01] [SUCCESS] 视频加载成功
+"
+  uid=2_106 StaticText "[20:33:01] [SUCCESS] 成功选择动画并加载第一集: 赛马娘 芦毛灰姑娘 第2部分
+"
+  uid=2_107 StaticText "[20:33:01] [SUCCESS] 播放器初始化完成
+"
+  uid=2_108 StaticText "[20:33:02] [INFO] 开始播放
+"

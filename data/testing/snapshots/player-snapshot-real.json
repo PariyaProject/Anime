@@ -1,0 +1,9 @@
+uid=2_0 RootWebArea "MuiPlayer PRO" url="https://player.cycanime.com/?url=cycani-dcd01-7c0057fe4756658131a29301cfc4cf0f1754962525&episode=14&bangumiId=3944&season=1&current_url=cycani-dcd01-7c0057fe4756658131a29301cfc4cf0f1754962525&next_episode=15&next_url=https%3A%2F%2Fplayer.cycanime.com%2F%3Furl%3Dplaceholder%26episode%3D15&next_mainUrl=https%3A%2F%2Fwww.cycani.org%2Fwatch%2F3944%2F1%2F15.html&timestamp=1766291969333"
+  uid=2_1 generic
+    uid=2_2 button "MuiPlayer PRO"
+    uid=2_3 button
+    uid=2_4 button "00:00 / 23:42"
+    uid=2_5 button
+    uid=2_6 button
+    uid=2_7 button
+    uid=2_8 button

@@ -1,0 +1,24 @@
+{
+  "name": "cycani-proxy-server",
+  "version": "1.0.0",
+  "description": "MVP版本 - 次元城视频代理服务",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "helmet": "^7.1.0",
+    "puppeteer": "^21.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["proxy", "video", "cycani"],
+  "author": "Your Name",
+  "license": "MIT"
+}

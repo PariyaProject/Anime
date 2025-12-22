@@ -1,0 +1,76 @@
+{
+  "default": {
+    "userId": "default",
+    "watchHistory": [
+      {
+        "animeId": "6001",
+        "animeTitle": "不擅吸血的吸血鬼",
+        "animeCover": "/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2F11%2F05%2F536102_Gohth.jpg",
+        "season": "1",
+        "episode": "11",
+        "episodeTitle": "不擅吸血的吸血鬼_第11集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
+        "position": 1420,
+        "duration": 1420,
+        "watchDate": "2025-12-21T14:17:31.372Z",
+        "completed": true
+      },
+      {
+        "animeId": "6001",
+        "animeTitle": "不擅吸血的吸血鬼",
+        "animeCover": "/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2F11%2F05%2F536102_Gohth.jpg",
+        "season": "1",
+        "episode": "1",
+        "episodeTitle": "不擅吸血的吸血鬼_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
+        "position": 1420,
+        "duration": 1420,
+        "watchDate": "2025-12-21T14:16:53.364Z",
+        "completed": true
+      },
+      {
+        "animeId": "5988",
+        "animeTitle": "间谍过家家 第三季",
+        "animeCover": "/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2F3d%2F79%2F498378_3ycrL.jpg",
+        "season": "1",
+        "episode": "1",
+        "episodeTitle": "间谍过家家 第三季_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
+        "position": 7,
+        "duration": 1420,
+        "watchDate": "2025-12-21T13:38:19.336Z",
+        "completed": false
+      },
+      {
+        "animeId": "5998",
+        "animeTitle": "赛马娘 芦毛灰姑娘 第2部分",
+        "animeCover": "/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2Ff8%2Fee%2F530377_B3tg1.jpg",
+        "season": "1",
+        "episode": "1",
+        "episodeTitle": "赛马娘 芦毛灰姑娘 第2部分_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
+        "position": 23,
+        "duration": 1428,
+        "watchDate": "2025-12-21T13:45:12.190Z",
+        "completed": false
+      }
+    ],
+    "lastPositions": {
+      "5998_1_1": {
+        "position": 23,
+        "lastUpdated": "2025-12-21T13:45:12.190Z"
+      },
+      "5988_1_1": {
+        "position": 7,
+        "lastUpdated": "2025-12-21T13:38:19.336Z"
+      },
+      "6001_1_1": {
+        "position": 1420,
+        "lastUpdated": "2025-12-21T14:16:53.364Z"
+      },
+      "6001_1_11": {
+        "position": 1420,
+        "lastUpdated": "2025-12-21T14:17:31.372Z"
+      }
+    },
+    "createdAt": "2025-12-21T09:07:27.032Z",
+    "updatedAt": "2025-12-21T09:07:27.032Z"
+  },
+  "updatedAt": "2025-12-21T14:17:31.372Z"
+}

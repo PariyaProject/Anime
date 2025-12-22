@@ -1,0 +1,9 @@
+uid=2_0 RootWebArea "MuiPlayer PRO" url="https://player.cycanime.com/?url=cycani-dcd01-f4051184f6d8da3601a9b35b6a62946b1754962547"
+  uid=2_1 generic "MuiPlayer PRO 02:09 / 23:42" focusable focused
+    uid=2_2 button "MuiPlayer PRO"
+    uid=2_3 button
+    uid=2_4 button "02:09 / 23:42"
+    uid=2_5 button
+    uid=2_6 button
+    uid=2_7 button
+    uid=2_8 button
