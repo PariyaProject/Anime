@@ -1,0 +1,43 @@
+version: 2
+updates:
+  # Enable version updates for the frontend
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    # Group dependencies by type
+    groups:
+      vue-dependencies:
+        patterns:
+          - "vue*"
+          - "@vue*"
+          - "pinia"
+          - "vue-router"
+      element-plus:
+        patterns:
+          - "element-plus*"
+      testing-dependencies:
+        patterns:
+          - "@vitest*"
+          - "vitest"
+          - "@playwright/test"
+          - "@vue/test-utils"
+      build-dependencies:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "typescript"
+          - "esbuild"
+    # Ignore major version updates for stability
+    ignore:
+      - dependency-name: "vue"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "element-plus"
+        update-types: ["version-update:semver-major"]
+    reviewers:
+      - "maintainer-team"
+    labels:
+      - "dependencies"
+      - "frontend"

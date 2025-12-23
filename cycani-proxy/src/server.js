@@ -1,13 +1,15 @@
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
 const cheerio = require('cheerio');
 const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 
 // Import URL constructor utilities
 const { AnimeListUrlConstructor, ApiParameterValidator, AnimeListCache } = require('./urlConstructor');
+// Import enhanced HTTP client with rate limiting and retry logic
+const { httpClient, getEnhancedHeaders } = require('./httpClient');
 
 // 尝试引入Puppeteer
 let puppeteer;
@@ -136,7 +138,7 @@ app.use(helmet({
 
 // CORS配置
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true
 }));
 
@@ -144,22 +146,25 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 静态文件服务（前端页面）
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// 静态文件服务
+// 优先使用新的Vue前端 (dist/)，如果不存在则使用旧的Bootstrap前端 (public/)
+const distPath = path.join(__dirname, '..', 'dist');
+const publicPath = path.join(__dirname, '..', 'public');
 
-// 请求头配置 - 模拟真实浏览器
-const DEFAULT_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Cache-Control': 'max-age=0'
-};
+// 检查dist目录是否存在
+const useVueFrontend = fsSync.existsSync(distPath);
+
+if (useVueFrontend) {
+    console.log('✅ 使用Vue前端 (dist/)');
+    // 服务Vue前端静态文件
+    app.use(express.static(distPath));
+    // 同时也服务public目录的静态文件（用于占位符SVG等）
+    app.use('/placeholder', express.static(publicPath));
+} else {
+    console.log('⚠️ dist/目录不存在，使用旧版Bootstrap前端 (public/)');
+    // 服务旧版前端静态文件
+    app.use(express.static(publicPath));
+}
 
 // 日志中间件
 app.use((req, res, next) => {
@@ -195,8 +200,7 @@ async function getAnimeEpisodeCount(animeId) {
     try {
         const detailUrl = `https://www.cycani.org/bangumi/${animeId}.html`;
 
-        const response = await axios.get(detailUrl, {
-            headers: DEFAULT_HEADERS,
+        const response = await httpClient.get(detailUrl, {
             timeout: 3000 // 减少到3秒超时
         });
 
@@ -268,7 +272,10 @@ async function getAnimeEpisodeCount(animeId) {
 
 // 主页路由
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    const indexPath = useVueFrontend
+        ? path.join(distPath, 'index.html')
+        : path.join(publicPath, 'index.html');
+    res.sendFile(indexPath);
 });
 
 // API路由 - 获取剧集信息
@@ -279,8 +286,7 @@ app.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
 
         console.log(`🔍 获取剧集信息: ${targetUrl}`);
 
-        const response = await axios.get(targetUrl, {
-            headers: DEFAULT_HEADERS,
+        const response = await httpClient.get(targetUrl, {
             timeout: 10000
         });
 
@@ -387,8 +393,7 @@ app.get('/api/anime-list', async (req, res) => {
 
         console.log(`🔍 获取动画列表: ${targetUrl}`);
 
-        const response = await axios.get(targetUrl, {
-            headers: DEFAULT_HEADERS,
+        const response = await httpClient.get(targetUrl, {
             timeout: 15000
         });
 
@@ -606,8 +611,7 @@ app.get('/api/anime-list', async (req, res) => {
                 const nextUrl = urlConstructor.construct({
                     search, genre, year, letter, sort, channel, page: sourcePage + 1
                 });
-                const nextResponse = await axios.get(nextUrl, {
-                    headers: DEFAULT_HEADERS,
+                const nextResponse = await httpClient.get(nextUrl, {
                     timeout: 15000
                 });
                 const $next = cheerio.load(nextResponse.data);
@@ -705,15 +709,15 @@ app.get('/api/image-proxy', async (req, res) => {
 
         // 如果URL无效，返回占位符图片
         if (!url || url.includes('data:image')) {
-            return res.redirect('https://via.placeholder.com/200x280/f8f9fa/6c757d?text=无封面');
+            return res.redirect('/api/placeholder-image');
         }
 
-        console.log(`🖼️ 代理图片: ${url}`);
+        console.log(`🖼️ 代理图片: ${decodeURIComponent(url).substring(0, 100)}...`);
 
-        const response = await axios.get(url, {
-            headers: DEFAULT_HEADERS,
+        const response = await httpClient.get(url, {
             timeout: 10000,
-            responseType: 'arraybuffer'
+            responseType: 'arraybuffer',
+            skipRetry: true // 图片加载失败不重试，直接用占位符
         });
 
         // 设置正确的Content-Type
@@ -726,8 +730,8 @@ app.get('/api/image-proxy', async (req, res) => {
 
     } catch (error) {
         console.error('❌ 图片代理失败:', error.message);
-        // 如果代理失败，返回占位符图片
-        res.redirect('https://via.placeholder.com/200x280/f8f9fa/6c757d?text=加载失败');
+        // 如果代理失败，返回本地占位符图片（不使用外部服务）
+        res.redirect('/api/placeholder-image');
     }
 });
 
@@ -912,8 +916,7 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
         const weeklyUrl = 'https://www.cycani.org/index.php/label/weekday.html';
 
         try {
-            const response = await axios.get(weeklyUrl, {
-                headers: DEFAULT_HEADERS,
+            const response = await httpClient.get(weeklyUrl, {
                 timeout: 10000
             });
 
@@ -1003,8 +1006,7 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
         // If weekly page doesn't work, try homepage
         if (Object.values(scheduleData).every(dayList => dayList.length === 0)) {
             try {
-                const homeResponse = await axios.get('https://www.cycani.org/', {
-                    headers: DEFAULT_HEADERS,
+                const homeResponse = await httpClient.get('https://www.cycani.org/', {
                     timeout: 10000
                 });
 
@@ -1096,8 +1098,7 @@ app.get('/api/search-anime', async (req, res) => {
 
         // 使用搜索接口
         const searchUrl = `https://www.cycani.org/search?wd=${encodeURIComponent(q)}`;
-        const response = await axios.get(searchUrl, {
-            headers: DEFAULT_HEADERS,
+        const response = await httpClient.get(searchUrl, {
             timeout: 15000
         });
 
@@ -1155,8 +1156,7 @@ app.get('/api/anime/:animeId', async (req, res) => {
 
         console.log(`🔍 获取动画详情: ${detailUrl}`);
 
-        const response = await axios.get(detailUrl, {
-            headers: DEFAULT_HEADERS,
+        const response = await httpClient.get(detailUrl, {
             timeout: 15000
         });
 
@@ -1550,11 +1550,7 @@ async function parseWithPuppeteer(playerUrl) {
 // 使用Axios解析页面 (备用方案)
 async function parseWithAxios(playerUrl) {
     try {
-        const response = await axios.get(playerUrl, {
-            headers: {
-                ...DEFAULT_HEADERS,
-                'Referer': 'https://www.cycani.org/'
-            },
+        const response = await httpClient.get(playerUrl, {
             timeout: 10000
         });
 
@@ -1685,6 +1681,21 @@ function isValidVideoUrl(url) {
         return false;
     }
 }
+
+// SPA fallback for Vue Router history mode
+// 处理所有非API路由，返回index.html以支持前端路由
+// 必须放在所有API路由之后，错误处理之前
+app.use((req, res, next) => {
+    // 如果请求的是API路由或静态文件（有扩展名），则跳过
+    if (req.path.startsWith('/api/') || req.path.includes('.')) {
+        return next();
+    }
+
+    const indexPath = useVueFrontend
+        ? path.join(distPath, 'index.html')
+        : path.join(publicPath, 'index.html');
+    res.sendFile(indexPath);
+});
 
 // 错误处理中间件
 app.use((error, req, res, next) => {

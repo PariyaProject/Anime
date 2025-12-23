@@ -1,0 +1,145 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { WatchRecord, PositionRecord } from '@/types/history.types'
+import { historyService } from '@/services/history.service'
+
+export const useHistoryStore = defineStore('history', () => {
+  // State
+  const watchHistory = ref<WatchRecord[]>([])
+  const continueWatching = ref<WatchRecord[]>([])
+  const lastPositions = ref<Record<string, PositionRecord>>({})
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Getters
+  const hasHistory = computed(() => watchHistory.value.length > 0)
+  const hasContinueWatching = computed(() => continueWatching.value.length > 0)
+
+  // Actions
+  async function loadWatchHistory() {
+    loading.value = true
+    error.value = null
+    try {
+      watchHistory.value = await historyService.getWatchHistory()
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load watch history'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadContinueWatching() {
+    loading.value = true
+    error.value = null
+    try {
+      continueWatching.value = await historyService.getContinueWatching()
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load continue watching'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function addToHistory(record: WatchRecord) {
+    try {
+      await historyService.saveHistoryRecord(record)
+
+      // Update local state
+      const existingIndex = watchHistory.value.findIndex(
+        (r) =>
+          r.animeId === record.animeId &&
+          r.season === record.season &&
+          r.episode === record.episode
+      )
+
+      if (existingIndex >= 0) {
+        watchHistory.value[existingIndex] = record
+      } else {
+        watchHistory.value.unshift(record)
+      }
+
+      // Update continue watching if not completed
+      if (!record.completed) {
+        const existingContinueIndex = continueWatching.value.findIndex(
+          (r) => r.animeId === record.animeId
+        )
+        if (existingContinueIndex >= 0) {
+          continueWatching.value[existingContinueIndex] = record
+        } else {
+          continueWatching.value.unshift(record)
+        }
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Failed to save history'
+      throw err
+    }
+  }
+
+  async function savePosition(
+    animeId: string,
+    season: number,
+    episode: number,
+    position: number
+  ) {
+    try {
+      await historyService.saveWatchPosition(animeId, season, episode, position)
+
+      const key = `${animeId}_${season}_${episode}`
+      lastPositions.value[key] = {
+        position,
+        lastUpdated: new Date().toISOString()
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Failed to save position'
+      throw err
+    }
+  }
+
+  async function loadLastPosition(animeId: string, season: number, episode: number) {
+    try {
+      const positionRecord = await historyService.getLastPosition(animeId, season, episode)
+
+      if (positionRecord) {
+        const key = `${animeId}_${season}_${episode}`
+        lastPositions.value[key] = positionRecord
+        return positionRecord.position
+      }
+
+      return 0
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load last position'
+      return 0
+    }
+  }
+
+  function getPosition(animeId: string, season: number, episode: number): number {
+    const key = `${animeId}_${season}_${episode}`
+    return lastPositions.value[key]?.position || 0
+  }
+
+  function clearError() {
+    error.value = null
+  }
+
+  return {
+    // State
+    watchHistory,
+    continueWatching,
+    lastPositions,
+    loading,
+    error,
+    // Getters
+    hasHistory,
+    hasContinueWatching,
+    // Actions
+    loadWatchHistory,
+    loadContinueWatching,
+    addToHistory,
+    savePosition,
+    loadLastPosition,
+    getPosition,
+    clearError
+  }
+})

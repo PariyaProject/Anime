@@ -26,11 +26,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repository contains projects for cycani.org (次元城动画网站):
 
 1. **Node.js Proxy Server** (`cycani-proxy/` directory): Web-based proxy service with watch history management
-2. **Legacy Tampermonkey Userscripts**: Archived userscripts for automatic video playback (see `data/archive/legacy-userscripts/`)
+2. **Vue.js Frontend** (`cycani-proxy/frontend/` directory): Modern Vue 3 web application
+3. **Legacy Tampermonkey Userscripts**: Archived userscripts for automatic video playback (see `data/archive/legacy-userscripts/`)
 
 ### Proxy Server Project (cycani-proxy/)
 
 This is a Node.js Express server that provides a web interface for browsing and watching anime from cycani.org with enhanced features like watch history, position memory, and multi-user architecture support.
+
+### Vue.js Frontend (cycani-proxy/frontend/)
+
+A modern Vue 3 + TypeScript web application with:
+- **Vue 3** with Composition API and `<script setup>` syntax
+- **TypeScript** for type safety
+- **Pinia** for state management
+- **Vue Router** for navigation
+- **Element Plus** for UI components
+- **Plyr** for video playback
+- **Tailwind CSS** for custom styling
+- **Vite** for fast development and optimized production builds
+- **Vitest** for unit testing (96 tests passing)
 
 ## Architecture
 
@@ -38,9 +52,20 @@ This is a Node.js Express server that provides a web interface for browsing and 
 
 **Core Components:**
 - **Express Server** (`src/server.js`): Main API server with CORS proxy and web scraping
+- **HTTP Client** (`src/httpClient.js`): Enhanced HTTP client with anti-bot protection features:
+  - User-Agent rotation with modern browser signatures
+  - Request rate limiting (configurable via `RATE_LIMIT_DELAY` env var, default 1000ms)
+  - Automatic retry with exponential backoff on 403, 429, 503 errors
+  - Enhanced browser headers (Sec-Ch-Ua, Sec-Fetch-*, Referer)
 - **WatchHistoryManager**: Class-based system for managing user watch history and position tracking
-- **Web Interface** (`public/`): Bootstrap-based responsive web application
+- **Vue.js Frontend** (`frontend/`): Modern Vue 3 web application (see Vue Frontend Architecture below)
+- **Legacy Web Interface** (`public/`): Bootstrap-based responsive web application (fallback)
 - **Puppeteer Integration**: Advanced video URL extraction for complex player implementations
+
+**Deployment:**
+- The Express server automatically detects and serves the Vue frontend from `dist/` if available
+- Falls back to the legacy Bootstrap frontend in `public/` if `dist/` doesn't exist
+- Supports Vue Router's history mode with SPA fallback for client-side routing
 
 **Key Features:**
 - Cross-origin proxy for cycani.org content
@@ -53,6 +78,54 @@ This is a Node.js Express server that provides a web interface for browsing and 
 ### Legacy Userscript System (Archived)
 
 The project previously included a dual-script Tampermonkey system for automatic video playback. These scripts are now archived in `data/archive/legacy-userscripts/` for reference.
+
+### Vue Frontend Architecture
+
+**Directory Structure:**
+```
+frontend/src/
+├── components/
+│   ├── anime/          # Anime-related components (AnimeCard, AnimeGrid)
+│   ├── common/         # Common components (LoadingSpinner, ErrorMessage)
+│   ├── history/        # History-related components (HistoryCard)
+│   ├── layout/         # Layout components (AppNavbar, AppContainer)
+│   ├── player/         # Player components (VideoPlayer, EpisodeList)
+│   └── VirtualList.vue # Virtual scrolling component
+├── composables/
+│   ├── useAnimeApi.ts  # Anime API composable
+│   ├── useDarkMode.ts  # Dark mode toggle
+│   ├── useHistory.ts   # Watch history management
+│   ├── useKeyboardShortcuts.ts  # Keyboard shortcuts (Space, Ctrl+Right)
+│   ├── useNotification.ts       # Toast notifications
+│   ├── usePlayer.ts    # Video player management
+│   └── useServerStatus.ts       # Server health monitoring
+├── stores/
+│   ├── anime.ts        # Anime store (list, current anime, pagination)
+│   ├── history.ts      # Watch history store
+│   ├── player.ts       # Player state store
+│   └── ui.ts           # UI state store (dark mode, notifications)
+├── services/
+│   ├── api.ts          # Axios instance with retry logic
+│   ├── anime.service.ts
+│   ├── episode.service.ts
+│   └── history.service.ts
+├── types/              # TypeScript type definitions
+├── utils/              # Utility functions (format, retry)
+└── views/
+    ├── HomeView.vue    # Main anime list page
+    ├── WatchView.vue   # Video player page
+    └── HistoryView.vue # Watch history page
+```
+
+**Key Features:**
+- Dark mode with localStorage persistence
+- Watch history with position memory
+- Keyboard shortcuts (Space: play/pause, Ctrl+Right: next episode)
+- Server status monitoring with health indicator
+- Responsive design (mobile/tablet/desktop)
+- Virtual scrolling for large lists
+- Auto-save watch position every 30 seconds
+- Toast notifications for errors/success
 
 ### Cross-Domain Data Flow
 
@@ -119,9 +192,26 @@ The project has reached a stable state with:
 D:\Code\ClaudeCode\
 ├── cycani-proxy/                   # Proxy server
 │   ├── src/                        # Server source code
-│   │   └── server.js               # Main Express server
-│   ├── public/                     # Static web files
-│   ├── package.json                # Dependencies
+│   │   ├── server.js               # Main Express server
+│   │   ├── httpClient.js           # Enhanced HTTP client with anti-bot protection
+│   │   └── urlConstructor.js       # URL construction utilities
+│   ├── frontend/                   # Vue 3 Frontend
+│   │   ├── src/
+│   │   │   ├── components/         # Vue components
+│   │   │   ├── composables/        # Vue composables
+│   │   │   ├── stores/             # Pinia stores
+│   │   │   ├── services/           # API services
+│   │   │   ├── types/              # TypeScript types
+│   │   │   ├── utils/              # Utility functions
+│   │   │   └── views/              # Page views
+│   │   ├── public/                 # Static assets
+│   │   ├── index.html              # Entry HTML
+│   │   ├── vite.config.ts          # Vite config
+│   │   ├── vitest.config.ts        # Vitest config
+│   │   └── package.json            # Frontend dependencies
+│   ├── dist/                       # Built Vue frontend (auto-generated)
+│   ├── public/                     # Legacy Bootstrap web files (fallback)
+│   ├── package.json                # Server dependencies
 │   └── package-lock.json           # Lock file
 ├── data/                           # Unified data storage
 │   ├── proxy/                      # Proxy server data
@@ -145,6 +235,34 @@ D:\Code\ClaudeCode\
 The userscripts are now archived in `data/archive/legacy-userscripts/` for reference. They are no longer actively maintained but can be used if needed.
 
 ## Commands
+
+### Vue Frontend Development
+
+**Start Development Server:**
+```bash
+cd cycani-proxy/frontend
+npm run dev  # Vite dev server on http://localhost:5173
+```
+
+**Build for Production:**
+```bash
+cd cycani-proxy/frontend
+npm run build  # Outputs to ../dist/
+```
+
+**Run Unit Tests:**
+```bash
+cd cycani-proxy/frontend
+npm test              # Run tests in watch mode
+npm test -- --run     # Run tests once
+npm test -- --ui      # Run tests with UI
+```
+
+**Install Dependencies:**
+```bash
+cd cycani-proxy/frontend
+npm install
+```
 
 ### Proxy Server Development
 
@@ -206,7 +324,7 @@ curl -s "http://localhost:3017/api/continue-watching"
 
 **Utility:**
 - `GET /api/placeholder-image` - Fallback image service
-- Static file serving from `/public` directory
+- Static file serving from `/dist` (Vue frontend) or `/public` (legacy) directory
 
 ## Data Storage
 

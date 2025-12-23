@@ -1,9 +1,10 @@
 # Project Context
 
 ## Purpose
-Dual-component system for enhancing cycani.org (次元城动画网站) anime streaming experience:
+Multi-component system for enhancing cycani.org (次元城动画网站) anime streaming experience:
 - **Tampermonkey Userscripts**: Automated video playback and episode progression
 - **Node.js Proxy Server**: Web-based proxy service with watch history management
+- **Vue.js Frontend**: Modern SPA for browsing and watching anime (NEW - 2024)
 
 ## Tech Stack
 
@@ -18,8 +19,21 @@ Dual-component system for enhancing cycani.org (次元城动画网站) anime str
 - **Node.js**: Runtime environment
 - **Express.js**: Web server framework
 - **Puppeteer**: Web scraping and video URL extraction
-- **Bootstrap 5**: Frontend UI framework
 - **JSON**: Data storage and API format
+
+### Vue.js Frontend (NEW - 2024)
+- **Vue 3**: Progressive JavaScript framework with Composition API
+- **TypeScript**: Type-safe JavaScript
+- **Pinia**: State management
+- **Vue Router**: Client-side routing with history mode
+- **Element Plus**: UI component library
+- **Bootstrap 5**: Grid system and utility classes
+- **Plyr**: Video player component
+- **Vite**: Fast build tool and dev server
+- **Vitest**: Unit testing framework
+- **Playwright**: End-to-end testing framework
+- **ESLint**: Code linting
+- **Tailwind CSS**: Utility-first CSS framework
 
 ### Development Tools
 - **Chrome MCP**: Real-world testing and debugging
@@ -129,10 +143,12 @@ Dual-component system for enhancing cycani.org (次元城动画网站) anime str
 - **Port Configuration**: Default 3017, configurable via PORT environment variable
 - **Data Storage**: JSON files in project directory
 - **API Endpoints**: RESTful API for anime data and watch history
-- **Static Files**: Served from `public/` directory
+- **Static Files**: Served from `dist/` (Vue frontend) or `public/` (legacy Bootstrap frontend)
+- **Automatic Detection**: Express detects and serves Vue frontend if `dist/` exists
 
 ## Current Status
 - ✅ **Userscripts**: Stable v14.x with automatic playback and episode progression
 - ✅ **Proxy Server**: Functional with watch history and responsive UI
+- ✅ **Vue.js Frontend**: Production-ready SPA (108 unit tests, 4 E2E suites)
 - ✅ **Cross-Domain Communication**: Reliable URL parameter transfer system
-- ✅ **Testing**: Comprehensive real-world testing with Chrome MCP
+- ✅ **Testing**: Comprehensive testing with Vitest, Playwright, and Chrome MCP
