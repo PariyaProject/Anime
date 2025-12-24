@@ -49,3 +49,46 @@ export interface SeasonInfo {
   season: number
   episodeCount: number
 }
+
+/**
+ * Anime entry in weekly schedule
+ */
+export interface WeeklyAnime {
+  id: string
+  title: string
+  cover: string
+  rating: string
+  status: string
+  broadcastTime: string
+  url: string
+  watchUrl: string | null
+  day: string
+}
+
+/**
+ * Weekly schedule response from backend
+ */
+export interface WeeklySchedule {
+  schedule: Record<string, WeeklyAnime[]>
+  updated: string
+  filter: string
+}
+
+/**
+ * Individual search result
+ */
+export interface SearchResult {
+  id: string
+  title: string
+  cover: string
+  url: string
+}
+
+/**
+ * Search response from backend
+ */
+export interface SearchResponse {
+  animeList: SearchResult[]
+  searchQuery: string
+  totalCount: number
+}

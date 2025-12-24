@@ -32,6 +32,16 @@ const retryInterceptor = createRetryInterceptor({
 
 api.interceptors.response.use(
   (response) => {
+    // Check for backend success wrapper
+    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+      if (!response.data.success) {
+        throw {
+          message: response.data.error || 'API request failed',
+          status: response.status,
+          code: response.data.code
+        }
+      }
+    }
     return response
   },
   (error): Promise<ApiError> => {

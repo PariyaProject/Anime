@@ -10,8 +10,8 @@ export function useAnimeApi() {
     loading.value = true
     error.value = null
     try {
-      const response = await animeService.getAnimeList(params)
-      return response.data
+      const data = await animeService.getAnimeList(params)
+      return data
     } catch (err: any) {
       error.value = err.message || 'Failed to load anime list'
       throw err

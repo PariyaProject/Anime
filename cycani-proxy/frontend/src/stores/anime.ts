@@ -23,11 +23,11 @@ export const useAnimeStore = defineStore('anime', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await animeService.getAnimeList(params)
-      animeList.value = response.data.animeList
-      totalCount.value = response.data.totalCount
-      totalPages.value = response.data.totalPages
-      currentPage.value = response.data.currentPage
+      const data = await animeService.getAnimeList(params)
+      animeList.value = data.animeList
+      totalCount.value = data.totalCount
+      totalPages.value = data.totalPages
+      currentPage.value = data.currentPage
     } catch (err: any) {
       error.value = err.message || 'Failed to load anime list'
       throw err

@@ -339,9 +339,17 @@ async function savePosition() {
   if (currentTime.value > 0) {
     try {
       await historyStore.savePosition(
-        animeId.value,
-        season.value,
-        episode.value,
+        {
+          id: animeId.value,
+          title: animeTitle.value,
+          cover: animeCover.value
+        },
+        {
+          season: season.value,
+          episode: episode.value,
+          title: episodeTitle.value,
+          duration: duration.value
+        },
         currentTime.value
       )
     } catch (err) {

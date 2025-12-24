@@ -141,15 +141,26 @@ describe('History Service', () => {
   })
 
   describe('saveWatchPosition', () => {
-    it('saves watch position', async () => {
+    it('saves watch position with animeInfo and episodeInfo', async () => {
       mockApiPost.mockResolvedValueOnce({ data: { success: true } } as any)
 
-      await historyService.saveWatchPosition('123', 1, 1, 150)
-
-      expect(mockApiPost).toHaveBeenCalledWith('/api/last-position', {
-        animeId: '123',
+      const animeInfo = {
+        id: '123',
+        title: 'Test Anime',
+        cover: 'https://example.com/cover.jpg'
+      }
+      const episodeInfo = {
         season: 1,
         episode: 1,
+        title: 'Episode 1',
+        duration: 1440
+      }
+
+      await historyService.saveWatchPosition(animeInfo, episodeInfo, 150)
+
+      expect(mockApiPost).toHaveBeenCalledWith('/api/watch-history', {
+        animeInfo,
+        episodeInfo,
         position: 150
       })
     })
@@ -157,12 +168,23 @@ describe('History Service', () => {
     it('handles position of 0', async () => {
       mockApiPost.mockResolvedValueOnce({ data: { success: true } } as any)
 
-      await historyService.saveWatchPosition('123', 1, 1, 0)
-
-      expect(mockApiPost).toHaveBeenCalledWith('/api/last-position', {
-        animeId: '123',
+      const animeInfo = {
+        id: '123',
+        title: 'Test Anime',
+        cover: 'https://example.com/cover.jpg'
+      }
+      const episodeInfo = {
         season: 1,
         episode: 1,
+        title: 'Episode 1',
+        duration: 1440
+      }
+
+      await historyService.saveWatchPosition(animeInfo, episodeInfo, 0)
+
+      expect(mockApiPost).toHaveBeenCalledWith('/api/watch-history', {
+        animeInfo,
+        episodeInfo,
         position: 0
       })
     })
@@ -171,7 +193,20 @@ describe('History Service', () => {
       const error = new Error('Failed to save position')
       mockApiPost.mockRejectedValueOnce(error)
 
-      await expect(historyService.saveWatchPosition('123', 1, 1, 150)).rejects.toThrow('Failed to save position')
+      const animeInfo = {
+        id: '123',
+        title: 'Test Anime',
+        cover: 'https://example.com/cover.jpg'
+      }
+      const episodeInfo = {
+        season: 1,
+        episode: 1,
+        title: 'Episode 1',
+        duration: 1440
+      }
+
+      await expect(historyService.saveWatchPosition(animeInfo, episodeInfo, 150))
+        .rejects.toThrow('Failed to save position')
     })
   })
 

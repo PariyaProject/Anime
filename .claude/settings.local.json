@@ -55,7 +55,8 @@
       "Skill(openspec:archive)",
       "Skill(openspec:proposal)",
       "Bash(findstr:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Skill(code-review:code-review)"
     ],
     "deny": [],
     "ask": []

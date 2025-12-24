@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { WatchRecord, PositionRecord } from '@/types/history.types'
-import { historyService } from '@/services/history.service'
+import { historyService, type AnimeInfo, type EpisodeInfo } from '@/services/history.service'
 
 export const useHistoryStore = defineStore('history', () => {
   // State
@@ -77,16 +77,19 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
+  /**
+   * Save watch position with anime and episode information.
+   * This replaces the old savePosition(animeId, season, episode, position) method.
+   */
   async function savePosition(
-    animeId: string,
-    season: number,
-    episode: number,
+    animeInfo: AnimeInfo,
+    episodeInfo: EpisodeInfo,
     position: number
   ) {
     try {
-      await historyService.saveWatchPosition(animeId, season, episode, position)
+      await historyService.saveWatchPosition(animeInfo, episodeInfo, position)
 
-      const key = `${animeId}_${season}_${episode}`
+      const key = `${animeInfo.id}_${episodeInfo.season}_${episodeInfo.episode}`
       lastPositions.value[key] = {
         position,
         lastUpdated: new Date().toISOString()
@@ -94,6 +97,24 @@ export const useHistoryStore = defineStore('history', () => {
     } catch (err: any) {
       error.value = err.message || 'Failed to save position'
       throw err
+    }
+  }
+
+  /**
+   * @deprecated Use savePosition(animeInfo, episodeInfo, position) instead.
+   * This method will be removed in a future version.
+   */
+  async function savePositionLegacy(
+    animeId: string,
+    season: number,
+    episode: number,
+    position: number
+  ) {
+    console.warn('savePositionLegacy is deprecated. Use savePosition with animeInfo and episodeInfo instead.')
+    const key = `${animeId}_${season}_${episode}`
+    lastPositions.value[key] = {
+      position,
+      lastUpdated: new Date().toISOString()
     }
   }
 
@@ -138,6 +159,7 @@ export const useHistoryStore = defineStore('history', () => {
     loadContinueWatching,
     addToHistory,
     savePosition,
+    savePositionLegacy,
     loadLastPosition,
     getPosition,
     clearError

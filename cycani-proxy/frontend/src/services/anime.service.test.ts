@@ -28,10 +28,13 @@ describe('Anime Service', () => {
 
       mockApiGet.mockResolvedValueOnce({
         data: {
-          animeList: mockResponse,
-          totalCount: 2,
-          totalPages: 1,
-          currentPage: 1
+          success: true,
+          data: {
+            animeList: mockResponse,
+            totalCount: 2,
+            totalPages: 1,
+            currentPage: 1
+          }
         }
       } as any)
 
@@ -60,10 +63,13 @@ describe('Anime Service', () => {
 
       mockApiGet.mockResolvedValueOnce({
         data: {
-          animeList: mockResponse,
-          totalCount: 1,
-          totalPages: 1,
-          currentPage: 1
+          success: true,
+          data: {
+            animeList: mockResponse,
+            totalCount: 1,
+            totalPages: 1,
+            currentPage: 1
+          }
         }
       } as any)
 
@@ -76,10 +82,13 @@ describe('Anime Service', () => {
     it('handles empty response', async () => {
       mockApiGet.mockResolvedValueOnce({
         data: {
-          animeList: [],
-          totalCount: 0,
-          totalPages: 0,
-          currentPage: 1
+          success: true,
+          data: {
+            animeList: [],
+            totalCount: 0,
+            totalPages: 0,
+            currentPage: 1
+          }
         }
       } as any)
 
