@@ -22,6 +22,77 @@ try {
     console.log('安装方法: npm install puppeteer');
 }
 
+// 浏览器实例池管理
+class BrowserPool {
+    constructor() {
+        this.browser = null;
+        this.isLaunching = false;
+        this.launchPromise = null;
+    }
+
+    async getBrowser() {
+        // 如果浏览器已经存在，直接返回
+        if (this.browser) {
+            return this.browser;
+        }
+
+        // 如果正在启动，等待启动完成
+        if (this.isLaunching) {
+            return this.launchPromise;
+        }
+
+        // 启动新浏览器
+        this.isLaunching = true;
+        this.launchPromise = this._launchBrowser();
+
+        try {
+            this.browser = await this.launchPromise;
+            return this.browser;
+        } finally {
+            this.isLaunching = false;
+            this.launchPromise = null;
+        }
+    }
+
+    async _launchBrowser() {
+        try {
+            console.log('🚀 启动浏览器实例...');
+            const browser = await puppeteer.launch({
+                headless: "new",
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            });
+
+            // 监听浏览器关闭事件
+            browser.on('disconnected', () => {
+                console.log('🔌 浏览器已断开连接');
+                this.browser = null;
+            });
+
+            console.log('✅ 浏览器实例已启动');
+            return browser;
+        } catch (error) {
+            console.error('❌ 启动浏览器失败:', error.message);
+            this.isLaunching = false;
+            throw error;
+        }
+    }
+
+    async close() {
+        if (this.browser) {
+            try {
+                await this.browser.close();
+                console.log('✅ 浏览器实例已关闭');
+            } catch (error) {
+                console.error('❌ 关闭浏览器失败:', error.message);
+            }
+            this.browser = null;
+        }
+    }
+}
+
+// 创建全局浏览器池
+const browserPool = puppeteer ? new BrowserPool() : null;
+
 const app = express();
 const PORT = process.env.PORT || 3006;
 
@@ -1227,6 +1298,9 @@ app.get('/api/anime/:animeId', async (req, res) => {
 
         // 解析剧集列表 - 使用正确的选择器
         const episodes = [];
+        // Only scrape the first play source (season=1) to avoid duplicate episodes
+        // Note: The site uses /watch/{animeId}/{source}/{episode}.html where {source} is the play source (1, 2, 3...)
+        // not the actual season number. We only use the first source to avoid duplicates.
         $(`a[href*="/watch/${animeId}/"]`).each((_, element) => {
             const $episodeLink = $(element);
             const href = $episodeLink.attr('href');
@@ -1235,32 +1309,83 @@ app.get('/api/anime/:animeId', async (req, res) => {
             if (href && episodeText) {
                 const episodeMatch = href.match(new RegExp(`/watch/${animeId}/(\\d+)/(\\d+)\\.html`));
                 if (episodeMatch) {
-                    const season = parseInt(episodeMatch[1]);
+                    const source = parseInt(episodeMatch[1]);
                     const episode = parseInt(episodeMatch[2]);
 
-                    // 避免重复
-                    const exists = episodes.find(ep => ep.season === season && ep.episode === episode);
-                    if (!exists) {
-                        episodes.push({
-                            season,
-                            episode,
-                            title: episodeText,
-                            url: `https://www.cycani.org${href}`
-                        });
+                    // Only include episodes from the first play source (source=1)
+                    // This avoids duplicate episodes when multiple play sources are available
+                    if (source === 1) {
+                        // Avoid duplicates
+                        const exists = episodes.find(ep => ep.episode === episode);
+                        if (!exists) {
+                            episodes.push({
+                                season: 1,  // Always use season 1 for the first play source
+                                episode,
+                                title: episodeText,
+                                url: `https://www.cycani.org${href}`
+                            });
+                        }
                     }
                 }
             }
         });
 
-        // 按季数和集数排序
-        episodes.sort((a, b) => {
-            if (a.season !== b.season) {
-                return a.season - b.season;
+        // Sort by episode number
+        episodes.sort((a, b) => a.episode - b.episode);
+
+        // Scrape additional anime metadata
+        // Cover image
+        let cover = '';
+        const $coverImg = $('.detail-pic img.lazy');
+        if ($coverImg.length) {
+            cover = $coverImg.attr('data-src') || '';
+        }
+        if (!cover) {
+            const $coverImg2 = $('.detail-pic img');
+            if ($coverImg2.length) {
+                cover = $coverImg2.attr('src') || $coverImg2.attr('data-src') || '';
             }
-            return a.episode - b.episode;
-        });
+        }
+
+        // Description
+        let description = '';
+        const $descDiv = $('#height_limit');
+        if ($descDiv.length) {
+            description = $descDiv.text().trim();
+        }
+        // Fallback to meta description
+        if (!description) {
+            const $metaDesc = $('meta[name="description"]');
+            if ($metaDesc.length) {
+                description = $metaDesc.attr('content') || '';
+            }
+        }
+
+        // Year
+        let year = '';
+        const $yearSpan = $('.slide-info-remarks a[href*="/search/year/"]');
+        if ($yearSpan.length) {
+            year = $yearSpan.first().text().trim();
+        }
+
+        // Type (TV, Movie, etc.)
+        let type = 'TV';
+        // pageTitle is already declared above at line 1169
+        if (pageTitle.includes('TV番组')) {
+            type = 'TV';
+        } else if (pageTitle.includes('剧场番组')) {
+            type = '剧场';
+        } else if (pageTitle.includes('OAD')) {
+            type = 'OAD';
+        } else if (pageTitle.includes('OVA')) {
+            type = 'OVA';
+        }
 
         console.log(`✅ 解析到动画详情: ${title}, 共 ${episodes.length} 集`);
+        console.log(`📺 封面: ${cover ? '已找到' : '未找到'}`);
+        console.log(`📝 简介: ${description ? description.substring(0, 50) + '...' : '未找到'}`);
+        console.log(`📅 年份: ${year || '未找到'}`);
+        console.log(`🎬 类型: ${type}`);
 
         // 调试季节数据
         const seasons = [...new Set(episodes.map(ep => ep.season))];
@@ -1273,9 +1398,15 @@ app.get('/api/anime/:animeId', async (req, res) => {
         res.json({
             success: true,
             data: {
-                animeId,
+                id: animeId,
                 title,
-                detailUrl,
+                cover,
+                type,
+                year,
+                description,
+                score: 0,
+                status: '未知',
+                genres: [],
                 episodes,
                 totalSeasons: [...new Set(episodes.map(ep => ep.season))].length,
                 totalEpisodes: episodes.length
@@ -1373,8 +1504,6 @@ function parseEpisodeData($) {
 
         for (const script of scripts) {
             if (script && script.includes('player_aaaa')) {
-                console.log('🔍 找到包含player_aaaa的脚本，开始解析...');
-
                 // 尝试多种匹配模式
                 const patterns = [
                     /var\s+player_aaaa\s*=\s*({[^;]+});?/,
@@ -1386,28 +1515,25 @@ function parseEpisodeData($) {
                     const match = script.match(pattern);
                     if (match) {
                         try {
-                            console.log('✅ 找到匹配模式:', pattern);
                             let jsonStr = match[1];
 
                             // 尝试直接解析
                             try {
                                 videoData = JSON.parse(jsonStr);
-                                console.log('✅ 直接JSON解析成功');
+                                console.log('✅ 找到播放器数据');
                                 break;
                             } catch (e1) {
                                 // 如果直接解析失败，尝试修复语法
-                                console.log('🔧 尝试修复JSON语法...');
                                 let fixedJson = jsonStr
                                     .replace(/(\w+):/g, '"$1":')  // 添加引号到键名
                                     .replace(/'/g, '"');           // 单引号转双引号
 
                                 videoData = JSON.parse(fixedJson);
-                                console.log('✅ 修复后JSON解析成功');
+                                console.log('✅ 找到播放器数据（修复后）');
                                 break;
                             }
                         } catch (e) {
-                            console.warn('⚠️ JSON解析失败:', e.message);
-                            console.log('原始字符串片段:', jsonStr.substring(0, 200));
+                            // 静默失败，继续尝试下一个模式
                         }
                     }
                 }
@@ -1477,22 +1603,45 @@ async function parsePlayerPage(videoId) {
 /**
  * 使用Puppeteer从video元素直接读取解密后的视频URL
  * 这比拦截网络请求更可靠，因为我们获取的是浏览器已经解密后的URL
+ * 使用浏览器实例池复用浏览器，提升性能
  */
 async function getVideoUrlFromPuppeteer(playerUrl) {
-    if (!puppeteer) return null;
+    if (!browserPool) return null;
 
-    let browser = null;
+    let page = null;
     try {
-        browser = await puppeteer.launch({
-            headless: "new",
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        // 从池中获取浏览器实例
+        const browser = await browserPool.getBrowser();
 
-        const page = await browser.newPage();
+        page = await browser.newPage();
         await page.setUserAgent(getEnhancedHeaders()['User-Agent']);
 
-        console.log(`📄 访问: ${playerUrl}`);
-        await page.goto(playerUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+        // 关键：设置 Referer，模拟从 cycani.org 访问播放器
+        // 这是必须的，否则 player.cycanime.com 会拒绝请求
+        await page.setExtraHTTPHeaders({
+            'Referer': 'https://www.cycani.org/',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
+        });
+
+        // 忽略 HTTPS 错误和资源加载错误
+        await page.setBypassCSP(true);
+        page.on('error', (err) => {
+            // 静默忽略资源加载错误
+        });
+
+        console.log(`📄 访问播放器页面...`);
+
+        try {
+            await page.goto(playerUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+        } catch (gotoError) {
+            // 如果超时，尝试继续 - 页面可能已经加载完成了
+            if (gotoError.message.includes('timeout')) {
+                console.log(`⏱️ 页面加载超时，尝试继续...`);
+            } else {
+                throw gotoError;
+            }
+        }
 
         // 等待video元素出现并获取src
         const videoUrl = await page.evaluate(() => {
@@ -1513,17 +1662,44 @@ async function getVideoUrlFromPuppeteer(playerUrl) {
                 }
                 return null;
             });
-            await browser.close();
+
+            // 关闭页面，但保持浏览器运行
+            if (page) {
+                try {
+                    await page.close();
+                } catch (e) {
+                    // 忽略关闭错误
+                }
+            }
+
+            if (videoUrl2) {
+                console.log(`✅ 成功获取视频URL`);
+            } else {
+                console.log(`⚠️ 未找到 video 元素`);
+            }
             return videoUrl2;
         }
 
-        await browser.close();
+        // 关闭页面，但保持浏览器运行
+        if (page) {
+            try {
+                await page.close();
+            } catch (e) {
+                // 忽略关闭错误
+            }
+        }
+
+        console.log(`✅ 成功获取视频URL`);
         return videoUrl;
 
     } catch (error) {
         console.error('Puppeteer获取video src失败:', error.message);
-        if (browser) {
-            await browser.close();
+        if (page) {
+            try {
+                await page.close();
+            } catch (e) {
+                // 忽略关闭错误
+            }
         }
         return null;
     }
@@ -1600,11 +1776,12 @@ function decryptVideoUrl(encryptedUrl) {
 
         // 解码Base64
         const base64Decoded = Buffer.from(encryptedUrl, 'base64').toString('utf8');
-        console.log(`🔓 Base64解密: ${encryptedUrl.substring(0, 50)}... -> ${base64Decoded.substring(0, 50)}...`);
 
         // URL解码
         const urlDecoded = decodeURIComponent(base64Decoded);
-        console.log(`🔗 URL解码: ${base64Decoded.substring(0, 50)}... -> ${urlDecoded.substring(0, 50)}...`);
+
+        // 只输出最终结果，减少日志噪音
+        console.log(`🔓 解密视频ID: ${urlDecoded.substring(0, 40)}...`);
 
         return urlDecoded;
     } catch (error) {
@@ -1646,7 +1823,7 @@ app.use((req, res) => {
 });
 
 // 启动服务器
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     // 验证必要的导入
     const requiredModules = {
         express: typeof express !== 'undefined',
@@ -1670,5 +1847,40 @@ app.listen(PORT, () => {
     console.log(`🔧 开发模式: ${process.env.NODE_ENV || 'production'}`);
     console.log(`⏰ 启动时间: ${new Date().toLocaleString()}`);
 });
+
+// 优雅关闭处理
+process.on('SIGINT', async () => {
+    console.log('\n🛑 收到 SIGINT 信号，正在关闭服务器...');
+    await shutdown();
+});
+
+process.on('SIGTERM', async () => {
+    console.log('\n🛑 收到 SIGTERM 信号，正在关闭服务器...');
+    await shutdown();
+});
+
+async function shutdown() {
+    try {
+        // 关闭浏览器池
+        if (browserPool) {
+            await browserPool.close();
+        }
+
+        // 关闭服务器
+        server.close(() => {
+            console.log('✅ 服务器已关闭');
+            process.exit(0);
+        });
+
+        // 强制退出（如果 10 秒内没有关闭）
+        setTimeout(() => {
+            console.log('⚠️ 强制退出');
+            process.exit(1);
+        }, 10000);
+    } catch (error) {
+        console.error('❌ 关闭服务器时出错:', error.message);
+        process.exit(1);
+    }
+}
 
 module.exports = app;

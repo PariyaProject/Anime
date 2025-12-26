@@ -153,10 +153,11 @@
         <div class="anime-info-section mb-4">
           <div class="card">
             <img
-              :src="animeCover || placeholderImage"
+              :src="displayCoverImage"
               :alt="animeTitle"
               class="card-img-top"
               style="height: 300px; object-fit: cover"
+              @error="handleImageError"
             />
             <div class="card-body">
               <h5 class="card-title">{{ animeTitle || '加载中...' }}</h5>
@@ -208,6 +209,8 @@ import { useHistoryStore } from '@/stores/history'
 import { useUiStore } from '@/stores/ui'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useAutoplay } from '@/composables/useAutoplay'
+import { animeService } from '@/services/anime.service'
+import type { AnimeDetails } from '@/types/anime.types'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorMessage from '@/components/common/ErrorMessage.vue'
 import Plyr from 'plyr'
@@ -300,6 +303,8 @@ const episodeTitle = computed(() => {
 
 const posterImage = computed(() => animeCover.value || '')
 
+const displayCoverImage = computed(() => animeCover.value || placeholderImage)
+
 const progress = computed(() => {
   if (duration.value === 0) return 0
   return (currentTime.value / duration.value) * 100
@@ -313,20 +318,68 @@ const episodeList = computed(() => {
 const hasPrevious = computed(() => episode.value > 1)
 const hasNext = computed(() => episode.value < totalEpisodes.value)
 
+/**
+ * Load anime details (cover, type, year, description, episode list)
+ * Fetches from /api/anime/:id endpoint
+ */
+async function loadAnimeDetails(id: string): Promise<void> {
+  try {
+    console.log('📺 Loading anime details for:', id)
+    const details: AnimeDetails = await animeService.getAnimeById(id)
+
+    // Update refs with anime metadata
+    animeTitle.value = details.title
+    animeCover.value = animeService.getImageProxyUrl(details.cover) || ''
+    animeType.value = details.type || 'TV'
+    animeYear.value = details.year || ''
+    totalEpisodes.value = details.episodes?.length || 0
+    animeDescription.value = details.description || ''
+
+    console.log('✅ Anime details loaded:', {
+      title: details.title,
+      cover: animeCover.value ? 'found' : 'not found',
+      type: details.type,
+      year: details.year,
+      totalEpisodes: totalEpisodes.value
+    })
+  } catch (err: any) {
+    console.error('❌ Failed to load anime details:', err.message)
+    // Don't throw error - video playback should still work
+  }
+}
+
 async function loadEpisode() {
   loading.value = true
   error.value = null
 
   try {
-    await playerStore.loadEpisode(animeId.value, season.value, episode.value)
+    // Load episode data and anime details in parallel using Promise.allSettled
+    // This ensures video playback works even if anime details fail to load
+    const [episodeResult, animeResult] = await Promise.allSettled([
+      playerStore.loadEpisode(animeId.value, season.value, episode.value),
+      loadAnimeDetails(animeId.value)
+    ])
+
+    // Handle episode data (critical - if this fails, video won't play)
+    if (episodeResult.status === 'rejected') {
+      error.value = episodeResult.reason?.message || 'Failed to load episode'
+      loading.value = false
+      return
+    }
 
     const data = playerStore.currentEpisodeData
     if (data) {
-      animeTitle.value = data.title
+      // Update season and episode from episode data
       season.value = data.season
       episode.value = data.episode
       currentSeason.value = data.season
       jumpEpisode.value = data.episode
+
+      // Note: animeTitle, animeCover, etc. are now set by loadAnimeDetails()
+      // But keep fallback to episode data title if anime details failed
+      if (animeResult.status === 'rejected' && data.title) {
+        animeTitle.value = data.title
+      }
 
       // Only initialize Plyr if we have a direct video URL (not using iframe)
       if (!useIframePlayer.value && videoUrl.value && player) {
@@ -440,6 +493,14 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+function handleImageError() {
+  // Fallback to placeholder if cover image fails to load
+  if (animeCover.value !== placeholderImage) {
+    console.warn('⚠️ Cover image failed to load, using placeholder')
+    animeCover.value = ''
+  }
 }
 
 async function savePosition() {

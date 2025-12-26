@@ -62,7 +62,11 @@
       "Bash(npx cross-env PORT=3020 npm run dev:backend:*)",
       "Bash(npx cross-env PORT=3021 npm run dev:backend:*)",
       "Bash(ping:*)",
-      "mcp__chrome-devtools__close_page"
+      "mcp__chrome-devtools__close_page",
+      "Bash(npx openspec list:*)",
+      "Bash(npx openspec validate:*)",
+      "Bash(npx openspec show fix-watch-page-anime-info)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
