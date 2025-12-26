@@ -353,27 +353,38 @@ async function loadEpisode() {
         if (autoPlayEnabled.value) {
           // Wait for video to be ready before playing
           setTimeout(() => {
-            console.log('▶️ Attempting to play, player exists:', !!player)
-            if (player) {
-              try {
-                // Check if video element is ready
-                const media = player.media;
-                if (media && media.readyState >= 2) {
-                  console.log('✅ Video ready, playing now')
-                  player.play()
-                } else {
-                  console.log('⏳ Video not ready, waiting...')
-                  // Wait for canplay event
-                  media?.addEventListener('canplay', () => {
-                    console.log('✅ canplay event fired, playing now')
-                    player.play()
-                  }, { once: true })
-                }
-              } catch (err) {
-                console.warn('Auto-play failed:', err)
+            console.log('▶️ Attempting to play, player exists:', !!player, 'videoElement:', !!videoElement.value)
+            // Use the native video element for more reliable autoplay
+            if (videoElement.value) {
+              const media = videoElement.value
+              console.log('🎬 Video element state:', {
+                muted: media.muted,
+                paused: media.paused,
+                readyState: media.readyState
+              })
+
+              // Try unmuted autoplay, fall back to muted if blocked by browser
+              const playPromise = media.play()
+              if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch((err: any) => {
+                  if (err.name === 'NotAllowedError') {
+                    console.log('⚠️ Unmuted autoplay blocked, using muted fallback')
+                    media.muted = true
+                    media.play()
+                  } else {
+                    console.warn('Autoplay failed:', err)
+                  }
+                })
+              } else if (playPromise === undefined) {
+                // play() succeeded synchronously (no promise)
+                console.log('✅ Playback started (synchronous)')
               }
+            } else if (player) {
+              // Fallback to Plyr's play method if video element is not available
+              console.log('⚠️ videoElement not available, using Plyr play()')
+              player.play()
             }
-          }, 2000)
+          }, 1000)  // Reduced from 2000ms to match legacy implementation
         }
       } else {
         console.log('⚠️ Auto-play skipped:', {
@@ -497,7 +508,7 @@ onMounted(async () => {
           'pip',
           'fullscreen'
         ],
-        muted: true,  // Start muted to allow autoplay
+        // muted: not set (defaults to false, allows sound with autoplay)
         autoplay: false  // We'll manually trigger autoplay
       })
 
