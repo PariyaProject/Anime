@@ -70,18 +70,40 @@ const emit = defineEmits<{
   details: [anime: Anime]
 }>()
 
-// Use static SVG file from backend server
-const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-200x280.svg`
+// Get placeholder image URL as a constant
+const getPlaceholderImage = () => {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  return `${apiBaseUrl}/api/placeholder-image`
+}
 
-// Resolve image URL - prepend API base URL for relative paths
+const placeholderImage = getPlaceholderImage()
+
+// Resolve image URL - handle different URL formats correctly
 const resolvedCover = computed(() => {
   const cover = props.anime.cover
-  if (!cover || cover.startsWith('http://') || cover.startsWith('https://')) {
-    return cover || placeholderImage
+  if (!cover) {
+    return placeholderImage
   }
-  // Prepend API base URL for relative paths
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
-  return `${apiBaseUrl}${cover}`
+
+  // If it's already an absolute URL (http/https), use as-is
+  if (cover.startsWith('http://') || cover.startsWith('https://')) {
+    return cover
+  }
+
+  // If it's already an API path (/api/...), prepend backend base URL
+  if (cover.startsWith('/api/')) {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+    return `${apiBaseUrl}${cover}`
+  }
+
+  // If it's a placeholder path (/placeholder/...), prepend backend base URL
+  if (cover.startsWith('/placeholder/')) {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+    return `${apiBaseUrl}${cover}`
+  }
+
+  // Default to placeholder for any other format
+  return placeholderImage
 })
 
 function handleSelect() {

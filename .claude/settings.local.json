@@ -56,7 +56,12 @@
       "Skill(openspec:proposal)",
       "Bash(findstr:*)",
       "Bash(cat:*)",
-      "Skill(code-review:code-review)"
+      "Skill(code-review:code-review)",
+      "Bash(npx cross-env PORT=3018 npm run dev:backend:*)",
+      "Bash(npx cross-env PORT=3019 npm run dev:backend:*)",
+      "Bash(npx cross-env PORT=3020 npm run dev:backend:*)",
+      "Bash(npx cross-env PORT=3021 npm run dev:backend:*)",
+      "Bash(ping:*)"
     ],
     "deny": [],
     "ask": []

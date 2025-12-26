@@ -125,8 +125,8 @@ const uiStore = useUiStore()
 const historyStore = useHistoryStore()
 const serverStatus = useServerStatus()
 
-// Use static SVG file from backend server
-const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-40x40.svg`
+// Use static SVG file from backend server (computed to avoid initialization issues)
+const placeholderImage = computed(() => `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-40x40.svg`)
 
 const darkMode = computed(() => uiStore.darkMode)
 const continueWatching = computed(() => historyStore.continueWatching)

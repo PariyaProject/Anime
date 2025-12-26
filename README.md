@@ -7,9 +7,9 @@ A Node.js Express server that provides a web interface for browsing and watching
 - **Cross-origin proxy**: Access cycani.org content through a local proxy
 - **Real-time anime scraping**: Up-to-date anime list with proper episode counts
 - **Watch history management**: Track your viewing progress and resume from where you left off
-- **Responsive web interface**: Modern Bootstrap-based UI for browsing and watching
+- **Modern Vue 3 frontend**: Responsive SPA with dark mode, keyboard shortcuts, and virtual scrolling
 - **Position memory**: Automatic saving of playback position every 30 seconds
-- **Multi-user architecture**: Currently supports single user, designed for future expansion
+- **Unified development experience**: Single commands to manage frontend and backend services
 
 ## Quick Start
 
@@ -20,38 +20,61 @@ A Node.js Express server that provides a web interface for browsing and watching
 
 ### Installation
 
-1. Clone or download this repository
-2. Navigate to the proxy server directory:
-   ```bash
-   cd cycani-proxy
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
+From the project root directory:
 
-### Running the Server
+```bash
+# Install all dependencies (root + backend + frontend)
+npm run install:all
+```
 
-**Development mode (with auto-reload):**
+### Running the Project
+
+**Start development environment (both frontend and backend):**
 ```bash
 npm run dev
 ```
 
-**Production mode:**
+This will start:
+- Backend server at http://localhost:3006
+- Frontend dev server at http://localhost:3000
+
+**Stop all services:**
 ```bash
-npm start
+npm run stop
 ```
 
-**On a different port:**
+**Build for production:**
 ```bash
-npx cross-env PORT=3017 npm start
+npm run build    # Build frontend
+npm run start    # Start production server
 ```
+
+### Individual Service Control
+
+```bash
+# Start only backend
+npm run dev:backend
+
+# Start only frontend
+npm run dev:frontend
+```
+
+### Custom Port Configuration
+
+**Via environment variables:**
+```bash
+BACKEND_PORT=3017 FRONTEND_PORT=3001 npm run dev
+```
+
+**Via configuration file:**
+Edit `dev.config.js` in the project root to customize default ports.
 
 ### Access
 
 Open your browser and navigate to:
-- http://localhost:3006 (default port)
-- http://localhost:YOUR_PORT (if using custom port)
+- **Frontend (development)**: http://localhost:3000
+- **Backend API**: http://localhost:3006
+- **Production (after `npm run build && npm run start`)**: http://localhost:3006
 
 ## Project Structure
 
@@ -59,13 +82,16 @@ Open your browser and navigate to:
 D:\Code\ClaudeCode\
 ├── cycani-proxy/                   # Proxy server
 │   ├── src/                        # Server source code
-│   │   └── server.js               # Main Express server
-│   ├── public/                     # Static web files
-│   │   ├── index.html              # Main web interface
-│   │   ├── style.css               # Styles
-│   │   └── script.js               # Client-side JavaScript
-│   ├── package.json                # Dependencies
-│   └── package-lock.json           # Lock file
+│   │   ├── server.js               # Main Express server
+│   │   ├── httpClient.js           # Enhanced HTTP client
+│   │   └── urlConstructor.js       # URL utilities
+│   ├── frontend/                   # Vue 3 Frontend
+│   │   ├── src/                    # Vue source code
+│   │   ├── package.json            # Frontend dependencies
+│   │   └── vite.config.ts          # Vite configuration
+│   ├── dist/                       # Built Vue frontend (auto-generated)
+│   ├── public/                     # Legacy Bootstrap web files (fallback)
+│   └── package.json                # Server dependencies
 ├── data/                           # Unified data storage
 │   ├── proxy/                      # Proxy server data
 │   │   ├── watch-history.json      # User watch history
@@ -78,8 +104,12 @@ D:\Code\ClaudeCode\
 │   └── archive/                    # Archived data
 │       └── legacy-userscripts/     # Archived Tampermonkey scripts
 ├── openspec/                       # Project specifications
+├── scripts/                        # Utility scripts
+│   └── stop.js                     # Stop all services
 ├── docs/                          # Documentation
 ├── .gitignore                     # Version control rules
+├── package.json                   # Root package.json with unified commands
+├── dev.config.js                  # Development configuration
 ├── CLAUDE.md                      # Project instructions
 └── README.md                      # This file
 ```
@@ -179,10 +209,45 @@ This project is for educational and personal use only. Please respect the origin
 
 ### Common Issues
 
-- **Port already in use**: Change port using `PORT=3001 npm start`
-- **Dependencies not found**: Run `npm install` in cycani-proxy directory
-- **Anime list not loading**: Check cycani.org connectivity and console for errors
+**Port already in use:**
+```bash
+# Option 1: Use a different port via environment variables
+BACKEND_PORT=3017 FRONTEND_PORT=3001 npm run dev
+
+# Option 2: Stop the process using the port
+npm run stop
+
+# Option 3: Edit dev.config.js to change default ports
+```
+
+**Dependencies not found:**
+```bash
+# Install all dependencies
+npm run install:all
+
+# Or install individually
+npm install --prefix cycani-proxy
+npm install --prefix cycani-proxy/frontend
+```
+
+**Services won't start:**
+- Check that Node.js version is 14 or higher: `node --version`
+- Verify all dependencies are installed
+- Check for port conflicts using `npm run stop`
+- Review console output for specific error messages
+
+**Anime list not loading:**
+- Verify the backend server is running: Check http://localhost:3006/api/anime-list
+- Check cycani.org connectivity
+- Review server console for scraping errors
+
+**Frontend not connecting to backend:**
+- Ensure both services are running: `npm run dev`
+- Check that the backend URL is correct in browser console
+- Verify CORS settings in server configuration
 
 ### Getting Help
 
-Check the browser console and server logs for detailed error information. For issues related to the original cycani.org site, verify that the site is accessible directly.
+- Check the browser console and server logs for detailed error information
+- Review `CLAUDE.md` for detailed project documentation
+- For issues related to the original cycani.org site, verify that the site is accessible directly

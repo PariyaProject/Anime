@@ -131,3 +131,7 @@ Thumbs.db
 !data/proxy/watch-history.json
 !data/proxy/anime-list-detail.json
 !data/proxy/current-anime-list.json
+
+# Development configuration overrides
+dev.config.local.js
+dev.config.local.json

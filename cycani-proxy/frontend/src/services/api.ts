@@ -4,7 +4,7 @@ import { createRetryInterceptor } from '@/utils/retry'
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  timeout: 10000,
+  timeout: 30000, // Increased to 30s for episode API calls (Puppeteer can be slow)
   headers: {
     'Content-Type': 'application/json'
   }

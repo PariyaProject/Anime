@@ -236,12 +236,73 @@ The userscripts are now archived in `data/archive/legacy-userscripts/` for refer
 
 ## Commands
 
+### Quick Start (Recommended)
+
+**Install all dependencies:**
+```bash
+# From project root
+npm run install:all
+```
+
+**Start development environment (both frontend and backend):**
+```bash
+# From project root - starts both services concurrently
+npm run dev
+```
+
+**Stop all services:**
+```bash
+npm run stop
+```
+
+### Unified Development Commands
+
+Run all commands from the project root directory:
+
+```bash
+# Start both frontend and backend concurrently
+npm run dev
+
+# Start only backend server (port 3006 by default)
+npm run dev:backend
+
+# Start only frontend dev server (port 3000 by default)
+npm run dev:frontend
+
+# Build frontend for production
+npm run build
+
+# Start production server (serves built frontend)
+npm run start
+
+# Stop all running services
+npm run stop
+
+# Install all dependencies (root + backend + frontend)
+npm run install:all
+```
+
+### Custom Port Configuration
+
+**Via environment variables:**
+```bash
+# Set custom ports
+BACKEND_PORT=3017 FRONTEND_PORT=3001 npm run dev
+```
+
+**Via configuration file:**
+Edit `dev.config.js` in the project root to customize default ports and service settings.
+
+### Individual Service Commands (Legacy)
+
+These commands still work if you prefer to navigate to subdirectories:
+
 ### Vue Frontend Development
 
 **Start Development Server:**
 ```bash
 cd cycani-proxy/frontend
-npm run dev  # Vite dev server on http://localhost:5173
+npm run dev  # Vite dev server on http://localhost:3000
 ```
 
 **Build for Production:**
@@ -385,3 +446,8 @@ The project has reached a stable state with:
 - ✅ User-friendly error handling and notifications
 
 The archived userscripts in `data/archive/legacy-userscripts/` contain the final production-ready versions for reference.
+
+## Important
+
+- That ports 3000 and 3006 are currently open, with the frontend and backend services deployed respectively. Please do not start or stop the services. If necessary, use Chrome MCP for debugging.
+- When using Chrome MCP, please do not use screenshots to verify correctness. If necessary, please let me know, and I will make the judgment.

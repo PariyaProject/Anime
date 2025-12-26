@@ -15,7 +15,18 @@
         <div class="video-player-section mb-4">
           <div class="card">
             <div class="card-body p-0">
-              <div id="plyr-player" ref="playerContainer">
+              <!-- Use iframe for cycani- video IDs (player domain) -->
+              <iframe
+                v-if="useIframePlayer"
+                :src="playerUrl"
+                class="w-100"
+                style="aspect-ratio: 16/9; border: none"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+
+              <!-- Use Plyr for direct video URLs -->
+              <div v-else id="plyr-player" ref="playerContainer">
                 <video
                   v-if="videoUrl"
                   ref="videoElement"
@@ -206,8 +217,12 @@ const playerStore = usePlayerStore()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
 
-// Use static SVG file from backend server
-const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-300x400.svg`
+// Get placeholder image URL as a constant
+const getPlaceholderImage = () => {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  return `${apiBaseUrl}/api/placeholder-image`
+}
+const placeholderImage = getPlaceholderImage()
 
 const playerContainer = ref<HTMLElement | null>(null)
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -224,7 +239,27 @@ const currentSeason = ref(season.value)
 
 const jumpEpisode = ref<number>(episode.value)
 
-const videoUrl = computed(() => playerStore.currentEpisodeData?.realVideoUrl)
+// Check if we should use iframe player (for cycani- video IDs)
+const useIframePlayer = computed(() => {
+  const url = playerStore.currentEpisodeData?.realVideoUrl
+  return url && url.startsWith('cycani-')
+})
+
+// Generate player URL for iframe
+const playerUrl = computed(() => {
+  const videoId = playerStore.currentEpisodeData?.realVideoUrl
+  if (!videoId || !videoId.startsWith('cycani-')) return ''
+  return `https://player.cycanime.com/?url=${videoId}`
+})
+
+// Direct video URL for Plyr player
+const videoUrl = computed(() => {
+  const url = playerStore.currentEpisodeData?.realVideoUrl
+  // Don't use cycani- IDs with Plyr
+  if (!url || url.startsWith('cycani-')) return null
+  return url
+})
+
 const animeTitle = ref('')
 const animeCover = ref('')
 const animeType = ref('')
@@ -273,7 +308,8 @@ async function loadEpisode() {
       currentSeason.value = data.season
       jumpEpisode.value = data.episode
 
-      if (videoUrl.value && player) {
+      // Only initialize Plyr if we have a direct video URL (not using iframe)
+      if (!useIframePlayer.value && videoUrl.value && player) {
         player.source = {
           type: 'video',
           sources: [{ src: videoUrl.value, type: 'video/mp4' }]
@@ -388,7 +424,8 @@ onMounted(async () => {
   try {
     await loadEpisode()
 
-    if (playerContainer.value) {
+    // Only initialize Plyr if we're not using iframe player
+    if (!useIframePlayer.value && playerContainer.value) {
       player = new Plyr('#plyr-player', {
         controls: [
           'play-large',

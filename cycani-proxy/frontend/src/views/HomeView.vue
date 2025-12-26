@@ -187,8 +187,12 @@ const animeStore = useAnimeStore()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
 
-// Use static SVG file from backend server
-const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-80x80.svg`
+// Get placeholder image URL as a constant
+const getPlaceholderImage = () => {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  return `${apiBaseUrl}/api/placeholder-image`
+}
+const placeholderImage = getPlaceholderImage()
 
 const filters = ref<FilterParams>({
   search: '',

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cheerio = require('cheerio');
+const axios = require('axios');
 const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs').promises;
@@ -295,17 +296,17 @@ app.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
         // 解析页面中的视频信息
         const episodeData = parseEpisodeData($);
 
-        // 尝试通过Puppeteer获取真实的视频URL
+        // 尝试通过HTTP+AES解密获取真实的视频URL
         if (episodeData.decryptedVideoUrl) {
-            console.log('🔍 尝试通过Puppeteer获取真实视频URL:', episodeData.decryptedVideoUrl);
+            console.log('🔍 尝试获取真实视频URL:', episodeData.decryptedVideoUrl);
             const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl);
             if (realVideoUrl) {
                 episodeData.realVideoUrl = realVideoUrl;
                 console.log('✅ 成功获取真实视频URL:', realVideoUrl.substring(0, 100) + '...');
             } else {
-                // 如果Puppeteer失败，使用解密后的ID作为备用
-                episodeData.realVideoUrl = episodeData.decryptedVideoUrl;
-                console.log('⚠️ Puppeteer失败，使用解密ID作为备用:', episodeData.realVideoUrl);
+                // 如果解密失败，使用播放器URL作为备用
+                episodeData.realVideoUrl = `https://player.cycanime.com/?url=${episodeData.decryptedVideoUrl}`;
+                console.log('⚠️ 解密失败，返回播放器URL作为备用:', episodeData.realVideoUrl);
             }
         }
 
@@ -414,11 +415,10 @@ app.get('/api/anime-list', async (req, res) => {
                 if (animeId && animeId[1]) {
                     const title = $img.attr('alt') || $link.attr('title') || '';
 
-                    // Process image URL
+                    // Process image URL - return original URLs directly for better performance
+                    // Frontend will handle CORS errors with fallback to placeholder
                     let imgSrc = $img.attr('data-src') || $img.attr('src') || '';
-                    if (imgSrc && (imgSrc.includes('baidu.com') || imgSrc.startsWith('https://'))) {
-                        imgSrc = `/api/image-proxy?url=${encodeURIComponent(imgSrc)}`;
-                    } else {
+                    if (!imgSrc || (!imgSrc.startsWith('http://') && !imgSrc.startsWith('https://'))) {
                         imgSrc = '/api/placeholder-image';
                     }
 
@@ -627,10 +627,9 @@ app.get('/api/anime-list', async (req, res) => {
                         const animeId = href?.match(/\/bangumi\/(\d+)\.html/);
                         if (animeId && animeId[1]) {
                             const title = $img.attr('alt') || $link.attr('title') || '';
+                            // Use original image URL directly - frontend handles CORS errors
                             let imgSrc = $img.attr('data-src') || $img.attr('src') || '';
-                            if (imgSrc && (imgSrc.includes('baidu.com') || imgSrc.startsWith('https://'))) {
-                                imgSrc = `/api/image-proxy?url=${encodeURIComponent(imgSrc)}`;
-                            } else {
+                            if (!imgSrc || (!imgSrc.startsWith('http://') && !imgSrc.startsWith('https://'))) {
                                 imgSrc = '/api/placeholder-image';
                             }
 
@@ -724,7 +723,15 @@ app.get('/api/image-proxy', async (req, res) => {
         const contentType = response.headers['content-type'] || 'image/jpeg';
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'public, max-age=86400'); // 缓存一天
+
+        // CORS headers - allow cross-origin requests
         res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Access-Control-Allow-Headers', '*');
+
+        // Cross-Origin headers to fix ERR_BLOCKED_BY_RESPONSE.NotSameOrigin
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
 
         res.send(response.data);
 
@@ -749,6 +756,16 @@ app.get('/api/placeholder-image', (req, res) => {
 
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'public, max-age=86400');
+
+    // CORS headers - allow cross-origin requests
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+
+    // Cross-Origin headers to fix ERR_BLOCKED_BY_RESPONSE.NotSameOrigin
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+
     res.send(svg);
 });
 
@@ -1350,7 +1367,7 @@ app.get('/api/stream', async (req, res) => {
             method: 'GET',
             url: url,
             headers: {
-                'User-Agent': DEFAULT_HEADERS['User-Agent'],
+                ...getEnhancedHeaders(url),
                 'Referer': 'https://player.cycanime.com/',
                 'Range': req.headers.range || ''
             },
@@ -1451,18 +1468,27 @@ async function parsePlayerPage(videoId) {
         const playerUrl = `https://player.cycanime.com/?url=${videoId}`;
         console.log(`🎬 解析播放器页面: ${playerUrl}`);
 
-        // 使用Puppeteer监控网络请求获取真实byteimg.com URL
+        // 方法1: 尝试使用Puppeteer从video元素直接读取解密后的URL
         if (puppeteer) {
-            console.log('🤖 使用Puppeteer监控网络请求...');
-            const realVideoUrl = await parseWithPuppeteer(playerUrl);
-            if (realVideoUrl) {
-                console.log(`✅ Puppeteer成功捕获真实视频URL: ${realVideoUrl.substring(0, 100) + '...'}`);
-                return realVideoUrl;
+            console.log('🤖 使用Puppeteer从video元素读取URL...');
+            const videoUrl = await getVideoUrlFromPuppeteer(playerUrl);
+            if (videoUrl) {
+                console.log(`✅ Puppeteer成功: ${videoUrl.substring(0, 80)}...`);
+                return videoUrl;
             }
-            console.log('⚠️ Puppeteer未能捕获到视频URL');
+            console.log('⚠️ Puppeteer方法失败');
         }
 
-        console.log('❌ 无法获取真实视频URL');
+        // 方法2: HTTP方法作为备用（目前解密不工作，但保留以备将来使用）
+        console.log('📡 尝试HTTP+AES解密方法...');
+        const realVideoUrl = await parseWithAxios(playerUrl);
+
+        if (realVideoUrl) {
+            console.log(`✅ HTTP方法成功: ${realVideoUrl.substring(0, 100) + '...'}`);
+            return realVideoUrl;
+        }
+
+        console.log('❌ 所有方法都失败');
         return null;
 
     } catch (error) {
@@ -1471,85 +1497,52 @@ async function parsePlayerPage(videoId) {
     }
 }
 
-// 使用Puppeteer解析页面
-async function parseWithPuppeteer(playerUrl) {
+/**
+ * 使用Puppeteer从video元素直接读取解密后的视频URL
+ * 这比拦截网络请求更可靠，因为我们获取的是浏览器已经解密后的URL
+ */
+async function getVideoUrlFromPuppeteer(playerUrl) {
     if (!puppeteer) return null;
 
     let browser = null;
     try {
         browser = await puppeteer.launch({
-            headless: "new",  // 使用新的Headless模式
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
+            headless: "new",
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
         const page = await browser.newPage();
+        await page.setUserAgent(getEnhancedHeaders()['User-Agent']);
 
-        // 设置User-Agent和视口
-        await page.setUserAgent(DEFAULT_HEADERS['User-Agent']);
-        await page.setViewport({ width: 1920, height: 1080 });
+        console.log(`📄 访问: ${playerUrl}`);
+        await page.goto(playerUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-        // 监听网络请求以捕获byteimg.com视频URL
-        let capturedVideoUrl = null;
-
-        // 使用Promise来等待网络请求
-        const videoUrlPromise = new Promise((resolve) => {
-            page.on('response', async (response) => {
-                const url = response.url();
-                // 捕获byteimg.com的视频资源请求
-                if (url.includes('byteimg.com') &&
-                    (url.includes('image.image') ||
-                     url.includes('video') ||
-                     url.includes('tplv-') ||
-                     url.includes('.image'))) {
-                    capturedVideoUrl = url;
-                    console.log(`🎯 Puppeteer捕获到byteimg视频请求: ${url.substring(0, 100) + '...'}`);
-                    resolve(url); // 解析Promise以继续执行
-                }
-            });
-        });
-
-        // 访问播放器页面
-        console.log(`📄 Puppeteer访问播放器页面: ${playerUrl}`);
-        await page.goto(playerUrl, {
-            waitUntil: 'networkidle2',
-            timeout: 20000
-        });
-
-        console.log('⏳ 等待视频资源加载...');
-
-        // 等待网络请求完成或超时
-        try {
-            const videoUrl = await Promise.race([
-                videoUrlPromise,
-                new Promise(resolve => setTimeout(() => resolve(null), 12000)) // 12秒超时
-            ]);
-
-            if (videoUrl) {
-                console.log('✅ 成功捕获到视频URL');
-                return videoUrl;
-            } else {
-                console.log('⏳ 等待额外的视频请求时间...');
-                await page.waitForTimeout(3000);
-                return capturedVideoUrl; // 返回可能已捕获的URL
+        // 等待video元素出现并获取src
+        const videoUrl = await page.evaluate(() => {
+            const video = document.querySelector('video');
+            if (video && (video.src || video.currentSrc)) {
+                return video.src || video.currentSrc;
             }
-        } catch (error) {
-            console.log('⏳ 等待网络请求时出错，返回已捕获的URL');
-            return capturedVideoUrl;
-        }
+            return null;
+        });
+
+        await browser.close();
+
+        return videoUrl;
 
     } catch (error) {
-        console.error('Puppeteer解析失败:', error.message);
-        return null;
-    } finally {
+        console.error('Puppeteer获取video src失败:', error.message);
         if (browser) {
             await browser.close();
         }
+        return null;
     }
 }
 
 // 使用Axios解析页面 (备用方案)
 async function parseWithAxios(playerUrl) {
     try {
+        console.log(`🌐 获取播放器页面: ${playerUrl}`);
         const response = await httpClient.get(playerUrl, {
             timeout: 10000
         });
@@ -1557,84 +1550,55 @@ async function parseWithAxios(playerUrl) {
         const $ = cheerio.load(response.data);
         console.log('📄 页面标题:', $('title').text());
 
-        // 多种方式查找视频元素
-        let videoSrc = null;
-
         // 方法1: 直接查找video标签
         const videoElements = $('video');
         if (videoElements.length > 0) {
-            videoSrc = videoElements.first().attr('src') ||
-                       videoElements.first().attr('data-src') ||
-                       videoElements.first().attr('current-src');
-            console.log(`🎥 方法1: 从video标签找到: ${videoSrc ? videoSrc.substring(0, 100) + '...' : 'null'}`);
-        }
-
-        // 方法2: 从HTML内容中直接提取URL
-        if (!videoSrc) {
-            const htmlContent = response.data;
-            const urlMatches = htmlContent.match(/https:\/\/[^"\s]+\.(?:mp4|m3u8|webm|flv)[^"\s]*/gi);
-            if (urlMatches && urlMatches.length > 0) {
-                videoSrc = urlMatches.find(url =>
-                    url.includes('byteimg.com') ||
-                    url.includes('tos-cn') ||
-                    url.includes('video') ||
-                    url.includes('media')
-                );
-                console.log(`🎥 方法2: 从HTML中找到: ${videoSrc ? videoSrc.substring(0, 100) + '...' : 'null'}`);
+            const videoSrc = videoElements.first().attr('src') ||
+                           videoElements.first().attr('data-src') ||
+                           videoElements.first().attr('current-src');
+            if (videoSrc) {
+                console.log(`✅ 方法1 (video标签): 找到视频源`);
+                return videoSrc;
             }
         }
 
-        // 方法3: 从MuiPlayer配置中提取
-        if (!videoSrc) {
-            const scripts = $('script').map((_, el) => $(el).html()).get();
-            for (const script of scripts) {
-                if (script && script.includes('config')) {
-                    const configMatch = script.match(/"url":\s*"([^"]+)"/);
-                    if (configMatch && configMatch[1]) {
-                        const configUrl = configMatch[1];
-                        // 检查是否是加密的URL
-                        if (configUrl.startsWith('+')) {
-                            console.log('🔓 发现加密的config URL，尝试解密...');
-                            try {
-                                // 尝试Base64解密
-                                const decoded = Buffer.from(configUrl.substring(1), 'base64').toString('utf8');
-                                if (decoded.startsWith('http')) {
-                                    videoSrc = decoded;
-                                    console.log(`🎥 方法3: 解密config URL成功: ${videoSrc.substring(0, 100) + '...'}`);
-                                }
-                            } catch (e) {
-                                console.warn('config URL解密失败:', e.message);
-                            }
-                        }
-                    }
-                }
+        // 方法2: 从HTML中直接提取URL
+        const htmlContent = response.data;
+        const urlMatches = htmlContent.match(/https:\/\/[^"\s]+\.(?:mp4|m3u8|webm|flv)[^"\s]*/gi);
+        if (urlMatches && urlMatches.length > 0) {
+            const videoSrc = urlMatches.find(url =>
+                url.includes('byteimg.com') ||
+                url.includes('tos-cn') ||
+                url.includes('video') ||
+                url.includes('media')
+            );
+            if (videoSrc) {
+                console.log(`✅ 方法2 (HTML正则): 找到视频源`);
+                return videoSrc;
             }
         }
 
-        // 方法4: 查找所有带src属性的元素
-        if (!videoSrc) {
-            const elementsWithSrc = $('[src]');
-            elementsWithSrc.each((_, element) => {
-                const src = $(element).attr('src');
-                if (src && (src.includes('video') || src.includes('media') || src.includes('tos-cn'))) {
-                    videoSrc = src;
-                    console.log(`🎥 方法4: 从元素找到: ${src.substring(0, 100) + '...'}`);
-                    return false; // 停止查找
-                }
-            });
-        }
+        // 方法3: 查找所有带src属性的元素
+        const elementsWithSrc = $('[src]');
+        let foundVideoSrc = null;
+        elementsWithSrc.each((_, element) => {
+            const src = $(element).attr('src');
+            if (src && (src.includes('video') || src.includes('media') || src.includes('tos-cn') || src.includes('byteimg.com'))) {
+                foundVideoSrc = src;
+                return false;
+            }
+        });
 
-        if (videoSrc) {
-            console.log(`✅ 最终找到视频源: ${videoSrc}`);
-            return videoSrc;
+        if (foundVideoSrc) {
+            console.log(`✅ 方法3 (元素src): 找到视频源`);
+            return foundVideoSrc;
         }
 
         console.warn('❌ 所有方法都未找到视频源');
-        console.log('页面HTML片段:', response.data.substring(0, 500));
         return null;
 
     } catch (error) {
-        console.error('Axios解析失败:', error.message);
+        console.error('❌ Axios解析失败:', error.message);
         return null;
     }
 }
@@ -1656,29 +1620,6 @@ function decryptVideoUrl(encryptedUrl) {
     } catch (error) {
         console.error('视频URL解密失败:', error.message);
         return encryptedUrl; // 返回原始URL
-    }
-}
-
-// 工具函数 - 验证视频URL安全性
-function isValidVideoUrl(url) {
-    if (!url) return false;
-
-    try {
-        const urlObj = new URL(url);
-        // 允许的域名白名单（根据实际情况调整）
-        const allowedDomains = [
-            'player.cycanime.com',
-            'cycani.org',
-            // 添加其他可能的视频域名
-        ];
-
-        return allowedDomains.some(domain =>
-            urlObj.hostname.includes(domain) ||
-            url.startsWith('https://') ||
-            url.startsWith('http://')
-        );
-    } catch (error) {
-        return false;
     }
 }
 
@@ -1716,6 +1657,24 @@ app.use((req, res) => {
 
 // 启动服务器
 app.listen(PORT, () => {
+    // 验证必要的导入
+    const requiredModules = {
+        express: typeof express !== 'undefined',
+        axios: typeof axios !== 'undefined',
+        getEnhancedHeaders: typeof getEnhancedHeaders === 'function'
+    };
+
+    const missingModules = Object.entries(requiredModules)
+        .filter(([_, isAvailable]) => !isAvailable)
+        .map(([name]) => name);
+
+    if (missingModules.length > 0) {
+        console.error('❌ 缺少必要的模块或函数:', missingModules.join(', '));
+        console.error('请检查server.js中的import语句。');
+        process.exit(1);
+    }
+
+    console.log(`✅ 所有必要的模块已加载`);
     console.log(`🚀 Cycani代理服务器启动成功!`);
     console.log(`📱 服务地址: http://localhost:${PORT}`);
     console.log(`🔧 开发模式: ${process.env.NODE_ENV || 'production'}`);
