@@ -82,10 +82,11 @@
                         class="form-check-input"
                         type="checkbox"
                         id="autoplay-switch"
-                        v-model="autoPlay"
+                        :checked="autoPlayEnabled"
+                        @change="toggleAutoplay"
                       />
                       <label class="form-check-label" for="autoplay-switch">
-                        自动播放下一集
+                        自动播放
                       </label>
                     </div>
                   </div>
@@ -206,6 +207,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useHistoryStore } from '@/stores/history'
 import { useUiStore } from '@/stores/ui'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+import { useAutoplay } from '@/composables/useAutoplay'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorMessage from '@/components/common/ErrorMessage.vue'
 import Plyr from 'plyr'
@@ -216,6 +218,7 @@ const router = useRouter()
 const playerStore = usePlayerStore()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
+const { autoplay: autoPlayEnabled, toggleAutoplay, setAutoplay } = useAutoplay()
 
 // Get placeholder image URL as a constant
 const getPlaceholderImage = () => {
@@ -239,24 +242,41 @@ const currentSeason = ref(season.value)
 
 const jumpEpisode = ref<number>(episode.value)
 
-// Check if we should use iframe player (for cycani- video IDs)
+// Check if we should use iframe player (for cycani- video IDs or player URLs)
 const useIframePlayer = computed(() => {
   const url = playerStore.currentEpisodeData?.realVideoUrl
-  return url && url.startsWith('cycani-')
+  if (!url) return false
+  // Only use iframe for player.cycanime.com URLs, NOT for cycani- IDs
+  // cycani- IDs should use Plyr player for autoplay support
+  return url.includes('player.cycanime.com')
 })
 
 // Generate player URL for iframe
 const playerUrl = computed(() => {
-  const videoId = playerStore.currentEpisodeData?.realVideoUrl
-  if (!videoId || !videoId.startsWith('cycani-')) return ''
-  return `https://player.cycanime.com/?url=${videoId}`
+  const url = playerStore.currentEpisodeData?.realVideoUrl
+  if (!url) return ''
+
+  // If URL already contains player.cycanime.com, use it directly
+  if (url.includes('player.cycanime.com')) {
+    // Add autoplay parameter if not already present
+    const autoplayParam = autoPlayEnabled.value ? (url.includes('?') ? '&autoplay=1' : '?autoplay=1') : ''
+    return url + autoplayParam
+  }
+
+  // If URL is a cycani- ID, construct the player URL
+  if (url.startsWith('cycani-')) {
+    const autoplayParam = autoPlayEnabled.value ? '&autoplay=1' : ''
+    return `https://player.cycanime.com/?url=${url}${autoplayParam}`
+  }
+
+  return ''
 })
 
 // Direct video URL for Plyr player
 const videoUrl = computed(() => {
   const url = playerStore.currentEpisodeData?.realVideoUrl
-  // Don't use cycani- IDs with Plyr
-  if (!url || url.startsWith('cycani-')) return null
+  // Don't use cycani- IDs or player URLs with Plyr
+  if (!url || url.startsWith('cycani-') || url.includes('player.cycanime.com')) return null
   return url
 })
 
@@ -269,7 +289,7 @@ const animeDescription = ref('')
 
 const currentTime = ref(0)
 const duration = ref(0)
-const autoPlay = ref(true)
+const autoPlayNext = ref(true) // Auto-play next episode
 
 let saveInterval: number | null = null
 
@@ -310,17 +330,57 @@ async function loadEpisode() {
 
       // Only initialize Plyr if we have a direct video URL (not using iframe)
       if (!useIframePlayer.value && videoUrl.value && player) {
+        console.log('🎬 Setting Plyr source:', videoUrl.value?.substring(0, 50))
+
         player.source = {
           type: 'video',
           sources: [{ src: videoUrl.value, type: 'video/mp4' }]
         }
 
         const startTime = Number(route.query.startTime) || 0
+
+        // Set start time if provided
         if (startTime > 0) {
           setTimeout(() => {
-            if (player) player.currentTime = startTime
+            if (player) {
+              player.currentTime = startTime
+            }
           }, 500)
         }
+
+        // Auto-play with delay (similar to old version)
+        console.log('🎵 Auto-play enabled:', autoPlayEnabled.value)
+        if (autoPlayEnabled.value) {
+          // Wait for video to be ready before playing
+          setTimeout(() => {
+            console.log('▶️ Attempting to play, player exists:', !!player)
+            if (player) {
+              try {
+                // Check if video element is ready
+                const media = player.media;
+                if (media && media.readyState >= 2) {
+                  console.log('✅ Video ready, playing now')
+                  player.play()
+                } else {
+                  console.log('⏳ Video not ready, waiting...')
+                  // Wait for canplay event
+                  media?.addEventListener('canplay', () => {
+                    console.log('✅ canplay event fired, playing now')
+                    player.play()
+                  }, { once: true })
+                }
+              } catch (err) {
+                console.warn('Auto-play failed:', err)
+              }
+            }
+          }, 2000)
+        }
+      } else {
+        console.log('⚠️ Auto-play skipped:', {
+          useIframe: useIframePlayer.value,
+          hasVideoUrl: !!videoUrl.value,
+          hasPlayer: !!player
+        })
       }
     }
   } catch (err: any) {
@@ -405,7 +465,7 @@ function togglePlayPause() {
 }
 
 function onVideoEnd() {
-  if (autoPlay.value && hasNext.value) {
+  if (autoPlayNext.value && hasNext.value) {
     setTimeout(() => {
       playNext()
     }, 1000)
@@ -422,10 +482,9 @@ onMounted(async () => {
   })
 
   try {
-    await loadEpisode()
-
-    // Only initialize Plyr if we're not using iframe player
-    if (!useIframePlayer.value && playerContainer.value) {
+    // Initialize Plyr first (before loading episode)
+    // We'll check if we need Plyr after loading episode data
+    if (playerContainer.value) {
       player = new Plyr('#plyr-player', {
         controls: [
           'play-large',
@@ -437,7 +496,9 @@ onMounted(async () => {
           'volume',
           'pip',
           'fullscreen'
-        ]
+        ],
+        muted: true,  // Start muted to allow autoplay
+        autoplay: false  // We'll manually trigger autoplay
       })
 
       player.on('timeupdate', (event) => {
@@ -452,6 +513,10 @@ onMounted(async () => {
         savePosition()
       }, 30000)
     }
+
+    // Load episode data
+    await loadEpisode()
+
   } catch (err) {
     console.error('Error initializing player:', err)
   }

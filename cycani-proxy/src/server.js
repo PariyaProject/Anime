@@ -8,7 +8,7 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 
 // Import URL constructor utilities
-const { AnimeListUrlConstructor, ApiParameterValidator, AnimeListCache } = require('./urlConstructor');
+const { AnimeListUrlConstructor, ApiParameterValidator } = require('./urlConstructor');
 // Import enhanced HTTP client with rate limiting and retry logic
 const { httpClient, getEnhancedHeaders } = require('./httpClient');
 
@@ -173,31 +173,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// 简单的内存缓存（生产环境建议使用Redis）
-const episodeCache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10分钟缓存
-
-// Initialize anime list cache and URL constructor
-const animeListCache = new AnimeListCache(10 * 60 * 1000); // 10 minutes cache
+// Initialize URL constructor
 const urlConstructor = new AnimeListUrlConstructor();
 
-// Initialize separate cache for weekly schedule
-const weeklyScheduleCache = new Map(); // Simple Map for weekly schedule
-
-// Clear caches on startup to ensure fresh data
-animeListCache.clear();
-weeklyScheduleCache.clear();
-console.log('🧹 已清除所有缓存');
-
-// 获取动画真实集数的辅助函数（带缓存和快速失败）
+// 获取动画真实集数的辅助函数（无缓存，始终获取最新数据）
 async function getAnimeEpisodeCount(animeId) {
-    // 检查缓存
-    const cacheKey = `episode_${animeId}`;
-    const cached = episodeCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.data;
-    }
-
     try {
         const detailUrl = `https://www.cycani.org/bangumi/${animeId}.html`;
 
@@ -254,12 +234,6 @@ async function getAnimeEpisodeCount(animeId) {
                 hasMultipleSeasons: Object.keys(seasonGroups).length > 1
             };
 
-            // 存入缓存
-            episodeCache.set(cacheKey, {
-                data: result,
-                timestamp: Date.now()
-            });
-
             return result;
         }
 
@@ -277,6 +251,15 @@ app.get('/', (req, res) => {
         ? path.join(distPath, 'index.html')
         : path.join(publicPath, 'index.html');
     res.sendFile(indexPath);
+});
+
+// API路由 - 轻量级健康检查端点
+app.get('/api/health', (req, res) => {
+    res.json({
+        success: true,
+        status: 'ok',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // API路由 - 获取剧集信息
@@ -361,19 +344,9 @@ app.get('/api/anime-list', async (req, res) => {
             });
         }
 
-        // Check cache first
-        const cacheKey = { search, genre, year, letter, sort, channel, page: pageNum };
-        const cachedData = animeListCache.get(cacheKey);
-        if (cachedData) {
-            console.log(`📋 使用缓存数据: ${search || 'no-search'} ${genre || 'no-genre'} ${year || 'no-year'} ${letter || 'no-letter'} ${channel} ${sort} page:${pageNum}`);
-            return res.json({
-                success: true,
-                data: {
-                    ...cachedData,
-                    fromCache: true
-                }
-            });
-        }
+        // Note: useCache parameter can be used for future opt-in caching implementation
+        // Currently always fetches fresh data to support development workflow
+        const useCache = req.query.useCache === 'true' || req.query.useCache === '1';
 
         // Construct target URL using the new URL constructor
         // NOTE: We need to handle pagination mapping
@@ -680,9 +653,6 @@ app.get('/api/anime-list', async (req, res) => {
             }
         };
 
-        // Cache the results
-        animeListCache.set(cacheKey, responseData);
-
         res.json({
             success: true,
             data: responseData
@@ -865,25 +835,18 @@ app.get('/api/last-position/:animeId/:season/:episode', async (req, res) => {
 // API路由 - 每周番剧时间表
 app.get('/api/weekly-schedule', async (req, res) => {
     try {
-        const { day = 'all' } = req.query; // day: 'monday', 'tuesday', ..., 'all'
+        const { day = 'all', refresh } = req.query; // day: 'monday', 'tuesday', ..., 'all', refresh: legacy parameter
 
-        // Check cache first (24-hour cache for weekly schedule)
-        const cacheKey = `weekly-schedule-${day}`;
-        const cachedEntry = weeklyScheduleCache.get(cacheKey);
-        if (cachedEntry && Date.now() - cachedEntry.timestamp < 24 * 60 * 60 * 1000) {
-            console.log(`📋 使用每周时间表缓存数据: ${day}`);
-            return res.json({
-                success: true,
-                data: {
-                    schedule: cachedEntry.data,
-                    updated: new Date(cachedEntry.timestamp).toISOString(),
-                    filter: day,
-                    fromCache: true
-                }
-            });
+        // Note: useCache parameter can be used for future opt-in caching implementation
+        // Currently always fetches fresh data to support development workflow
+        const useCache = req.query.useCache === 'true' || req.query.useCache === '1';
+
+        // Keep refresh parameter for legacy compatibility
+        if (refresh === 'true' || refresh === '1') {
+            console.log(`🔄 强制刷新每周时间表: ${day}`);
+        } else {
+            console.log(`🔍 获取每周番剧时间表: ${day}`);
         }
-
-        console.log(`🔍 获取每周番剧时间表: ${day}`);
 
         // Scrape homepage for weekly schedule
         console.log(`📅 开始抓取每周时间表数据...`);
@@ -895,12 +858,6 @@ app.get('/api/weekly-schedule', async (req, res) => {
             updated: new Date().toISOString(),
             filter: day
         };
-
-        // Cache for 24 hours
-        weeklyScheduleCache.set(`weekly-schedule-${day}`, {
-            data: scheduleData,
-            timestamp: Date.now()
-        });
 
         res.json({
             success: true,
@@ -1020,7 +977,7 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
             console.log('⚠️ 无法获取专用每周时间表页面，尝试首页:', weeklyError.message);
         }
 
-        // If weekly page doesn't work, try homepage
+        // If weekly page doesn't work, try homepage with week-module-X divs
         if (Object.values(scheduleData).every(dayList => dayList.length === 0)) {
             try {
                 const homeResponse = await httpClient.get('https://www.cycani.org/', {
@@ -1029,53 +986,73 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
 
                 const $ = cheerio.load(homeResponse.data);
 
-                // Look for weekly schedule section on homepage
-                // Common selectors for weekly anime sections
-                const weeklySelectors = [
-                    '.weekly',
-                    '.schedule',
-                    '.new-anime',
-                    '.weekday',
-                    '.daily-update',
-                    '[class*="week"]',
-                    '[class*="schedule"]',
-                    '[class*="update"]'
-                ];
+                // Map week-module-X divs to days
+                const dayMapping = {
+                    1: 'monday',
+                    2: 'tuesday',
+                    3: 'wednesday',
+                    4: 'thursday',
+                    5: 'friday',
+                    6: 'saturday',
+                    7: 'sunday'
+                };
 
-                for (const selector of weeklySelectors) {
-                    $(selector).each((_, element) => {
-                        const $section = $(element);
-                        const text = $section.text().trim();
+                // Iterate through each week-module-X div
+                for (let i = 1; i <= 7; i++) {
+                    const $module = $(`#week-module-${i}`);
+                    if ($module.length === 0) continue;
 
-                        // Check if this contains weekly schedule information
-                        if (text.includes('周一') || text.includes('周二') || text.includes('新番')) {
-                            // Extract anime links
-                            const $animeLinks = $section.find('a[href*="/bangumi/"]');
-                            $animeLinks.each((_, link) => {
-                                const $link = $(link);
-                                const href = $link.attr('href');
-                                const animeId = href?.match(/\/bangumi\/(\d+)\.html/);
+                    const dayKey = dayMapping[i];
+                    if (!dayKey) continue;
 
-                                if (animeId && animeId[1]) {
-                                    const title = $link.text().trim() || $link.attr('title') || '';
-                                    if (title && !scheduleData.monday.some(anime => anime.id === animeId[1])) {
-                                        // For homepage, we'll put everything in Monday as default
-                                        scheduleData.monday.push({
-                                            id: animeId[1],
-                                            title: title,
-                                            cover: '',
-                                            rating: '',
-                                            status: '连载中',
-                                            broadcastTime: '',
-                                            url: `https://www.cycani.org${href}`,
-                                            day: 'monday'
-                                        });
-                                    }
-                                }
+                    // Extract anime info from each module (only primary links with images)
+                    $module.find('a.public-list-exp[href*="/bangumi/"]').each((_, link) => {
+                        const $link = $(link);
+                        const href = $link.attr('href');
+                        const match = href?.match(/\/bangumi\/(\d+)\.html/);
+
+                        if (match && match[1]) {
+                            const animeId = match[1];
+                            const title = $link.attr('title') || '';
+
+                            if (!title) return;
+
+                            // Get parent element to extract additional info
+                            const $parent = $link.closest('.public-list-box');
+
+                            // Extract rating
+                            const ratingText = $parent.find('.public-list-prb').text().trim() || '';
+
+                            // Extract broadcast time from subtitle (in public-list-button sibling)
+                            const subtitleText = $parent.find('.public-list-subtitle').text().trim() || '';
+
+                            // Check if completed
+                            const isCompleted = subtitleText.includes('已完结') || subtitleText.includes('完结');
+
+                            // Extract cover image from data-src attribute
+                            let cover = '';
+                            const $img = $link.find('img[data-src], img[src]').first();
+                            if ($img.length) {
+                                cover = $img.attr('data-src') || $img.attr('src') || '';
+                            }
+
+                            scheduleData[dayKey].push({
+                                id: animeId,
+                                title: title,
+                                cover: cover,
+                                rating: ratingText,
+                                status: isCompleted ? '已完结' : '连载中',
+                                broadcastTime: subtitleText,
+                                url: `https://www.cycani.org${href}`,
+                                watchUrl: null,
+                                day: dayKey
                             });
                         }
                     });
                 }
+
+                console.log(`✅ 从首页解析到数据:`, Object.entries(scheduleData).map(([day, animes]) => `${day}: ${animes.length}个`).join(', '));
+
             } catch (homeError) {
                 console.log('⚠️ 首页解析也失败，返回空时间表:', homeError.message);
             }
@@ -1515,7 +1492,7 @@ async function getVideoUrlFromPuppeteer(playerUrl) {
         await page.setUserAgent(getEnhancedHeaders()['User-Agent']);
 
         console.log(`📄 访问: ${playerUrl}`);
-        await page.goto(playerUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await page.goto(playerUrl, { waitUntil: 'networkidle0', timeout: 30000 });
 
         // 等待video元素出现并获取src
         const videoUrl = await page.evaluate(() => {
@@ -1526,8 +1503,21 @@ async function getVideoUrlFromPuppeteer(playerUrl) {
             return null;
         });
 
-        await browser.close();
+        // 如果第一次没找到，等待更长时间再试一次
+        if (!videoUrl) {
+            await page.waitForTimeout(3000);
+            const videoUrl2 = await page.evaluate(() => {
+                const video = document.querySelector('video');
+                if (video && (video.src || video.currentSrc)) {
+                    return video.src || video.currentSrc;
+                }
+                return null;
+            });
+            await browser.close();
+            return videoUrl2;
+        }
 
+        await browser.close();
         return videoUrl;
 
     } catch (error) {

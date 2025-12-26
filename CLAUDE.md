@@ -93,6 +93,7 @@ frontend/src/
 │   └── VirtualList.vue # Virtual scrolling component
 ├── composables/
 │   ├── useAnimeApi.ts  # Anime API composable
+│   ├── useCacheSettings.ts  # Cache preference management (disabled by default)
 │   ├── useDarkMode.ts  # Dark mode toggle
 │   ├── useHistory.ts   # Watch history management
 │   ├── useKeyboardShortcuts.ts  # Keyboard shortcuts (Space, Ctrl+Right)
@@ -120,6 +121,7 @@ frontend/src/
 **Key Features:**
 - Dark mode with localStorage persistence
 - Watch history with position memory
+- Global cache toggle (disabled by default) for optional performance optimization
 - Keyboard shortcuts (Space: play/pause, Ctrl+Right: next episode)
 - Server status monitoring with health indicator
 - Responsive design (mobile/tablet/desktop)
@@ -373,9 +375,10 @@ curl -s "http://localhost:3017/api/continue-watching"
 ## Key API Endpoints
 
 **Anime Management:**
-- `GET /api/anime-list` - Fetch paginated anime list with metadata
+- `GET /api/anime-list` - Fetch paginated anime list with metadata (supports optional `useCache` parameter for future opt-in caching)
 - `GET /api/anime/:id` - Get detailed anime information
 - `GET /api/episode/:animeId/:season/:episode` - Get episode video URL
+- `GET /api/weekly-schedule` - Get weekly anime schedule (supports optional `useCache` parameter for future opt-in caching)
 
 **Watch History:**
 - `GET /api/continue-watching` - Get incomplete content for resumption
@@ -383,9 +386,14 @@ curl -s "http://localhost:3017/api/continue-watching"
 - `GET /api/last-position/:animeId/:season/:episode` - Get saved position
 - `POST /api/last-position` - Save current playback position
 
+**Health Check:**
+- `GET /api/health` - Lightweight health check endpoint (used by frontend server status monitoring)
+
 **Utility:**
 - `GET /api/placeholder-image` - Fallback image service
 - Static file serving from `/dist` (Vue frontend) or `/public` (legacy) directory
+
+**Note:** Server-side in-memory caching has been removed to ensure fresh data during development. The API accepts an optional `useCache` query parameter (default: `false`) for future caching implementation. The frontend provides a global cache toggle (disabled by default) in the navbar for users who prefer to enable caching for better performance.
 
 ## Data Storage
 

@@ -23,90 +23,81 @@
             <router-link to="/" class="nav-link" role="menuitem">动画列表</router-link>
           </li>
         </ul>
+      </div>
 
-        <div class="d-flex align-items-center gap-3" role="group" aria-label="用户操作">
-          <!-- Watch History Dropdown -->
-          <div class="dropdown" v-if="hasContinueWatching">
-            <button
-              class="btn btn-outline-light dropdown-toggle"
-              type="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-              aria-haspopup="true"
-              :id="'history-dropdown'"
-            >
-              <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
-              继续观看
-            </button>
-            <ul
-              class="dropdown-menu dropdown-menu-end"
-              :aria-labelledby="'history-dropdown'"
-              role="menu"
-            >
-              <li v-for="item in continueWatching.slice(0, 5)" :key="`${item.animeId}-${item.episode}`" role="none">
-                <a
-                  class="dropdown-item d-flex align-items-center gap-2"
-                  href="#"
-                  @click.prevent="resumeWatching(item)"
-                  role="menuitem"
-                  :aria-label="`继续观看 ${item.animeTitle} 第${item.episode}集`"
-                >
-                  <img
-                    :src="item.animeCover || placeholderImage"
-                    :alt="`${item.animeTitle} 缩略图`"
-                    class="rounded"
-                    width="40"
-                    height="40"
-                    style="object-fit: cover"
-                  />
-                  <div class="flex-grow-1">
-                    <div class="fw-bold text-truncate" style="max-width: 200px">
-                      {{ item.animeTitle }}
-                    </div>
-                    <div class="small text-muted" aria-label="第{{ item.season }}季 第{{ item.episode }}集，播放至{{ formatTime(item.position) }}">
-                      S{{ item.season }} E{{ item.episode }}
-                      <span v-if="item.position > 0">
-                        · {{ formatTime(item.position) }}
-                      </span>
-                    </div>
-                  </div>
-                </a>
-              </li>
-              <li role="none"><hr class="dropdown-divider" /></li>
-              <li role="none">
-                <router-link to="/history" class="dropdown-item" role="menuitem">查看全部</router-link>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Server Status -->
-          <div
-            class="server-status"
-            :class="{ 'status-online': serverStatus.status.online, 'status-offline': !serverStatus.status.online }"
-            :title="`服务器: ${serverStatus.status.online ? '在线' : '离线'}${serverStatus.status.latency ? ` (${serverStatus.status.latency}ms)` : ''}`"
-            :aria-label="`服务器状态: ${serverStatus.status.online ? '在线' : '离线'}${serverStatus.status.latency ? `，延迟 ${serverStatus.status.latency}毫秒` : ''}`"
-            role="status"
-            :aria-live="serverStatus.loading ? 'polite' : 'off'"
-          >
-            <i
-              class="bi"
-              :class="serverStatus.loading ? 'bi-arrow-repeat spin' : (serverStatus.status.online ? 'bi-wifi' : 'bi-wifi-off')"
-              :aria-hidden="true"
-            ></i>
-          </div>
-
-          <!-- Dark Mode Toggle -->
+      <!-- Always-visible controls (outside collapsible section) -->
+      <div class="d-flex align-items-center gap-3" role="group" aria-label="用户操作">
+        <!-- Watch History Dropdown -->
+        <div class="dropdown" v-if="hasContinueWatching">
           <button
-            class="btn btn-outline-light"
+            class="btn btn-outline-light dropdown-toggle"
             type="button"
-            @click="uiStore.toggleDarkMode()"
-            :title="darkMode ? '关闭深色模式' : '开启深色模式'"
-            :aria-label="darkMode ? '关闭深色模式' : '开启深色模式'"
-            :aria-pressed="darkMode"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            aria-haspopup="true"
+            :id="'history-dropdown'"
           >
-            <i :class="darkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'" aria-hidden="true"></i>
+            <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+            继续观看
           </button>
+          <ul
+            class="dropdown-menu dropdown-menu-end"
+            :aria-labelledby="'history-dropdown'"
+            role="menu"
+          >
+            <li v-for="item in continueWatching.slice(0, 5)" :key="`${item.animeId}-${item.episode}`" role="none">
+              <a
+                class="dropdown-item d-flex align-items-center gap-2"
+                href="#"
+                @click.prevent="resumeWatching(item)"
+                role="menuitem"
+                :aria-label="`继续观看 ${item.animeTitle} 第${item.episode}集`"
+              >
+                <img
+                  :src="item.animeCover || placeholderImage"
+                  :alt="`${item.animeTitle} 缩略图`"
+                  class="rounded"
+                  width="40"
+                  height="40"
+                  style="object-fit: cover"
+                />
+                <div class="flex-grow-1">
+                  <div class="fw-bold text-truncate" style="max-width: 200px">
+                    {{ item.animeTitle }}
+                  </div>
+                  <div class="small text-muted" aria-label="第{{ item.season }}季 第{{ item.episode }}集，播放至{{ formatTime(item.position) }}">
+                    S{{ item.season }} E{{ item.episode }}
+                    <span v-if="item.position > 0">
+                      · {{ formatTime(item.position) }}
+                    </span>
+                  </div>
+                </div>
+              </a>
+            </li>
+            <li role="none"><hr class="dropdown-divider" /></li>
+            <li role="none">
+              <router-link to="/history" class="dropdown-item" role="menuitem">查看全部</router-link>
+            </li>
+          </ul>
         </div>
+
+        <!-- Server Status Indicator -->
+        <ServerStatusIndicator />
+
+        <!-- Dark Mode Toggle -->
+        <button
+          class="btn btn-outline-light"
+          type="button"
+          @click="uiStore.toggleDarkMode()"
+          :title="darkMode ? '关闭深色模式' : '开启深色模式'"
+          :aria-label="darkMode ? '关闭深色模式' : '开启深色模式'"
+          :aria-pressed="darkMode"
+        >
+          <i :class="darkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'" aria-hidden="true"></i>
+        </button>
+
+        <!-- Cache Toggle -->
+        <CacheToggle />
       </div>
     </div>
   </nav>
@@ -117,13 +108,13 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
 import { useHistoryStore } from '@/stores/history'
-import { useServerStatus } from '@/composables/useServerStatus'
+import ServerStatusIndicator from '@/components/common/ServerStatusIndicator.vue'
+import CacheToggle from '@/components/common/CacheToggle.vue'
 import type { WatchRecord } from '@/types/history.types'
 
 const router = useRouter()
 const uiStore = useUiStore()
 const historyStore = useHistoryStore()
-const serverStatus = useServerStatus()
 
 // Use static SVG file from backend server (computed to avoid initialization issues)
 const placeholderImage = computed(() => `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-40x40.svg`)
@@ -169,41 +160,5 @@ function formatTime(seconds: number): string {
 
 .dropdown-item:hover {
   background-color: var(--bg-secondary);
-}
-
-.server-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
-
-.server-status.status-online {
-  color: #198754;
-}
-
-.server-status.status-offline {
-  color: #dc3545;
-}
-
-.server-status:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.server-status .spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

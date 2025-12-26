@@ -34,12 +34,13 @@ export function useWeeklySchedule() {
   /**
    * Load weekly schedule from backend
    * @param day - Specific day filter or 'all' for full week
+   * @param refresh - Force refresh server cache
    */
-  async function loadSchedule(day: string = 'all') {
+  async function loadSchedule(day: string = 'all', refresh: boolean = false) {
     loading.value = true
     error.value = null
     try {
-      schedule.value = await weeklyScheduleService.getWeeklySchedule(day)
+      schedule.value = await weeklyScheduleService.getWeeklySchedule(day, refresh)
       return schedule.value
     } catch (err: any) {
       error.value = err.message || 'Failed to load weekly schedule'
@@ -50,13 +51,11 @@ export function useWeeklySchedule() {
   }
 
   /**
-   * Refresh the current schedule
+   * Refresh the current schedule (force cache refresh from server)
    */
   async function refresh() {
-    if (schedule.value) {
-      return loadSchedule(schedule.value.filter)
-    }
-    return loadSchedule()
+    const dayFilter = schedule.value?.filter || 'all'
+    return loadSchedule(dayFilter, true)
   }
 
   function clearError() {

@@ -44,6 +44,9 @@
       </div>
     </section>
 
+    <!-- Weekly Schedule Section -->
+    <WeeklySchedule @select-anime="handleSelectAnime" />
+
     <!-- Filters Section -->
     <section class="filters-section mb-4">
       <div class="card">
@@ -179,6 +182,7 @@ import AnimeCard from '@/components/anime/AnimeCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorMessage from '@/components/common/ErrorMessage.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import WeeklySchedule from '@/components/schedule/WeeklySchedule.vue'
 import type { Anime, FilterParams } from '@/types/anime.types'
 import type { WatchRecord } from '@/types/history.types'
 
@@ -200,7 +204,7 @@ const filters = ref<FilterParams>({
   year: '',
   sort: 'time',
   page: 1,
-  limit: 20
+  limit: 48
 })
 
 let debounceTimer: number | null = null
@@ -267,7 +271,7 @@ function resetFilters() {
     year: '',
     sort: 'time',
     page: 1,
-    limit: 20
+    limit: 48
   }
   loadAnimeList()
 }
@@ -279,10 +283,11 @@ function goToPage(page: number) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function handleSelectAnime(anime: Anime) {
+function handleSelectAnime(anime: Anime | string) {
+  const animeId = typeof anime === 'string' ? anime : anime.id.toString()
   router.push({
     name: 'Watch',
-    params: { animeId: anime.id.toString() }
+    params: { animeId }
   })
 }
 

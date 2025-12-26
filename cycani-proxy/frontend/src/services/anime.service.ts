@@ -7,10 +7,17 @@ import type {
   SearchResponse
 } from '@/types/anime.types'
 import type { BackendResponse } from '@/types/api.types'
+import { useCacheSettings } from '@/composables/useCacheSettings'
 
 export const animeService = {
   async getAnimeList(params: FilterParams = {}): Promise<AnimeListResponse['data']> {
-    const response = await api.get<AnimeListResponse>('/api/anime-list', { params })
+    const { isEnabled } = useCacheSettings()
+    const response = await api.get<AnimeListResponse>('/api/anime-list', {
+      params: {
+        ...params,
+        useCache: isEnabled() ? 'true' : 'false'
+      }
+    })
     return response.data.data
   },
 

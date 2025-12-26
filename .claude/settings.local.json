@@ -61,7 +61,8 @@
       "Bash(npx cross-env PORT=3019 npm run dev:backend:*)",
       "Bash(npx cross-env PORT=3020 npm run dev:backend:*)",
       "Bash(npx cross-env PORT=3021 npm run dev:backend:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "mcp__chrome-devtools__close_page"
     ],
     "deny": [],
     "ask": []

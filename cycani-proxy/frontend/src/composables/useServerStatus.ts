@@ -7,7 +7,7 @@ export interface ServerStatus {
   lastCheck: Date | null
 }
 
-export function useServerStatus(checkInterval = 30000) {
+export function useServerStatus(checkInterval = 30000, autoStart = false) {
   const status = ref<ServerStatus>({
     online: false,
     latency: null,
@@ -15,6 +15,7 @@ export function useServerStatus(checkInterval = 30000) {
   })
 
   const loading = ref(false)
+  const enabled = ref(autoStart)
 
   let intervalId: number | null = null
 
@@ -23,8 +24,8 @@ export function useServerStatus(checkInterval = 30000) {
     const startTime = Date.now()
 
     try {
-      // 使用一个简单的API端点来检查服务器状态
-      await api.get('/api/anime-list', { params: { page: 1, limit: 1 } })
+      // 使用轻量级健康检查端点
+      await api.get('/api/health')
 
       const latency = Date.now() - startTime
 
@@ -45,6 +46,9 @@ export function useServerStatus(checkInterval = 30000) {
   }
 
   function startPolling() {
+    if (intervalId) return // Already running
+
+    enabled.value = true
     checkServerStatus()
     intervalId = window.setInterval(() => {
       checkServerStatus()
@@ -52,14 +56,25 @@ export function useServerStatus(checkInterval = 30000) {
   }
 
   function stopPolling() {
+    enabled.value = false
     if (intervalId) {
       clearInterval(intervalId)
       intervalId = null
     }
   }
 
+  function toggle() {
+    if (enabled.value) {
+      stopPolling()
+    } else {
+      startPolling()
+    }
+  }
+
   onMounted(() => {
-    startPolling()
+    if (autoStart) {
+      startPolling()
+    }
   })
 
   onUnmounted(() => {
@@ -69,8 +84,10 @@ export function useServerStatus(checkInterval = 30000) {
   return {
     status,
     loading,
+    enabled,
     checkServerStatus,
     startPolling,
-    stopPolling
+    stopPolling,
+    toggle
   }
 }
