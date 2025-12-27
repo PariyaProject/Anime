@@ -529,4 +529,6 @@ The archived userscripts in `data/archive/legacy-userscripts/` contain the final
 ## Important
 
 - That ports 3000 and 3006 are currently open, with the frontend and backend services deployed respectively. Please do not start or stop the services. If necessary, use Chrome MCP for debugging.
-- When using Chrome MCP, please do not use screenshots to verify correctness. If necessary, please let me know, and I will make the judgment.
+- When using Chrome MCP, please do not use take_snapshot/screenshots to verify correctness. If necessary, please let me know, and I will make the judgment.
+- Do not use `>nul` in PowerShell scripts. While `>nul` works perfectly in the traditional Command Prompt (CMD), using it in PowerShell will create a physical file named "nul" on the disk. Because "nul" is a reserved system keyword, Windows will struggle to delete or read this file later, often causing "Invalid File Handle" errors. In PowerShell, you must redirect to $null (the automatic variable for null) or pipe to Out-Null. like `Start-Process "app.exe" > $null` or `Start-Process "app.exe" *> $null`
+- In the traditional Command Prompt, `nul` is treated as a virtual device (Bit bucket), so it is safe to use.

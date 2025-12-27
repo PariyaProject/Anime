@@ -442,6 +442,31 @@ async function loadEpisode() {
         savedPositionForResume.value = null
       }
 
+      // Initialize Plyr if not using iframe and player doesn't exist
+      if (!useIframePlayer.value && videoUrl.value && !player) {
+        console.log('🎬 Initializing Plyr after loadEpisode...')
+        // Wait for DOM to render, then poll for video element
+        await nextTick()
+
+        // Poll for video element with increasing delays
+        let attempts = 0
+        const maxAttempts = 10
+        while (attempts < maxAttempts) {
+          const target = videoElement.value || document.querySelector('#plyr-player video')
+          if (target) {
+            console.log('✅ Found video element after', attempts * 50, 'ms, calling initializePlyr()')
+            initializePlyr()
+            break
+          }
+          attempts++
+          await new Promise(resolve => setTimeout(resolve, 50))
+        }
+
+        if (attempts >= maxAttempts) {
+          console.error('❌ Video element not found after', maxAttempts * 50, 'ms')
+        }
+      }
+
       // Note: Plyr will be initialized by the watcher on useIframePlayer
       // This ensures DOM has updated before we try to initialize
       if (!useIframePlayer.value && videoUrl.value) {
@@ -679,6 +704,16 @@ watch(() => route.query, () => {
   }
 }, { deep: true })
 
+// Watch for videoElement to be set before initializing Plyr
+watch(videoElement, async (element) => {
+  if (element && !player && !useIframePlayer.value && videoUrl.value) {
+    console.log('🎬 videoElement ref set, initializing Plyr...')
+    // Small delay to ensure Plyr can attach to the element
+    await new Promise(resolve => setTimeout(resolve, 50))
+    initializePlyr()
+  }
+})
+
 // Watch useIframePlayer to initialize Plyr when DOM has updated
 watch(useIframePlayer, async (newValue) => {
   // Only initialize Plyr when using Plyr player (not iframe)
@@ -686,8 +721,8 @@ watch(useIframePlayer, async (newValue) => {
     console.log('🎬 useIframePlayer is false, initializing Plyr...')
     // Wait for DOM to update
     await nextTick()
-    // Small delay to ensure browser has rendered
-    await new Promise(resolve => setTimeout(resolve, 50))
+    // Longer delay to ensure browser has rendered
+    await new Promise(resolve => setTimeout(resolve, 100))
 
     const target = videoElement.value || document.querySelector('#plyr-player video')
     if (target) {
@@ -697,16 +732,17 @@ watch(useIframePlayer, async (newValue) => {
       console.error('❌ Video element not found after useIframePlayer check')
     }
   }
-})
+}, { immediate: true })
 
 // Also watch videoUrl in case it changes after useIframePlayer watcher
-watch(videoUrl, async (newUrl) => {
+watch(videoUrl, async (newUrl, oldUrl) => {
+  console.log('🔄 videoUrl watcher triggered:', { newUrl, oldUrl, player, useIframePlayer: useIframePlayer.value })
   if (newUrl && !useIframePlayer.value && !player) {
     console.log('🎬 videoUrl changed, initializing Plyr...')
     // Wait for DOM to update
     await nextTick()
-    // Small delay to ensure browser has rendered
-    await new Promise(resolve => setTimeout(resolve, 50))
+    // Longer delay to ensure browser has rendered the video element
+    await new Promise(resolve => setTimeout(resolve, 100))
 
     const target = videoElement.value || document.querySelector('#plyr-player video')
     if (target) {
@@ -716,52 +752,10 @@ watch(videoUrl, async (newUrl) => {
       console.error('❌ Video element not found after videoUrl changed')
     }
   }
-})
+}, { immediate: true })
 
-// Watch route changes to handle navigation from "Continue Watching"
-watch(() => [route.params.animeId, route.query.season, route.query.episode], async (newVals, oldVals) => {
-  console.log('🔄 Route changed, reloading episode...')
-
-  // Destroy existing player to ensure fresh initialization
-  // This is necessary because Vue Router may reuse the component
-  if (player) {
-    console.log('🔄 Destroying existing Plyr instance for re-initialization')
-    player.destroy()
-    player = null
-  }
-
-  // Only clear saved position if navigating to a different episode
-  // This prevents race condition where ready event fires before loadEpisode completes
-  if (oldVals) {
-    const oldEpisodeId = `${oldVals[0]}_${oldVals[1]}_${oldVals[2]}`
-    const newEpisodeId = `${newVals[0]}_${newVals[1]}_${newVals[2]}`
-    if (oldEpisodeId !== newEpisodeId) {
-      console.log('🔄 Different episode, clearing saved position')
-      savedPositionForResume.value = null
-    } else {
-      console.log('🔄 Same episode, preserving saved position for resume')
-    }
-  }
-
-  // Reload episode which will fetch new saved position
-  await loadEpisode()
-
-  // After loadEpisode completes, explicitly re-initialize Plyr if needed
-  // This handles the case where the same episode is reloaded and watchers don't fire
-  if (!useIframePlayer.value && videoUrl.value && !player) {
-    console.log('🔄 Route change complete, re-initializing Plyr...')
-    await nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    const target = videoElement.value || document.querySelector('#plyr-player video')
-    if (target) {
-      console.log('✅ Found video element after route change, calling initializePlyr()')
-      initializePlyr()
-    } else {
-      console.error('❌ Video element not found after route change')
-    }
-  }
-}, { deep: true })
+// Note: Route watcher removed - with :key on router-view, component is properly
+// destroyed and recreated on navigation, so this workaround is no longer needed
 
 function initializePlyr() {
   if (player) return // Already initialized
