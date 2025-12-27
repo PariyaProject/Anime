@@ -202,8 +202,8 @@ function resumeWatching(item: WatchRecord) {
     },
     query: {
       season: item.season.toString(),
-      episode: item.episode.toString(),
-      startTime: item.position.toString()
+      episode: item.episode.toString()
+      // Note: startTime is no longer needed - backend API will return the saved position
     }
   })
 }

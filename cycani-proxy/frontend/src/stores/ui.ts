@@ -77,6 +77,11 @@ export const useUiStore = defineStore('ui', () => {
     notifications.value = []
   }
 
+  // Convenience function for showing notifications
+  function showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', duration?: number) {
+    addNotification({ message, type, duration })
+  }
+
   // Persistence
   let isLoadingPreference = true
 
@@ -129,6 +134,7 @@ export const useUiStore = defineStore('ui', () => {
     addNotification,
     removeNotification,
     clearNotifications,
+    showNotification,
     loadDarkModePreference
   }
 })

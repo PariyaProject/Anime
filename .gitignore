@@ -101,6 +101,9 @@ public
 # Project-specific ignores
 data/proxy/runtime/*
 data/testing/debug/*
+cycani-proxy/config/*
+cycani-proxy/config/*.backup
+cycani-proxy/config/*.corrupted
 *.log
 *.tmp
 *.bak

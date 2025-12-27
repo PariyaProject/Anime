@@ -234,6 +234,9 @@ const playerContainer = ref<HTMLElement | null>(null)
 const videoElement = ref<HTMLVideoElement | null>(null)
 let player: Plyr | null = null
 
+// Store saved position for resume after Plyr is initialized
+const savedPositionForResume = ref<number | null>(null)
+
 const loading = ref(false)
 const episodesLoading = ref(false)
 const error = ref<string | null>(null)
@@ -401,11 +404,43 @@ async function loadEpisode() {
       }
 
       // Fetch saved position from backend for auto-resume
+      // Note: Actual resume will happen in initializePlyr() after Plyr is ready
       const savedPosition = await historyStore.getLastPosition(
         animeId.value,
         data.season,
         data.episode
       )
+
+      // Store saved position for resume after Plyr is initialized
+      const savedPos = savedPosition || 0
+      if (savedPos > 5) {
+        console.log('📌 Saved position found:', formatTime(savedPos), '- will resume after player ready')
+        savedPositionForResume.value = savedPos
+
+        // If player already exists (route navigation), immediately seek to position
+        if (player && !useIframePlayer.value) {
+          console.log('🎯 Player already exists, seeking to saved position immediately')
+          player.pause()
+          setTimeout(() => {
+            if (player) {
+              player.currentTime = savedPos
+              console.log('✅ Resumed from saved position (existing player):', formatTime(savedPos))
+              uiStore.showNotification(`恢复上次播放位置: ${formatTime(savedPos)}`, 'info')
+              savedPositionForResume.value = null
+
+              // Resume playback after seek
+              setTimeout(() => {
+                if (autoPlayEnabled.value && player) {
+                  player.play()
+                }
+              }, 200)
+            }
+          }, 100)
+        }
+      } else {
+        console.log('▶️ No saved position, starting from beginning')
+        savedPositionForResume.value = null
+      }
 
       // Note: Plyr will be initialized by the watcher on useIframePlayer
       // This ensures DOM has updated before we try to initialize
@@ -417,36 +452,6 @@ async function loadEpisode() {
             type: 'video',
             sources: [{ src: videoUrl.value, type: 'video/mp4' }]
           }
-        }
-
-        // Auto-resume from saved position or use route query parameter
-        const routeStartTime = Number(route.query.startTime) || 0
-        let startTime = routeStartTime
-
-        // Determine if we should use saved position
-        if (savedPosition && savedPosition > 5 && !routeStartTime) {
-          // Check if position is not near the end (completed episode)
-          // We need to wait for player to load duration first
-          setTimeout(() => {
-            if (player && player.duration && savedPosition < player.duration - 30) {
-              // Valid position, use it
-              startTime = savedPosition
-              player.currentTime = startTime
-              uiStore.showNotification(
-                `继续播放: ${formatTime(startTime)}`,
-                'info'
-              )
-            } else if (player && player.duration && savedPosition >= player.duration - 30) {
-              // Position near end, treat as completed
-              console.log('Episode already completed, starting from beginning')
-            } else {
-              // Duration not loaded yet, try seeking anyway
-              player.currentTime = savedPosition
-            }
-          }, 1000)
-        } else if (savedPosition && savedPosition <= 5) {
-          // Position at beginning, treat as new episode
-          console.log('No saved position (at beginning), starting from beginning')
         }
 
         // Auto-play with delay (similar to old version)
@@ -662,6 +667,7 @@ onUnmounted(() => {
   }
   if (player) {
     player.destroy()
+    player = null  // Clear the reference to allow re-initialization
   }
 })
 
@@ -711,6 +717,51 @@ watch(videoUrl, async (newUrl) => {
     }
   }
 })
+
+// Watch route changes to handle navigation from "Continue Watching"
+watch(() => [route.params.animeId, route.query.season, route.query.episode], async (newVals, oldVals) => {
+  console.log('🔄 Route changed, reloading episode...')
+
+  // Destroy existing player to ensure fresh initialization
+  // This is necessary because Vue Router may reuse the component
+  if (player) {
+    console.log('🔄 Destroying existing Plyr instance for re-initialization')
+    player.destroy()
+    player = null
+  }
+
+  // Only clear saved position if navigating to a different episode
+  // This prevents race condition where ready event fires before loadEpisode completes
+  if (oldVals) {
+    const oldEpisodeId = `${oldVals[0]}_${oldVals[1]}_${oldVals[2]}`
+    const newEpisodeId = `${newVals[0]}_${newVals[1]}_${newVals[2]}`
+    if (oldEpisodeId !== newEpisodeId) {
+      console.log('🔄 Different episode, clearing saved position')
+      savedPositionForResume.value = null
+    } else {
+      console.log('🔄 Same episode, preserving saved position for resume')
+    }
+  }
+
+  // Reload episode which will fetch new saved position
+  await loadEpisode()
+
+  // After loadEpisode completes, explicitly re-initialize Plyr if needed
+  // This handles the case where the same episode is reloaded and watchers don't fire
+  if (!useIframePlayer.value && videoUrl.value && !player) {
+    console.log('🔄 Route change complete, re-initializing Plyr...')
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const target = videoElement.value || document.querySelector('#plyr-player video')
+    if (target) {
+      console.log('✅ Found video element after route change, calling initializePlyr()')
+      initializePlyr()
+    } else {
+      console.error('❌ Video element not found after route change')
+    }
+  }
+}, { deep: true })
 
 function initializePlyr() {
   if (player) return // Already initialized
@@ -828,6 +879,58 @@ function initializePlyr() {
     })
 
     player.on('ended', onVideoEnd)
+
+    // Auto-resume from saved position after Plyr is ready
+    player.on('ready', () => {
+      console.log('✅ Plyr ready, checking for saved position...')
+      const savedPos = savedPositionForResume.value
+
+      if (savedPos && savedPos > 5) {
+        console.log('📍 Resuming to saved position:', formatTime(savedPos))
+
+        // Pause first to ensure seek works properly
+        player.pause()
+        console.log('⏸️ Paused for seek')
+
+        // Wait a bit for duration to be available, then seek
+        setTimeout(() => {
+          const duration = player?.duration || videoElement.value?.duration
+
+          if (!duration || !isFinite(duration) || duration === 0) {
+            console.log('⏳ Duration not loaded yet, will try to seek anyway')
+          }
+
+          // Check if saved position is near end (within 30 seconds)
+          if (duration && savedPos >= duration - 30) {
+            console.log('⚠️ Episode already completed, starting from beginning')
+            savedPositionForResume.value = null
+            // Resume autoplay if needed
+            if (autoPlayEnabled.value) {
+              player.play()
+            }
+            return
+          }
+
+          // Seek to saved position
+          if (player) {
+            player.currentTime = savedPos
+            console.log('✅ Resumed from saved position:', formatTime(savedPos), duration ? `/ ${formatTime(duration)}` : '')
+            uiStore.showNotification(`恢复上次播放位置: ${formatTime(savedPos)}`, 'info')
+            savedPositionForResume.value = null
+
+            // Resume playback after seek
+            setTimeout(() => {
+              if (autoPlayEnabled.value) {
+                console.log('▶️ Resuming playback after seek')
+                player.play()
+              }
+            }, 200)
+          }
+        }, 500)
+      } else {
+        console.log('▶️ No saved position to resume')
+      }
+    })
 
     // Fallback interval: 5 minutes (was 30 seconds)
     // This is a safety net in case events don't fire properly

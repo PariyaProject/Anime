@@ -70,7 +70,11 @@
       "Bash(tasklist:*)",
       "Bash(netstat:*)",
       "Bash(git stash:*)",
-      "Bash(npx cross-env:*)"
+      "Bash(npx cross-env:*)",
+      "Bash(npx openspec:*)",
+      "Bash(cd:*)",
+      "Bash(pushd:*)",
+      "Bash(popd:*)"
     ],
     "deny": [],
     "ask": []

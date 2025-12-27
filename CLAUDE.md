@@ -219,6 +219,10 @@ D:\Code\ClaudeCode\
 │   │   ├── server.js               # Main Express server
 │   │   ├── httpClient.js           # Enhanced HTTP client with anti-bot protection
 │   │   └── urlConstructor.js       # URL construction utilities
+│   ├── config/                     # Runtime data storage (auto-created, resilient)
+│   │   ├── watch-history.json      # Main watch history data
+│   │   ├── watch-history.json.backup.*  # Automatic backups (5 most recent)
+│   │   └── watch-history.json.corrupted.* # Preserved corrupted files
 │   ├── frontend/                   # Vue 3 Frontend
 │   │   ├── src/
 │   │   │   ├── components/         # Vue components
@@ -237,11 +241,7 @@ D:\Code\ClaudeCode\
 │   ├── public/                     # Legacy Bootstrap web files (fallback)
 │   ├── package.json                # Server dependencies
 │   └── package-lock.json           # Lock file
-├── data/                           # Unified data storage
-│   ├── proxy/                      # Proxy server data
-│   │   ├── watch-history.json
-│   │   ├── anime-list-detail.json
-│   │   └── current-anime-list.json
+├── data/                           # Test and archived data only
 │   ├── testing/                    # Test and debug artifacts
 │   │   ├── snapshots/              # Test snapshots
 │   │   ├── debug/                  # Debug files
@@ -419,7 +419,27 @@ curl -s "http://localhost:3017/api/continue-watching"
 
 ## Data Storage
 
-**Watch History Structure:**
+### Storage Location and Resilience
+
+**New Location (since data storage resilience update):**
+- **Primary**: `cycani-proxy/config/watch-history.json` - Inside application directory
+- **Legacy**: `data/proxy/watch-history.json` - Automatically migrated on first run
+
+**Key Features:**
+- ✅ **Automatic directory creation**: Config directory is created if missing
+- ✅ **Automatic migration**: Legacy data files are migrated on startup
+- ✅ **Backup before writes**: Creates timestamped backups before each write
+- ✅ **Corrupted file recovery**: Preserves corrupted files with `.corrupted.*` suffix
+- ✅ **Graceful degradation**: Server continues running even if data files are deleted/corrupted
+- ✅ **Automatic cleanup**: Keeps only 5 most recent backups
+
+**Backup Files:**
+- `watch-history.json.backup.YYYY-MM-DDTHH-MM-SS-mssZ` - Automatic backups (5 most recent)
+- `watch-history.json.corrupted.YYYY-MM-DDTHH-MM-SS-mssZ` - Preserved corrupted files
+- `data/proxy/watch-history.json.migrated.YYYY-MM-DDTHH-MM-SS-mssZ` - Legacy file after migration
+
+### Watch History Data Structure
+
 ```json
 {
   "default": {
@@ -440,15 +460,44 @@ curl -s "http://localhost:3017/api/continue-watching"
         "position": 245,
         "lastUpdated": "2025-12-21T09:00:00.000Z"
       }
-    }
+    },
+    "createdAt": "2025-12-21T09:00:00.000Z",
+    "updatedAt": "2025-12-21T09:00:00.000Z"
   }
 }
 ```
 
-Data is stored in `data/proxy/watch-history.json` with automatic backup and recovery mechanisms. Additional data files are organized in the `data/` directory structure:
-- `data/proxy/`: Proxy server operational data
-- `data/testing/`: Debug and test artifacts
-- `data/archive/`: Legacy and archived files
+### Data Storage Organization
+
+**Configuration vs. Runtime Data:**
+- `cycani-proxy/config/` - Runtime user data (watch history, auto-created)
+- `src/` - Application source code (never mixed with data)
+- `data/` - Test and archived artifacts only (not used for runtime data)
+
+**Benefits:**
+- Deleting runtime data doesn't affect server startup
+- Clear separation between application and user data
+- Easy to find and manage for users
+- Better organization for backups and migrations
+
+### Troubleshooting Data File Issues
+
+**Server won't start due to data file errors:**
+- The server now handles all data file errors gracefully
+- Check console logs for specific error messages
+- Corrupted files are automatically backed up with `.corrupted.*` extension
+- Missing files are automatically created with default structure
+
+**Manually recovering data from backups:**
+1. Navigate to `cycani-proxy/config/`
+2. Find the most recent backup file: `watch-history.json.backup.*`
+3. Copy it to `watch-history.json`
+4. Restart the server
+
+**Data migration status:**
+- Migration happens automatically on first startup
+- Check console for migration messages: `📦 Migrated watch history from legacy location`
+- Legacy files are backed up with `.migrated.*` extension
 
 ## Legacy Development Notes
 
