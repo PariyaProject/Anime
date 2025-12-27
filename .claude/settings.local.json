@@ -68,7 +68,8 @@
       "Bash(npx openspec show fix-watch-page-anime-info)",
       "Bash(node:*)",
       "Bash(tasklist:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

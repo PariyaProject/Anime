@@ -243,11 +243,15 @@ describe('History Service', () => {
       expect(result).toBeNull()
     })
 
-    it('propagates API errors', async () => {
+    it('falls back to localStorage when backend fails', async () => {
       const error = new Error('Failed to fetch position')
       mockApiGet.mockRejectedValueOnce(error)
 
-      await expect(historyService.getLastPosition('123', 1, 1)).rejects.toThrow('Failed to fetch position')
+      // Should return null (no localStorage data) instead of throwing
+      const result = await historyService.getLastPosition('123', 1, 1)
+
+      expect(result).toBeNull()
+      expect(mockApiGet).toHaveBeenCalledWith('/api/last-position/123/1/1')
     })
   })
 })

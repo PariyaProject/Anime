@@ -16,15 +16,15 @@
       },
       {
         "animeId": "6001",
-        "animeTitle": "不擅吸血的吸血鬼",
+        "animeTitle": "未知动画",
         "animeCover": "/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2F11%2F05%2F536102_Gohth.jpg",
         "season": "1",
         "episode": "1",
         "episodeTitle": "不擅吸血的吸血鬼_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
-        "position": 1420,
-        "duration": 1420,
-        "watchDate": "2025-12-21T14:16:53.364Z",
-        "completed": true
+        "position": 2.610842,
+        "duration": 1420.053,
+        "watchDate": "2025-12-27T05:58:35.312Z",
+        "completed": false
       },
       {
         "animeId": "5988",
@@ -45,24 +45,24 @@
         "season": "1",
         "episode": "1",
         "episodeTitle": "赛马娘 芦毛灰姑娘 第2部分_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
-        "position": 658.435023,
+        "position": 583.337663,
         "duration": 1428.052,
-        "watchDate": "2025-12-27T05:06:14.827Z",
+        "watchDate": "2025-12-27T10:03:59.125Z",
         "completed": false
       }
     ],
     "lastPositions": {
       "5998_1_1": {
-        "position": 658.435023,
-        "lastUpdated": "2025-12-27T05:06:14.827Z"
+        "position": 583.337663,
+        "lastUpdated": "2025-12-27T10:03:59.125Z"
       },
       "5988_1_1": {
         "position": 7,
         "lastUpdated": "2025-12-21T13:38:19.336Z"
       },
       "6001_1_1": {
-        "position": 1420,
-        "lastUpdated": "2025-12-21T14:16:53.364Z"
+        "position": 2.610842,
+        "lastUpdated": "2025-12-27T05:58:35.312Z"
       },
       "6001_1_11": {
         "position": 1420,
@@ -72,5 +72,5 @@
     "createdAt": "2025-12-21T09:07:27.032Z",
     "updatedAt": "2025-12-21T09:07:27.032Z"
   },
-  "updatedAt": "2025-12-27T05:06:14.828Z"
+  "updatedAt": "2025-12-27T10:03:59.126Z"
 }

@@ -70,10 +70,32 @@ A modern Vue 3 + TypeScript web application with:
 **Key Features:**
 - Cross-origin proxy for cycani.org content
 - Real-time anime list scraping with proper episode counts
-- Watch position memory with automatic saving (30-second intervals)
+- Watch position memory with event-driven saving (localStorage + backend sync)
 - Multi-user data architecture (currently single user, expandable)
 - Modern responsive UI with video player integration
 - JSON-based persistent storage for watch history
+
+### Watch Progress Sync Strategy
+
+The frontend uses an **event-driven synchronization strategy** for watch progress:
+
+**Storage Architecture:**
+- **Primary**: Frontend localStorage (fast, always available, immediate save)
+- **Secondary**: Backend API (cross-device sync, debounced to 2 seconds)
+- **Priority Load**: Backend → localStorage → Default to 0
+
+**Save Triggers:**
+- Page exit/visibility change (`visibilitychange`, `pagehide`, `beforeunload`)
+- Manual seek operations (Plyr `seeked` event)
+- Play/pause button clicks (Plyr `play`/`pause` events)
+- Video end (before next episode loads)
+- Fallback interval: 5 minutes (safety net for long sessions)
+
+**Benefits:**
+- Reduced server load: ~120 requests/hour → ~3-5 requests/hour (96% reduction)
+- Better offline support: localStorage works without network
+- Immediate persistence: critical actions trigger instant saves
+- Cross-device sync: backend still enables continuation on other devices
 
 ### Legacy Userscript System (Archived)
 

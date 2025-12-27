@@ -579,6 +579,25 @@ function togglePlayPause() {
 }
 
 function onVideoEnd() {
+  // Save position before loading next episode (mark as completed)
+  if (duration.value > 0) {
+    historyStore.savePositionImmediate(
+      {
+        id: animeId.value,
+        title: animeTitle.value,
+        cover: animeCover.value
+      },
+      {
+        season: season.value,
+        episode: episode.value,
+        title: episodeTitle.value,
+        duration: duration.value
+      },
+      duration.value,
+      0  // No threshold for video end (always save)
+    )
+  }
+
   if (autoPlayNext.value && hasNext.value) {
     setTimeout(() => {
       playNext()
@@ -594,6 +613,33 @@ onMounted(async () => {
     'Space': togglePlayPause,
     'Ctrl+ArrowRight': playNext
   })
+
+  // Setup page visibility/unload event listeners for immediate save
+  const handlePageHide = () => {
+    if (currentTime.value > 0) {
+      historyStore.savePositionImmediate(
+        {
+          id: animeId.value,
+          title: animeTitle.value,
+          cover: animeCover.value
+        },
+        {
+          season: season.value,
+          episode: episode.value,
+          title: episodeTitle.value,
+          duration: duration.value
+        },
+        currentTime.value,
+        0  // No threshold for page exit (always save)
+      )
+      console.log('💾 Position saved on page exit')
+    }
+  }
+
+  window.addEventListener('visibilitychange', handlePageHide)
+  window.addEventListener('pagehide', handlePageHide)
+  // Note: beforeunload is unreliable for async operations, but we try anyway
+  window.addEventListener('beforeunload', handlePageHide)
 
   try {
     // Note: Plyr will be initialized when videoUrl becomes available
@@ -715,18 +761,102 @@ function initializePlyr() {
       playerStore.updateDuration(plyr.duration)
     })
 
+    // Event-driven save: play/pause
+    player.on('play', () => {
+      // Save position when user resumes playback
+      if (currentTime.value > 0) {
+        historyStore.savePositionImmediate(
+          {
+            id: animeId.value,
+            title: animeTitle.value,
+            cover: animeCover.value
+          },
+          {
+            season: season.value,
+            episode: episode.value,
+            title: episodeTitle.value,
+            duration: duration.value
+          },
+          currentTime.value,
+          5  // 5 second threshold for play/pause
+        )
+      }
+    })
+
+    player.on('pause', () => {
+      // Save position when user pauses playback
+      if (currentTime.value > 0) {
+        historyStore.savePositionImmediate(
+          {
+            id: animeId.value,
+            title: animeTitle.value,
+            cover: animeCover.value
+          },
+          {
+            season: season.value,
+            episode: episode.value,
+            title: episodeTitle.value,
+            duration: duration.value
+          },
+          currentTime.value,
+          5  // 5 second threshold for play/pause
+        )
+      }
+    })
+
+    // Event-driven save: seek
+    player.on('seeked', (event) => {
+      const plyr = event.detail.plyr
+      const newPosition = plyr.currentTime
+      if (newPosition > 0) {
+        historyStore.savePositionImmediate(
+          {
+            id: animeId.value,
+            title: animeTitle.value,
+            cover: animeCover.value
+          },
+          {
+            season: season.value,
+            episode: episode.value,
+            title: episodeTitle.value,
+            duration: duration.value
+          },
+          newPosition,
+          5  // 5 second threshold for seek
+        )
+      }
+    })
+
     player.on('ended', onVideoEnd)
 
+    // Fallback interval: 5 minutes (was 30 seconds)
+    // This is a safety net in case events don't fire properly
     saveInterval = window.setInterval(() => {
-      savePosition()
-    }, 30000)
+      if (currentTime.value > 0) {
+        historyStore.savePositionImmediate(
+          {
+            id: animeId.value,
+            title: animeTitle.value,
+            cover: animeCover.value
+          },
+          {
+            season: season.value,
+            episode: episode.value,
+            title: episodeTitle.value,
+            duration: duration.value
+          },
+          currentTime.value,
+          60  // 60 second threshold for fallback (only save if moved > 1 min)
+        )
+      }
+    }, 5 * 60 * 1000)  // 5 minutes
 
     // Log warning if using iframe player
     if (useIframePlayer.value) {
       console.warn('⚠️ Using iframe player - progress bar may not update due to cross-origin restrictions')
     }
 
-    console.log('✅ Plyr fully initialized with timeupdate listener')
+    console.log('✅ Plyr fully initialized with event-driven save listeners')
   } catch (err) {
     console.error('❌ Failed to initialize Plyr:', err)
   }

@@ -11,6 +11,9 @@ export const useHistoryStore = defineStore('history', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Track last saved position to avoid duplicate saves
+  const lastSavedPositions = ref<Record<string, number>>({})
+
   // Getters
   const hasHistory = computed(() => watchHistory.value.length > 0)
   const hasContinueWatching = computed(() => continueWatching.value.length > 0)
@@ -101,6 +104,53 @@ export const useHistoryStore = defineStore('history', () => {
   }
 
   /**
+   * Save watch position immediately to localStorage and backend.
+   * This is the new event-driven save method that replaces interval-based saves.
+   *
+   * - localStorage: Saved synchronously and immediately (always available)
+   * - Backend: Saved asynchronously (non-blocking)
+   *
+   * @param animeInfo - Anime information (id, title, cover)
+   * @param episodeInfo - Episode information (season, episode, optional title and duration)
+   * @param position - Current playback position in seconds
+   * @param skipThreshold - Minimum position change to trigger save (default: 5 seconds)
+   */
+  function savePositionImmediate(
+    animeInfo: AnimeInfo,
+    episodeInfo: EpisodeInfo,
+    position: number,
+    skipThreshold = 5
+  ) {
+    const key = `${animeInfo.id}_${episodeInfo.season}_${episodeInfo.episode}`
+
+    // Check if position changed significantly (avoid duplicate saves)
+    const lastSaved = lastSavedPositions.value[key]
+    if (lastSaved !== undefined && Math.abs(position - lastSaved) < skipThreshold) {
+      return // Skip save if position hasn't changed much
+    }
+
+    // Save to localStorage immediately (synchronous)
+    const localSaved = historyService.saveWatchPositionToLocal(animeInfo, episodeInfo, position)
+    if (localSaved) {
+      console.log('💾 Position saved to localStorage')
+    }
+
+    // Update local state
+    lastPositions.value[key] = {
+      position,
+      lastUpdated: new Date().toISOString()
+    }
+    lastSavedPositions.value[key] = position
+
+    // Backend sync (async, non-blocking - no debounce to avoid build issues)
+    historyService.saveWatchPosition(animeInfo, episodeInfo, position).then(() => {
+      console.log('✅ Synced position to backend')
+    }).catch((err) => {
+      console.warn('⚠️ Backend sync failed (data safe in localStorage):', err)
+    })
+  }
+
+  /**
    * @deprecated Use savePosition(animeInfo, episodeInfo, position) instead.
    * This method will be removed in a future version.
    */
@@ -177,6 +227,7 @@ export const useHistoryStore = defineStore('history', () => {
     loadContinueWatching,
     addToHistory,
     savePosition,
+    savePositionImmediate,
     savePositionLegacy,
     loadLastPosition,
     getLastPosition,
