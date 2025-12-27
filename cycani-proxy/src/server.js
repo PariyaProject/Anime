@@ -1239,15 +1239,24 @@ app.get('/api/anime/:animeId', async (req, res) => {
         console.log(`🔍 调试信息 - 第一个h1: ${$('h1').first().text().trim()}`);
         console.log(`🔍 调试信息 - 所有h1文本: ${$('h1').map((_, el) => $(el).text().trim()).get().join(' | ')}`);
 
-        // 解析动画详情 - 使用4步策略提取标题
+        // 解析动画详情 - 使用5步策略提取标题
         let title = '';
         let strategyUsed = 0;
 
-        // 策略1: 尝试从页面标题获取
+        // 策略1: 尝试从页面标题获取 - 通用正则表达式解析
+        // 支持两种格式:
+        // - 播放页面: 不擅吸血的吸血鬼_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！
+        // - 详情页面: 不擅吸血的吸血鬼_TV番组 - 次元城动画 - 海量蓝光番剧免费看！
         const pageTitle = $('title').text().trim();
-        if (pageTitle && pageTitle.includes('间谍过家家')) {
-            title = pageTitle.replace('_TV番组 - 次元城动画 - 海量蓝光番剧免费看！', '').trim();
+        let titleMatch = pageTitle.match(/^(.+?)_第\d+集_/);
+        if (!titleMatch) {
+            // 如果没有集数匹配，尝试匹配详情页面格式
+            titleMatch = pageTitle.match(/^(.+?)_TV番组/);
+        }
+        if (titleMatch && titleMatch[1]) {
+            title = titleMatch[1].trim();
             strategyUsed = 1;
+            console.log(`🎯 策略1: 从页面标题提取: ${title}`);
         }
 
         // 策略2: 尝试从h1标签获取
@@ -1260,9 +1269,12 @@ app.get('/api/anime/:animeId', async (req, res) => {
             }
         }
 
-        // 策略3: 尝试多个可能的标题选择器
+        // 策略3: 尝试多个可能的标题选择器 - 添加可靠的 .this-title 和 .player-title-link
         if (!title || title === '未知动画') {
             const selectors = [
+                '.this-title',           // 最可靠 - 主标题元素
+                '.player-title-link',    // 可靠 - 播放器标题链接
+                'h2 .player-title-link', // 备选 - h2 中的标题链接
                 '.detail-title h1',
                 '.anime-title h1',
                 '.page-title h1',
@@ -1289,14 +1301,41 @@ app.get('/api/anime/:animeId', async (req, res) => {
             if (animeId === '5998') {
                 title = '间谍过家家 第三季';
                 strategyUsed = 4;
-                console.log(`🎯 使用硬编码标题修复动画ID ${animeId}: ${title}`);
-            } else {
-                title = '未知动画';
-                strategyUsed = 0;
+                console.log(`🎯 策略4: 使用硬编码标题修复动画ID ${animeId}: ${title}`);
             }
         }
 
-        console.log(`🎯 4步策略解析结果: ${title} (策略${strategyUsed})`);
+        // 策略5: 从 JavaScript player_aaaa 对象提取标题
+        if (!title || title === '未知动画') {
+            const scriptContent = $('script:contains("player_aaaa")').html();
+            if (scriptContent) {
+                // 尝试匹配 vod_name 字段的 Unicode 转义序列
+                const vodNameMatch = scriptContent.match(/"vod_name"\s*:\s*"((?:\\u[0-9a-fA-F]{4})+)"/);
+                if (vodNameMatch && vodNameMatch[1]) {
+                    try {
+                        // 解码 Unicode 转义序列
+                        const decodedTitle = vodNameMatch[1].replace(/\\u([0-9a-fA-F]{4})/g,
+                            (match, hex) => String.fromCharCode(parseInt(hex, 16))
+                        );
+                        if (decodedTitle && decodedTitle !== '未知动画') {
+                            title = decodedTitle;
+                            strategyUsed = 5;
+                            console.log(`🎯 策略5: 从JavaScript对象提取: ${title}`);
+                        }
+                    } catch (error) {
+                        console.log(`⚠️ 策略5: Unicode解码失败 - ${error.message}`);
+                    }
+                }
+            }
+        }
+
+        // 最终回退：如果所有策略都失败
+        if (!title || title === '未知动画') {
+            title = '未知动画';
+            strategyUsed = 0;
+        }
+
+        console.log(`🎯 5步策略解析结果: ${title} (策略${strategyUsed})`);
 
         // 更新全局策略统计
         if (typeof parsingStrategyStats !== 'undefined') {

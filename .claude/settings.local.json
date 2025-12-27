@@ -69,7 +69,8 @@
       "Bash(node:*)",
       "Bash(tasklist:*)",
       "Bash(netstat:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(npx cross-env:*)"
     ],
     "deny": [],
     "ask": []
