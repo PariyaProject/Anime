@@ -97,7 +97,7 @@ const app = express();
 const PORT = process.env.PORT || 3006;
 
 // 观看历史记录存储
-const WATCH_HISTORY_FILE = path.join(__dirname, '..', 'data', 'proxy', 'watch-history.json');
+const WATCH_HISTORY_FILE = path.join(__dirname, '..', '..', 'data', 'proxy', 'watch-history.json');
 
 // 观看历史记录管理
 class WatchHistoryManager {
@@ -122,7 +122,11 @@ class WatchHistoryManager {
     static async saveHistory(historyData) {
         try {
             historyData.updatedAt = new Date().toISOString();
-            await fs.writeFile(WATCH_HISTORY_FILE, JSON.stringify(historyData, null, 2), 'utf8');
+            const jsonString = JSON.stringify(historyData, null, 2);
+            console.log(`[DEBUG] saveHistory: Writing to ${WATCH_HISTORY_FILE}`);
+            console.log(`[DEBUG] saveHistory: File size will be ${jsonString.length} bytes`);
+            await fs.writeFile(WATCH_HISTORY_FILE, jsonString, 'utf8');
+            console.log(`[DEBUG] saveHistory: File written successfully`);
             return true;
         } catch (error) {
             console.error('保存观看历史失败:', error);
@@ -169,13 +173,16 @@ class WatchHistoryManager {
             position: position,
             lastUpdated: new Date().toISOString()
         };
+        console.log(`[DEBUG] Saving position for ${positionKey}: ${position}s`);
+        console.log(`[DEBUG] lastPositions after update:`, JSON.stringify(userHistory.lastPositions, null, 2));
 
         // 限制历史记录数量（保留最近100条）
         if (userHistory.watchHistory.length > 100) {
             userHistory.watchHistory = userHistory.watchHistory.slice(0, 100);
         }
 
-        await this.saveHistory(history);
+        const saved = await this.saveHistory(history);
+        console.log(`[DEBUG] saveHistory returned:`, saved);
         return watchRecord;
     }
 

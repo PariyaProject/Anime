@@ -40,21 +40,21 @@
       },
       {
         "animeId": "5998",
-        "animeTitle": "赛马娘 芦毛灰姑娘 第2部分",
+        "animeTitle": "间谍过家家 第三季",
         "animeCover": "/api/image-proxy?url=https%3A%2F%2Fgimg1.baidu.com%2Fgimg%2Fapp%3D2001%26src%3Dimg2.cycimg.me%2Fpic%2Fcover%2Fl%2Ff8%2Fee%2F530377_B3tg1.jpg",
         "season": "1",
         "episode": "1",
         "episodeTitle": "赛马娘 芦毛灰姑娘 第2部分_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！",
-        "position": 23,
-        "duration": 1428,
-        "watchDate": "2025-12-21T13:45:12.190Z",
+        "position": 658.435023,
+        "duration": 1428.052,
+        "watchDate": "2025-12-27T05:06:14.827Z",
         "completed": false
       }
     ],
     "lastPositions": {
       "5998_1_1": {
-        "position": 23,
-        "lastUpdated": "2025-12-21T13:45:12.190Z"
+        "position": 658.435023,
+        "lastUpdated": "2025-12-27T05:06:14.827Z"
       },
       "5988_1_1": {
         "position": 7,
@@ -72,5 +72,5 @@
     "createdAt": "2025-12-21T09:07:27.032Z",
     "updatedAt": "2025-12-21T09:07:27.032Z"
   },
-  "updatedAt": "2025-12-21T14:17:31.372Z"
+  "updatedAt": "2025-12-27T05:06:14.828Z"
 }

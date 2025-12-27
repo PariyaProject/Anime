@@ -202,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useHistoryStore } from '@/stores/history'
@@ -245,12 +245,18 @@ const currentSeason = ref(season.value)
 
 const jumpEpisode = ref<number>(episode.value)
 
-// Check if we should use iframe player (for cycani- video IDs or player URLs)
+// Check if we should use iframe player
+// Use Plyr for cycani- IDs to enable progress tracking and auto-resume
 const useIframePlayer = computed(() => {
   const url = playerStore.currentEpisodeData?.realVideoUrl
   if (!url) return false
-  // Only use iframe for player.cycanime.com URLs, NOT for cycani- IDs
-  // cycani- IDs should use Plyr player for autoplay support
+
+  // Use Plyr for cycani- IDs (no iframe for better progress tracking)
+  if (url.startsWith('cycani-')) {
+    return false
+  }
+
+  // Only use iframe for existing player.cycanime.com URLs
   return url.includes('player.cycanime.com')
 })
 
@@ -276,11 +282,24 @@ const playerUrl = computed(() => {
 })
 
 // Direct video URL for Plyr player
+// Returns cycani- IDs directly (Plyr will handle them via backend proxy or player URL resolution)
+// Returns direct MP4 URLs as-is
+// Returns null for player.cycanime.com URLs (use iframe instead)
 const videoUrl = computed(() => {
   const url = playerStore.currentEpisodeData?.realVideoUrl
-  // Don't use cycani- IDs or player URLs with Plyr
-  if (!url || url.startsWith('cycani-') || url.includes('player.cycanime.com')) return null
-  return url
+  if (!url) return null
+
+  // Return cycani- IDs directly for Plyr to handle
+  if (url.startsWith('cycani-')) {
+    return url
+  }
+
+  // Don't use player URLs with Plyr
+  if (url.includes('player.cycanime.com')) {
+    return null
+  }
+
+  return url  // Direct MP4 URLs
 })
 
 const animeTitle = ref('')
@@ -381,24 +400,53 @@ async function loadEpisode() {
         animeTitle.value = data.title
       }
 
-      // Only initialize Plyr if we have a direct video URL (not using iframe)
-      if (!useIframePlayer.value && videoUrl.value && player) {
-        console.log('🎬 Setting Plyr source:', videoUrl.value?.substring(0, 50))
+      // Fetch saved position from backend for auto-resume
+      const savedPosition = await historyStore.getLastPosition(
+        animeId.value,
+        data.season,
+        data.episode
+      )
 
-        player.source = {
-          type: 'video',
-          sources: [{ src: videoUrl.value, type: 'video/mp4' }]
+      // Note: Plyr will be initialized by the watcher on useIframePlayer
+      // This ensures DOM has updated before we try to initialize
+      if (!useIframePlayer.value && videoUrl.value) {
+        // Set Plyr source after initialization
+        if (player) {
+          console.log('🎬 Setting Plyr source:', videoUrl.value?.substring(0, 50))
+          player.source = {
+            type: 'video',
+            sources: [{ src: videoUrl.value, type: 'video/mp4' }]
+          }
         }
 
-        const startTime = Number(route.query.startTime) || 0
+        // Auto-resume from saved position or use route query parameter
+        const routeStartTime = Number(route.query.startTime) || 0
+        let startTime = routeStartTime
 
-        // Set start time if provided
-        if (startTime > 0) {
+        // Determine if we should use saved position
+        if (savedPosition && savedPosition > 5 && !routeStartTime) {
+          // Check if position is not near the end (completed episode)
+          // We need to wait for player to load duration first
           setTimeout(() => {
-            if (player) {
+            if (player && player.duration && savedPosition < player.duration - 30) {
+              // Valid position, use it
+              startTime = savedPosition
               player.currentTime = startTime
+              uiStore.showNotification(
+                `继续播放: ${formatTime(startTime)}`,
+                'info'
+              )
+            } else if (player && player.duration && savedPosition >= player.duration - 30) {
+              // Position near end, treat as completed
+              console.log('Episode already completed, starting from beginning')
+            } else {
+              // Duration not loaded yet, try seeking anyway
+              player.currentTime = savedPosition
             }
-          }, 500)
+          }, 1000)
+        } else if (savedPosition && savedPosition <= 5) {
+          // Position at beginning, treat as new episode
+          console.log('No saved position (at beginning), starting from beginning')
         }
 
         // Auto-play with delay (similar to old version)
@@ -439,12 +487,6 @@ async function loadEpisode() {
             }
           }, 1000)  // Reduced from 2000ms to match legacy implementation
         }
-      } else {
-        console.log('⚠️ Auto-play skipped:', {
-          useIframe: useIframePlayer.value,
-          hasVideoUrl: !!videoUrl.value,
-          hasPlayer: !!player
-        })
       }
     }
   } catch (err: any) {
@@ -554,37 +596,11 @@ onMounted(async () => {
   })
 
   try {
-    // Initialize Plyr first (before loading episode)
-    // We'll check if we need Plyr after loading episode data
-    if (playerContainer.value) {
-      player = new Plyr('#plyr-player', {
-        controls: [
-          'play-large',
-          'play',
-          'progress',
-          'current-time',
-          'duration',
-          'mute',
-          'volume',
-          'pip',
-          'fullscreen'
-        ],
-        // muted: not set (defaults to false, allows sound with autoplay)
-        autoplay: false  // We'll manually trigger autoplay
-      })
+    // Note: Plyr will be initialized when videoUrl becomes available
+    // via the watch on videoUrl (see below)
 
-      player.on('timeupdate', (event) => {
-        const plyr = event.detail.plyr
-        currentTime.value = plyr.currentTime
-        duration.value = plyr.duration
-      })
-
-      player.on('ended', onVideoEnd)
-
-      saveInterval = window.setInterval(() => {
-        savePosition()
-      }, 30000)
-    }
+    // Log initial player state
+    console.log('🎬 Player container ready, waiting for video URL...')
 
     // Load episode data
     await loadEpisode()
@@ -610,6 +626,111 @@ watch(() => route.query, () => {
     loadEpisode()
   }
 }, { deep: true })
+
+// Watch useIframePlayer to initialize Plyr when DOM has updated
+watch(useIframePlayer, async (newValue) => {
+  // Only initialize Plyr when using Plyr player (not iframe)
+  if (newValue === false && !player && videoUrl.value) {
+    console.log('🎬 useIframePlayer is false, initializing Plyr...')
+    // Wait for DOM to update
+    await nextTick()
+    // Small delay to ensure browser has rendered
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const target = videoElement.value || document.querySelector('#plyr-player video')
+    if (target) {
+      console.log('✅ Found video element, calling initializePlyr()')
+      initializePlyr()
+    } else {
+      console.error('❌ Video element not found after useIframePlayer check')
+    }
+  }
+})
+
+// Also watch videoUrl in case it changes after useIframePlayer watcher
+watch(videoUrl, async (newUrl) => {
+  if (newUrl && !useIframePlayer.value && !player) {
+    console.log('🎬 videoUrl changed, initializing Plyr...')
+    // Wait for DOM to update
+    await nextTick()
+    // Small delay to ensure browser has rendered
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const target = videoElement.value || document.querySelector('#plyr-player video')
+    if (target) {
+      console.log('✅ Found video element via videoUrl watcher, calling initializePlyr()')
+      initializePlyr()
+    } else {
+      console.error('❌ Video element not found after videoUrl changed')
+    }
+  }
+})
+
+function initializePlyr() {
+  if (player) return // Already initialized
+
+  try {
+    console.log('🎬 Initializing Plyr...')
+
+    // Target the video element, not the container
+    const target = videoElement.value || document.querySelector('#plyr-player video')
+    console.log('🎯 Target video element:', target ? 'found' : 'not found')
+
+    if (!target) {
+      console.error('❌ Video element not found!')
+      return
+    }
+
+    player = new Plyr(target, {
+      controls: [
+        'play-large',
+        'play',
+        'progress',
+        'current-time',
+        'duration',
+        'mute',
+        'volume',
+        'pip',
+        'fullscreen'
+      ],
+      muted: false,
+      autoplay: false
+    })
+
+    console.log('✅ Plyr instance created:', !!player)
+
+    // Update videoElement ref to point to Plyr's wrapped video element
+    if (player.elements.video) {
+      videoElement.value = player.elements.video
+      console.log('✅ Updated videoElement ref to Plyr video element')
+    }
+
+    player.on('timeupdate', (event) => {
+      const plyr = event.detail.plyr
+      currentTime.value = plyr.currentTime
+      duration.value = plyr.duration
+
+      // Synchronize with player store for consistency
+      playerStore.updateTime(plyr.currentTime)
+      playerStore.updateDuration(plyr.duration)
+    })
+
+    player.on('ended', onVideoEnd)
+
+    saveInterval = window.setInterval(() => {
+      savePosition()
+    }, 30000)
+
+    // Log warning if using iframe player
+    if (useIframePlayer.value) {
+      console.warn('⚠️ Using iframe player - progress bar may not update due to cross-origin restrictions')
+    }
+
+    console.log('✅ Plyr fully initialized with timeupdate listener')
+  } catch (err) {
+    console.error('❌ Failed to initialize Plyr:', err)
+  }
+}
 </script>
 
 <style scoped>

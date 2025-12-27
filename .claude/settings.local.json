@@ -66,7 +66,9 @@
       "Bash(npx openspec list:*)",
       "Bash(npx openspec validate:*)",
       "Bash(npx openspec show fix-watch-page-anime-info)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(tasklist:*)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []

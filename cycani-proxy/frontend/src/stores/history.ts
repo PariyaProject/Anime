@@ -135,6 +135,24 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
+  /**
+   * Get last saved position for an episode without updating local state.
+   * Returns null if no position exists or API call fails.
+   */
+  async function getLastPosition(
+    animeId: string,
+    season: number,
+    episode: number
+  ): Promise<number | null> {
+    try {
+      const positionRecord = await historyService.getLastPosition(animeId, season, episode)
+      return positionRecord?.position || null
+    } catch (err) {
+      console.error('Failed to get last position:', err)
+      return null
+    }
+  }
+
   function getPosition(animeId: string, season: number, episode: number): number {
     const key = `${animeId}_${season}_${episode}`
     return lastPositions.value[key]?.position || 0
@@ -161,6 +179,7 @@ export const useHistoryStore = defineStore('history', () => {
     savePosition,
     savePositionLegacy,
     loadLastPosition,
+    getLastPosition,
     getPosition,
     clearError
   }
