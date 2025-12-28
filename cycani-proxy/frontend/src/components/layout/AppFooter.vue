@@ -4,7 +4,7 @@
       <div class="row">
         <div class="col-md-6 text-center text-md-start">
           <p class="mb-0 text-muted">
-            &copy; {{ currentYear }} 次元城动画网站
+            &copy; {{ currentYear }} 动画网站
             <span class="mx-2">•</span>
             <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-muted">
               GitHub

@@ -29,7 +29,7 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const title = to.meta.title as string
-  document.title = title ? `${title} - Cycani` : 'Cycani - 次元城动画'
+  document.title = title ? `${title} - 动画` : '动画'
   next()
 })
 

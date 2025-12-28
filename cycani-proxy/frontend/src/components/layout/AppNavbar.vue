@@ -1,9 +1,9 @@
 <template>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark" role="navigation" aria-label="主导航">
     <div class="container-fluid">
-      <router-link to="/" class="navbar-brand" aria-label="次元城动画 首页">
+      <router-link to="/" class="navbar-brand" aria-label="动画 首页">
         <i class="bi bi-play-circle-fill me-2" aria-hidden="true"></i>
-        次元城动画
+        动画
       </router-link>
 
       <button

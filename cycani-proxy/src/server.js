@@ -1525,7 +1525,7 @@ app.get('/api/anime/:animeId', async (req, res) => {
         // 策略2: 尝试从h1标签获取
         if (!title) {
             const fullTitle = $('h1').text().trim() || '';
-            const titleText = fullTitle.replace('_TV番组 - 次元城动画 - 海量蓝光番剧免费看！', '').trim();
+            const titleText = fullTitle.replace(/_TV番组.*$/, '').trim();
             if (titleText && titleText !== '未知动画') {
                 title = titleText;
                 strategyUsed = 2;
@@ -1854,7 +1854,8 @@ function parseEpisodeData($) {
         }
 
         // 如果没有解析到数据，返回基本信息
-        const title = $('title').text() || '未知剧集';
+        const rawTitle = $('title').text() || '未知剧集';
+        const title = rawTitle.replace(/_TV番组.*$/, '').trim();
 
         return {
             title,
