@@ -121,6 +121,12 @@ export const useHistoryStore = defineStore('history', () => {
     position: number,
     skipThreshold = 5
   ) {
+    // Validate animeId presence before processing save
+    if (!animeInfo?.id) {
+      console.error('❌ Cannot save: animeInfo.id is missing', { animeInfo, episodeInfo, position })
+      return
+    }
+
     const key = `${animeInfo.id}_${episodeInfo.season}_${episodeInfo.episode}`
 
     // Check if position changed significantly (avoid duplicate saves)

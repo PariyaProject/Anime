@@ -158,6 +158,8 @@ const episodesLoading = ref(false)
 const error = ref<string | null>(null)
 
 const animeId = computed(() => route.params.animeId as string)
+// Cache animeId on mount to prevent loss during route transitions
+const currentAnimeId = ref<string>(animeId.value)
 const season = ref(Number(route.query.season) || 1)
 const episode = ref(Number(route.query.episode) || 1)
 const currentSeason = ref(season.value)
@@ -498,7 +500,7 @@ async function savePosition() {
     try {
       await historyStore.savePosition(
         {
-          id: animeId.value,
+          id: currentAnimeId.value,
           title: animeTitle.value,
           cover: animeCover.value
         },
@@ -531,7 +533,7 @@ function onVideoEnd() {
   if (duration.value > 0) {
     historyStore.savePositionImmediate(
       {
-        id: animeId.value,
+        id: currentAnimeId.value,
         title: animeTitle.value,
         cover: animeCover.value
       },
@@ -662,6 +664,27 @@ async function refreshVideoUrlSeamlessly() {
   }
 }
 
+// Page hide handler - defined outside onMounted for cleanup in onUnmounted
+const handlePageHide = () => {
+  if (currentTime.value > 0) {
+    historyStore.savePositionImmediate(
+      {
+        id: currentAnimeId.value,
+        title: animeTitle.value,
+        cover: animeCover.value
+      },
+      {
+        season: season.value,
+        episode: episode.value,
+        title: episodeTitle.value,
+        duration: duration.value
+      },
+      currentTime.value,
+      0  // No threshold for page exit (always save)
+    )
+    console.log('💾 Position saved on page exit')
+  }
+}
 
 onMounted(async () => {
   uiStore.loadDarkModePreference()
@@ -693,30 +716,9 @@ onMounted(async () => {
   })
 
   // Setup page visibility/unload event listeners for immediate save
-  const handlePageHide = () => {
-    if (currentTime.value > 0) {
-      historyStore.savePositionImmediate(
-        {
-          id: animeId.value,
-          title: animeTitle.value,
-          cover: animeCover.value
-        },
-        {
-          season: season.value,
-          episode: episode.value,
-          title: episodeTitle.value,
-          duration: duration.value
-        },
-        currentTime.value,
-        0  // No threshold for page exit (always save)
-      )
-      console.log('💾 Position saved on page exit')
-    }
-  }
-
+  // Note: handlePageHide function is defined outside onMounted for cleanup in onUnmounted
   window.addEventListener('visibilitychange', handlePageHide)
   window.addEventListener('pagehide', handlePageHide)
-  // Note: beforeunload is unreliable for async operations, but we try anyway
   window.addEventListener('beforeunload', handlePageHide)
 
   try {
@@ -745,6 +747,11 @@ onUnmounted(() => {
     player.destroy()
     player = null  // Clear the reference to allow re-initialization
   }
+
+  // Cleanup event listeners to prevent memory leaks
+  window.removeEventListener('visibilitychange', handlePageHide)
+  window.removeEventListener('pagehide', handlePageHide)
+  window.removeEventListener('beforeunload', handlePageHide)
 })
 
 watch(() => route.query, () => {
@@ -863,7 +870,7 @@ function initializePlyr() {
       if (currentTime.value > 0) {
         historyStore.savePositionImmediate(
           {
-            id: animeId.value,
+            id: currentAnimeId.value,
             title: animeTitle.value,
             cover: animeCover.value
           },
@@ -884,7 +891,7 @@ function initializePlyr() {
       if (currentTime.value > 0) {
         historyStore.savePositionImmediate(
           {
-            id: animeId.value,
+            id: currentAnimeId.value,
             title: animeTitle.value,
             cover: animeCover.value
           },
@@ -907,7 +914,7 @@ function initializePlyr() {
       if (newPosition > 0) {
         historyStore.savePositionImmediate(
           {
-            id: animeId.value,
+            id: currentAnimeId.value,
             title: animeTitle.value,
             cover: animeCover.value
           },
@@ -986,7 +993,7 @@ function initializePlyr() {
       if (currentTime.value > 0) {
         historyStore.savePositionImmediate(
           {
-            id: animeId.value,
+            id: currentAnimeId.value,
             title: animeTitle.value,
             cover: animeCover.value
           },

@@ -5,17 +5,19 @@
       <h2 class="section-header mb-4">
         继续观看
       </h2>
-      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
-        <div
-          v-for="anime in groupedAnime.slice(0, 4)"
-          :key="`${anime.animeId}-${anime.season}`"
-          class="col"
-        >
-          <GroupedContinueWatchingCard
-            :anime="anime"
-            @resume="resumeWatching"
-            @select-episode="selectEpisode"
-          />
+      <div class="continue-watching-container">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+          <div
+            v-for="anime in groupedAnime"
+            :key="`${anime.animeId}-${anime.season}`"
+            class="col"
+          >
+            <GroupedContinueWatchingCard
+              :anime="anime"
+              @resume="resumeWatching"
+              @select-episode="selectEpisode"
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -339,6 +341,32 @@ onMounted(async () => {
   margin: 0;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--border-color);
+}
+
+/* Continue Watching Container - Scrollable */
+.continue-watching-container {
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Scrollbar styling for dark mode compatibility */
+.continue-watching-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.continue-watching-container::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.continue-watching-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.continue-watching-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 /* Filters Card */

@@ -175,6 +175,37 @@ async function createBackup(filePath) {
  * @returns {object} Parsed data or default structure
  */
 async function validateAndRecoverDataFile(filePath, defaultStructure) {
+    // Helper function to backup corrupted file
+    const backupCorruptedFile = async () => {
+        try {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const corruptedBackup = `${filePath}.corrupted.${timestamp}`;
+            await fs.copyFile(filePath, corruptedBackup);
+            console.log(`📦 Corrupted file backed up to: ${corruptedBackup}`);
+
+            // Clean up old corrupted files (keep only 3 most recent)
+            const dir = path.dirname(filePath);
+            const files = await fs.readdir(dir);
+            const corrupted = files
+                .filter(f => f.startsWith(path.basename(filePath)) && f.includes('.corrupted.'))
+                .sort()
+                .reverse();
+
+            if (corrupted.length > 3) {
+                for (const oldFile of corrupted.slice(3)) {
+                    try {
+                        await fs.unlink(path.join(dir, oldFile));
+                        console.log(`🗑️ Cleaned up old corrupted file: ${oldFile}`);
+                    } catch (e) {
+                        // Ignore cleanup errors
+                    }
+                }
+            }
+        } catch (backupError) {
+            console.warn(`⚠️ Failed to backup corrupted file: ${backupError.message}`);
+        }
+    };
+
     try {
         // Check if file exists
         await fs.access(filePath);
@@ -197,29 +228,61 @@ async function validateAndRecoverDataFile(filePath, defaultStructure) {
             data = JSON.parse(content);
         } catch (parseError) {
             console.error(`❌ Invalid JSON in data file: ${filePath}`);
-            // Create backup of corrupted file
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const corruptedBackup = `${filePath}.corrupted.${timestamp}`;
-            await fs.copyFile(filePath, corruptedBackup);
-            console.log(`📦 Corrupted file backed up to: ${corruptedBackup}`);
+            await backupCorruptedFile();
             return defaultStructure;
         }
 
-        // Validate data structure (basic validation)
+        // Minimal validation - only check if it's an object
         if (!data || typeof data !== 'object') {
-            throw new Error('Data is not an object');
+            console.warn(`⚠️ Data is not a valid object, backing up and using default`);
+            await backupCorruptedFile();
+            return defaultStructure;
         }
 
-        // If we have a default key like 'default', validate it exists
+        // Lenient validation: if default key is expected but missing, try to recover
         if (defaultStructure.default && !data.default) {
-            throw new Error('Missing default user data');
+            // Check if data has the structure we need (watchHistory array)
+            if (Array.isArray(data.watchHistory) || Array.isArray(data.history)) {
+                // Data structure is close enough, wrap it in default structure
+                console.log(`🔧 Recovering data with compatible structure`);
+                return {
+                    default: {
+                        userId: 'default',
+                        watchHistory: Array.isArray(data.watchHistory) ? data.watchHistory : (data.history || []),
+                        lastPositions: data.lastPositions || {},
+                        createdAt: data.createdAt || new Date().toISOString(),
+                        updatedAt: data.updatedAt || new Date().toISOString()
+                    }
+                };
+            }
+
+            // Cannot recover, backup and return default
+            console.warn(`⚠️ Missing default user data and cannot recover, backing up and using default`);
+            await backupCorruptedFile();
+            return defaultStructure;
+        }
+
+        // Validate default structure has required arrays
+        if (data.default) {
+            // Ensure watchHistory is an array
+            if (!Array.isArray(data.default.watchHistory)) {
+                console.warn(`⚠️ watchHistory is not an array, backing up and using default`);
+                await backupCorruptedFile();
+                return defaultStructure;
+            }
+            // Ensure lastPositions is an object
+            if (!data.default.lastPositions || typeof data.default.lastPositions !== 'object') {
+                console.warn(`⚠️ lastPositions is invalid, backing up and using default`);
+                await backupCorruptedFile();
+                return defaultStructure;
+            }
         }
 
         console.log(`✅ Data file validated successfully: ${filePath}`);
         return data;
     } catch (error) {
         console.error(`❌ Data file validation failed: ${error.message}`);
-        // Return default structure on any error
+        await backupCorruptedFile();
         return defaultStructure;
     }
 }
@@ -366,6 +429,14 @@ class WatchHistoryManager {
             // 添加新记录
             console.log(`➕ Adding new watch record: ${animeInfo.id} S${season}E${episode}`);
             userHistory.watchHistory.unshift(watchRecord);
+
+            // Log when history grows large (monitoring)
+            const historyCount = userHistory.watchHistory.length;
+            if (historyCount === 1000) {
+                console.log(`📊 Watch history reached ${historyCount} entries`);
+            } else if (historyCount > 0 && historyCount % 5000 === 0) {
+                console.log(`📊 Watch history reached ${historyCount} entries`);
+            }
         }
 
         // 保存播放位置（使用字符串键以确保一致性）
@@ -376,10 +447,8 @@ class WatchHistoryManager {
         };
         console.log(`[DEBUG] Saving position for ${positionKey}: ${position}s`);
 
-        // 限制历史记录数量（保留最近100条）
-        if (userHistory.watchHistory.length > 100) {
-            userHistory.watchHistory = userHistory.watchHistory.slice(0, 100);
-        }
+        // REMOVED: 100-record hard limit to prevent automatic data loss
+        // History now grows indefinitely. Monitor size with the log below.
 
         const saved = await this.saveHistory(history);
         console.log(`[DEBUG] saveHistory returned:`, saved);
