@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cycani视频代理 MVP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.plyr.io/3.7.8/plyr.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- 头部导航 -->
+        <nav class="navbar navbar-dark bg-dark mb-4 navbar-expand-lg">
+            <div class="container">
+                <a href="#" class="navbar-brand mb-0 h1 text-decoration-none" id="home-link">🎬 Cycani视频代理 MVP</a>
+
+                <!-- 播放历史下拉菜单 -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="historyDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        📜 播放历史
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="historyDropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;" id="history-dropdown-menu">
+                        <li><h6 class="dropdown-header">📜 播放历史</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><div class="text-center text-muted py-3">加载中...</div></li>
+                    </ul>
+                </div>
+
+                <!-- 夜间模式开关 -->
+                <div class="form-check form-switch d-flex align-items-center">
+                    <input class="form-check-input me-2" type="checkbox" id="darkmode-toggle">
+                    <label class="form-check-label text-light" for="darkmode-toggle">
+                        🌙 夜间模式
+                    </label>
+                </div>
+
+                <span class="badge bg-success ms-2" id="server-status">服务器连接中...</span>
+            </div>
+        </nav>
+
+        <div class="container">
+            <!-- 观看历史区域 -->
+            <div class="row mb-4" id="continue-watching-section" style="display: none;">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>📜 观看历史</h5>
+                            <small class="text-muted">最近观看的内容，包括已完成</small>
+                        </div>
+                        <div class="card-body">
+                            <div id="continue-watching-grid" class="row">
+                                <!-- 观看历史内容将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 筛选和搜索区域 -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>🔍 动画筛选与搜索</h5>
+                            <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#animeIdJumpModal">
+                                🎯 ID跳转
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <!-- 搜索框 -->
+                                <div class="col-md-3 mb-2">
+                                    <input type="text" class="form-control form-control-sm" id="anime-search"
+                                           placeholder="搜索动画名称..." autocomplete="off">
+                                </div>
+                                <!-- 类型筛选 -->
+                                <div class="col-md-2 mb-2">
+                                    <select class="form-select form-select-sm" id="genre-filter">
+                                        <option value="">所有类型</option>
+                                        <option value="原创">原创</option>
+                                        <option value="漫画改">漫画改</option>
+                                        <option value="小说改">小说改</option>
+                                        <option value="游戏改">游戏改</option>
+                                        <option value="热血">热血</option>
+                                        <option value="科幻">科幻</option>
+                                        <option value="治愈">治愈</option>
+                                        <option value="校园">校园</option>
+                                        <option value="恋爱">恋爱</option>
+                                        <option value="奇幻">奇幻</option>
+                                    </select>
+                                </div>
+                                <!-- 年份筛选 -->
+                                <div class="col-md-1 mb-2">
+                                    <select class="form-select form-select-sm" id="year-filter">
+                                        <option value="">年份</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2024">2024</option>
+                                        <option value="2023">2023</option>
+                                        <option value="2022">2022</option>
+                                        <option value="2021">2021</option>
+                                        <option value="2020">2020</option>
+                                    </select>
+                                </div>
+                                <!-- 月份筛选 -->
+                                <div class="col-md-1 mb-2">
+                                    <select class="form-select form-select-sm" id="month-filter">
+                                        <option value="">月份</option>
+                                        <option value="01">1月</option>
+                                        <option value="02">2月</option>
+                                        <option value="03">3月</option>
+                                        <option value="04">4月</option>
+                                        <option value="05">5月</option>
+                                        <option value="06">6月</option>
+                                        <option value="07">7月</option>
+                                        <option value="08">8月</option>
+                                        <option value="09">9月</option>
+                                        <option value="10">10月</option>
+                                        <option value="11">11月</option>
+                                        <option value="12">12月</option>
+                                    </select>
+                                </div>
+                                <!-- 排序 -->
+                                <div class="col-md-2 mb-2">
+                                    <select class="form-select form-select-sm" id="sort-filter">
+                                        <option value="time">按最新</option>
+                                        <option value="hits">按最热</option>
+                                        <option value="score">按评分</option>
+                                    </select>
+                                </div>
+                                <!-- 搜索按钮 -->
+                                <div class="col-md-2 mb-2">
+                                    <button type="button" class="btn btn-primary btn-sm w-100" id="filter-btn">
+                                        <span id="filter-btn-text">筛选</span>
+                                        <span id="filter-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 动画列表区域 -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>📺 动画列表</h5>
+                        <div class="text-muted" id="anime-count">
+                            共加载中...
+                        </div>
+                    </div>
+
+                    <!-- 动画网格 -->
+                    <div id="anime-grid" class="row">
+                        <!-- 动画卡片将通过JavaScript动态生成 -->
+                        <div class="col-md-12 text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <div class="mt-3">正在加载动画列表...</div>
+                        </div>
+                    </div>
+
+                    <!-- 分页 -->
+                    <div class="d-flex justify-content-center mt-4" id="pagination">
+                        <nav aria-label="动画列表分页">
+                            <ul class="pagination">
+                                <!-- 分页按钮将通过JavaScript动态生成 -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+    
+            <!-- 视频播放区域 -->
+            <div class="row" id="video-section" style="display: none;">
+
+                <!-- 播放器主要区域 -->
+                <div class="col-12 mb-4">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body p-0 bg-black">
+                            <!-- 视频播放器容器 - 优化尺寸 -->
+                            <div class="video-player-container">
+                                <video id="video-player" controls crossorigin="anonymous" playsinline>
+                                    您的浏览器不支持HTML5视频播放
+                                </video>
+                            </div>
+
+                            <!-- 视频信息面板 -->
+                            <div class="video-info bg-dark text-white">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">当前集数:</small>
+                                        <strong id="current-episode">-</strong>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">视频源:</small>
+                                        <strong id="video-source">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 mb-3">
+                    <!-- 播放器控制栏 -->
+                    <div class="card border-0 bg-transparent">
+                        <div class="card-body d-flex justify-content-between align-items-center py-2">
+                            <h5 class="mb-0 text-white" id="video-title">视频播放器</h5>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-light btn-sm" id="auto-play-btn">
+                                    自动播放: <span id="auto-play-status">开</span>
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" id="next-episode-btn">
+                                    下一集
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" id="back-to-list-btn">
+                                    返回列表
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 选集和跳转区域 -->
+                <div class="col-12 mb-4">
+                    <div class="row g-3">
+                        <!-- 快速跳转区域 -->
+                        <div class="col-lg-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">快速跳转</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control form-control-sm" id="jump-season" placeholder="季度" min="1" value="1">
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control form-control-sm" id="jump-episode" placeholder="集数" min="1">
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary btn-sm w-100" id="jump-btn">
+                                        跳转播放
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 选集列表区域 -->
+                        <div class="col-lg-9">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">选集列表</h6>
+                                    <small class="text-muted" id="episode-count">共0集</small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <!-- 选集列表容器 -->
+                                    <div id="episode-list" class="episode-list-container">
+                                        <div class="text-center text-muted py-4">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">加载中...</span>
+                                            </div>
+                                            <div class="small mt-2">正在加载选集...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+          </div>
+    </div>
+
+    <!-- 动画ID跳转模态框 -->
+    <div class="modal fade" id="animeIdJumpModal" tabindex="-1" aria-labelledby="animeIdJumpModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="animeIdJumpModalLabel">🎯 动画ID跳转</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="anime-id-jump-form">
+                        <div class="mb-3">
+                            <label for="modal-anime-id" class="form-label">动画ID</label>
+                            <input type="text" class="form-control" id="modal-anime-id" placeholder="输入动画ID" required>
+                            <div class="form-text">请输入要跳转的动画ID</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="modal-season" class="form-label">季度</label>
+                                <input type="number" class="form-control" id="modal-season" min="1" value="1" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="modal-episode" class="form-label">集数</label>
+                                <input type="number" class="form-control" id="modal-episode" min="1" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="anime-id-jump-btn">跳转播放</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

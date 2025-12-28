@@ -1,0 +1,1049 @@
+/* 自定义样式 - 白天模式 */
+body {
+    background-color: #ffffff;
+    font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #000000;
+}
+
+/* 导航栏样式 */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 卡片样式 */
+.card {
+    border: 1px solid #dee2e6;
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* 视频容器样式 */
+.video-container, .video-player-container {
+    position: relative;
+    background: #000;
+    width: 100%;
+    aspect-ratio: 16/9;
+}
+
+#video-player {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* 铺满整个容器 */
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* 确保视频播放器容器相对定位 */
+.video-player-container {
+    position: relative;
+}
+
+video {
+    width: 100%;      /* 宽度填满父容器 */
+    height: 100%;     /* 高度填满父容器 */
+    display: block;   /* 消除底部间隙 */
+    object-fit: contain; /* 关键属性：保持比例，确保视频内容不被裁剪 */
+}
+
+/* Plyr播放器自定义样式 */
+.plyr {
+    border-radius: 0;
+}
+
+.plyr--video {
+    background: transparent;
+}
+
+/* 视频信息面板 */
+.video-info {
+    background: #ffffff;
+    padding: 15px;
+    border-top: 1px solid #e9ecef;
+    color: #000000;
+}
+
+#video-section .video-info {
+    background: #ffffff;
+    color: #000000;
+}
+
+#video-section .video-info small {
+    color: #000000;
+}
+
+#video-section .video-info strong {
+    color: #000000;
+}
+
+/* 表单样式 */
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* 按钮状态 */
+.btn-group .btn.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+/* 服务器状态指示器 */
+#server-status {
+    transition: all 0.3s ease;
+}
+
+/* 加载动画 */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    vertical-align: middle;
+}
+
+/* 优化整体容器布局 - 固定30px边距 */
+.container {
+    width: calc(100% - 90px);
+    padding: 0 90px;
+    margin: 0 auto;
+    max-width: none;
+}
+
+@media (max-width: 768px) {
+    .container {
+        width: calc(100% - 40px);
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        width: calc(100% - 32px);
+        padding: 0 8px;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 12px;
+    }
+
+    .video-info .row {
+        text-align: center;
+    }
+
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-group .btn {
+        margin-bottom: 5px;
+    }
+
+    /* 移动端动画卡片优化 */
+    .anime-cover {
+        height: 200px;
+    }
+
+    .anime-title {
+        font-size: 14px;
+        height: 40px;
+    }
+
+    .anime-actions {
+        flex-direction: column;
+    }
+}
+
+/* 超大屏幕优化 */
+@media (min-width: 1600px) {
+
+    .anime-cover {
+        height: 320px;
+    }
+}
+
+/* 中等屏幕优化 */
+@media (min-width: 992px) and (max-width: 1200px) {
+    .anime-cover {
+        height: 260px;
+    }
+}
+
+/* 动画效果 */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 播放器控制栏 */
+.player-controls {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 0 0 8px 8px;
+}
+
+/* 错误提示样式 */
+.error-message {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* 成功提示样式 */
+.success-message {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 12px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* 动画卡片样式 */
+.anime-card {
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background-color: #ffffff;
+}
+
+.anime-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.anime-cover {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.anime-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.anime-card:hover .anime-cover img {
+    transform: scale(1.05);
+}
+
+.anime-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: flex-end;
+    padding: 15px;
+}
+
+.anime-card:hover .anime-overlay {
+    opacity: 1;
+}
+
+.anime-rating {
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    display: inline-block;
+}
+
+.anime-status {
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.anime-info {
+    padding: 15px;
+}
+
+.anime-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #000000;
+    line-height: 1.4;
+    height: 44px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.anime-meta {
+    color: #000000;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.anime-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.anime-btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.anime-btn-select {
+    background: #28a745;
+    color: white;
+    border: none;
+}
+
+.anime-btn-select:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.anime-btn-details {
+    background: #6c757d;
+    color: white;
+    border: none;
+}
+
+.anime-btn-details:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+/* 加载动画 */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.loading-spinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* 分页样式 */
+.pagination .page-link {
+    color: #667eea;
+    border-color: #667eea;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.pagination .page-link:hover {
+    color: #764ba2;
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .anime-cover {
+        height: 200px;
+    }
+
+    .anime-title {
+        font-size: 14px;
+        height: 40px;
+    }
+
+    .anime-actions {
+        flex-direction: column;
+    }
+}
+
+/* 历史记录卡片样式 */
+.history-card {
+    border: none;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.history-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.history-cover {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+}
+
+.history-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.7);
+}
+
+.history-progress .progress {
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.history-progress .progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* 继续观看区域样式 */
+#continue-watching-section .card {
+    background: #ffffff;
+    border-left: 4px solid #28a745;
+}
+
+/* 观看历史区域样式 */
+#watch-history-section .card {
+    background: #ffffff;
+    border-left: 4px solid #17a2b8;
+}
+
+/* 选集列表样式 */
+.episode-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.episode-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    color: #000000;
+}
+
+.episode-item:hover {
+    background: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.episode-item.episode-current {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border-color: #0056b3;
+}
+
+.episode-item.episode-completed {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: white;
+    border-color: #1e7e34;
+}
+
+.episode-number {
+    font-size: 12px;
+    font-weight: bold;
+    background: rgba(0,0,0,0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 8px;
+    min-width: 45px;
+    text-align: center;
+}
+
+.episode-title {
+    flex: 1;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.episode-status {
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* 播放页面优化布局 */
+#video-section {
+    background: #ffffff;
+    min-height: 100vh;
+    padding: 0;
+    width: 100%;
+}
+
+#video-section .container {
+    width: calc(100% - 60px);
+    padding: 0 30px;
+    margin: 0 auto;
+    max-width: none;
+}
+
+#video-section .card {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 0;
+}
+
+#video-section .card-header {
+    background: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 8px 15px;
+    min-height: auto;
+    position: relative;
+    z-index: 15;
+    color: #000000;
+}
+
+#video-section .card-body {
+    background: #ffffff;
+    padding: 0;
+}
+
+#video-section .video-player-container {
+    max-width: 100%;
+    margin: 0;
+    min-height: 400px;
+    background: #000000;
+    border-radius: 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+/* 修复播放器被遮挡问题 */
+#video-section .row:not(:first-child) {
+    position: relative;
+    z-index: 20;
+}
+
+#video-section .video-info {
+    position: relative;
+    z-index: 25;
+}
+
+/* 确保视频播放器在最上层 */
+#video-section .plyr {
+    z-index: 100 !important;
+}
+
+#video-section .plyr__controls {
+    z-index: 101 !important;
+}
+
+#video-player {
+    z-index: 99 !important;
+}
+
+/* 移动端播放器优化 */
+@media (max-width: 768px) {
+    #video-section {
+        padding: 0;
+    }
+
+    #video-section .container {
+        padding: 0 8px;
+    }
+
+    #video-section .video-player-container {
+        min-height: 300px;
+    }
+
+    #video-section .card-header {
+        padding: 6px 10px;
+    }
+
+    #video-section .card-body {
+        padding: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    #video-section .video-player-container {
+        min-height: 250px;
+    }
+
+    #video-section .card-header {
+        padding: 4px 8px;
+    }
+
+    #video-section h5 {
+        font-size: 14px;
+        margin-bottom: 0;
+    }
+
+    #video-section .btn-group .btn {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+}
+
+/* 响应式播放器 */
+@media (max-width: 768px) {
+    .video-player-container {
+        min-height: 250px;
+    }
+
+    .episode-list-container {
+        max-height: 300px;
+    }
+
+    .episode-item {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .episode-number {
+        font-size: 10px;
+        min-width: 35px;
+    }
+
+    .episode-title {
+        font-size: 12px;
+    }
+}
+
+/* 播放历史下拉菜单样式 */
+.history-item-dropdown .dropdown-item {
+    background: white;
+    border: none;
+    padding: 8px 12px;
+}
+
+.history-item-dropdown .dropdown-item:hover {
+    background: #f8f9fa;
+}
+
+.btn-resume {
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+/* 导航栏样式优化 */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.navbar-brand:hover {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.dropdown-menu {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* 调试信息区域默认隐藏 */
+    display: none;
+}
+
+/* 当调试信息开启时显示 */
+    display: block;
+}
+
+/* 夜间模式样式 */
+.dark-mode {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.dark-mode body {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.dark-mode html {
+    background-color: #1a1a1a !important;
+}
+
+/* 确保主容器背景色正确 */
+.dark-mode .container-fluid {
+    background-color: #1a1a1a !important;
+}
+
+.dark-mode .container {
+    background-color: #1a1a1a !important;
+}
+
+.dark-mode .navbar {
+    background-color: #2d2d2d !important;
+}
+
+.dark-mode .navbar-brand,
+.dark-mode .navbar-brand:hover {
+    color: #ffffff !important;
+}
+
+.dark-mode .navbar-nav .nav-link {
+    color: #ffffff !important;
+}
+
+.dark-mode .navbar-text {
+    color: #ffffff !important;
+}
+
+.dark-mode .card {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .card-header {
+    background-color: #2d2d2d !important;
+    border-bottom-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .card-body {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .form-control,
+.dark-mode .form-select {
+    background-color: #404040 !important;
+    border-color: #555555 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .form-control:focus,
+.dark-mode .form-select:focus {
+    background-color: #404040 !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.dark-mode .btn-outline-light {
+    border-color: #555555 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .btn-outline-light:hover {
+    background-color: #555555 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .btn-outline-secondary {
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .dropdown-menu {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .dropdown-item {
+    color: #ffffff !important;
+}
+
+.dark-mode .dropdown-item:hover {
+    background-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .dropdown-header {
+    color: #ffffff !important;
+}
+
+.dark-mode .dropdown-divider {
+    border-color: #404040 !important;
+}
+
+.dark-mode .anime-card {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .anime-title {
+    color: #ffffff !important;
+}
+
+.dark-mode .anime-meta {
+    color: #cccccc !important;
+}
+
+.dark-mode .badge {
+    background-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .badge.bg-success {
+    background-color: #198754 !important;
+}
+
+.dark-mode .text-muted {
+    color: #cccccc !important;
+}
+
+.dark-mode .page-link {
+    color: #ffffff !important;
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+}
+
+.dark-mode .page-link:hover {
+    color: #ffffff !important;
+    background-color: #404040 !important;
+    border-color: #555555 !important;
+}
+
+.dark-mode .page-item.active .page-link {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .page-item.disabled .page-link {
+    color: #6c757d !important;
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+}
+
+/* 夜间模式 - 播放页面 */
+.dark-mode #video-section {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.dark-mode #video-section .card {
+    background: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode #video-section .card-header {
+    background: #2d2d2d !important;
+    border-bottom-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode #video-section .card-body {
+    background: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode #video-section .video-info {
+    background: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode #video-section .video-info small {
+    color: #cccccc !important;
+}
+
+.dark-mode #video-section .video-info strong {
+    color: #ffffff !important;
+}
+
+.dark-mode .episode-item {
+    background: #404040 !important;
+    color: #ffffff !important;
+    border-color: #555555 !important;
+}
+
+.dark-mode .episode-item:hover {
+    background: #555555 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .episode-current {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+    color: #ffffff !important;
+    border-color: #0056b3 !important;
+}
+
+.dark-mode .episode-completed {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+    color: #ffffff !important;
+    border-color: #1e7e34 !important;
+}
+
+/* 夜间模式 - 按钮状态 */
+.dark-mode .btn-group .btn.active {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+}
+
+/* 夜间模式 - 输入框焦点状态 */
+.dark-mode .form-control:focus::placeholder {
+    color: #cccccc;
+}
+
+/* 夜间模式 - 历史记录卡片 */
+.dark-mode .history-card {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode #video-section h5,
+.dark-mode #video-section h6 {
+    color: #ffffff !important;
+}
+
+/* 夜间模式 - 额外的元素修复 */
+.dark-mode .btn-primary {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .btn-primary:hover {
+    background-color: #0b5ed7 !important;
+    border-color: #0a58ca !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .btn-outline-primary {
+    border-color: #0d6efd !important;
+    color: #0d6efd !important;
+}
+
+.dark-mode .btn-outline-primary:hover {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .modal-content {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .modal-header {
+    background-color: #2d2d2d !important;
+    border-bottom-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .modal-body {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .modal-footer {
+    background-color: #2d2d2d !important;
+    border-top-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .modal-title {
+    color: #ffffff !important;
+}
+
+.dark-mode .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+
+/* 夜间模式切换动画 */
+body, .card, .navbar, .dropdown-menu, .anime-card, .episode-item {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.form-control, .form-select {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 夜间模式 - 通用修复 */
+.dark-mode * {
+    box-sizing: border-box;
+}
+
+.dark-mode .btn {
+    transition: all 0.3s ease;
+}
+
+.dark-mode .alert {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .alert-success {
+    background-color: #1e3a2a !important;
+    border-color: #28a745 !important;
+    color: #28a745 !important;
+}
+
+.dark-mode .alert-danger {
+    background-color: #3a1e1e !important;
+    border-color: #dc3545 !important;
+    color: #dc3545 !important;
+}
+
+.dark-mode .alert-warning {
+    background-color: #3a2e1e !important;
+    border-color: #ffc107 !important;
+    color: #ffc107 !important;
+}
+
+.dark-mode .alert-info {
+    background-color: #1e2e3a !important;
+    border-color: #17a2b8 !important;
+    color: #17a2b8 !important;
+}
