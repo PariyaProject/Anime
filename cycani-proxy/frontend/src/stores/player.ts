@@ -12,6 +12,7 @@ export const usePlayerStore = defineStore('player', () => {
   const autoPlay = ref(true)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const refreshing = ref(false) // Track if currently refreshing video URL
 
   // Getters
   const hasEpisode = computed(() => currentEpisodeData.value !== null)
@@ -22,6 +23,15 @@ export const usePlayerStore = defineStore('player', () => {
   const hasNextEpisode = computed(
     () => currentEpisodeData.value?.nextEpisode !== undefined
   )
+  const currentVideoUrl = computed(() => currentEpisodeData.value?.realVideoUrl || null)
+  const expiresAt = computed(() => {
+    if (!currentVideoUrl.value) return null
+    return episodeService.parseUrlExpiration(currentVideoUrl.value)
+  })
+  const timeUntilExpiration = computed(() => {
+    if (!currentVideoUrl.value) return Infinity
+    return episodeService.getTimeUntilExpiration(currentVideoUrl.value)
+  })
 
   // Actions
   async function loadEpisode(animeId: string, season: number, episode: number) {
@@ -34,6 +44,36 @@ export const usePlayerStore = defineStore('player', () => {
       throw err
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Refresh the current video URL (handles expired URLs)
+   * Returns the refreshed video URL
+   */
+  async function refreshVideoUrl(): Promise<string> {
+    if (!currentEpisodeData.value) {
+      throw new Error('No episode loaded')
+    }
+
+    const animeId = currentEpisodeData.value.animeId || currentEpisodeData.value.bangumiId
+    const { season, episode } = currentEpisodeData.value
+
+    refreshing.value = true
+    try {
+      const result = await episodeService.refreshVideoUrl(animeId, season, episode)
+
+      // Update the episode data with the refreshed URL
+      if (currentEpisodeData.value) {
+        currentEpisodeData.value.realVideoUrl = result.realVideoUrl
+      }
+
+      return result.realVideoUrl
+    } catch (err: any) {
+      error.value = err.message || 'Failed to refresh video URL'
+      throw err
+    } finally {
+      refreshing.value = false
     }
   }
 
@@ -93,12 +133,17 @@ export const usePlayerStore = defineStore('player', () => {
     autoPlay,
     loading,
     error,
+    refreshing,
     // Getters
     hasEpisode,
     progress,
     hasNextEpisode,
+    currentVideoUrl,
+    expiresAt,
+    timeUntilExpiration,
     // Actions
     loadEpisode,
+    refreshVideoUrl,
     play,
     pause,
     seekTo,

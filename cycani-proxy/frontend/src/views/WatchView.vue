@@ -317,6 +317,8 @@ const duration = ref(0)
 const autoPlayNext = ref(true) // Auto-play next episode
 
 let saveInterval: number | null = null
+let refreshUrlTimeout: number | null = null // Auto-refresh before URL expires
+let isRefreshingUrl = ref(false) // Track if currently refreshing URL
 
 const episodeTitle = computed(() => {
   if (!playerStore.currentEpisodeData) return ''
@@ -635,8 +637,138 @@ function onVideoEnd() {
   }
 }
 
+/**
+ * Schedule automatic URL refresh before expiration
+ * Sets a timeout to refresh the URL 5 seconds before it expires
+ */
+function scheduleUrlRefresh() {
+  // Clear any existing timeout
+  if (refreshUrlTimeout) {
+    clearTimeout(refreshUrlTimeout)
+    refreshUrlTimeout = null
+  }
+
+  const timeUntilExpiration = playerStore.timeUntilExpiration
+
+  if (timeUntilExpiration === Infinity) {
+    return
+  }
+
+  // Refresh 5 seconds before expiration
+  const REFRESH_BEFORE_EXPIRATION = 5 * 1000 // 5 seconds
+  const refreshDelay = timeUntilExpiration - REFRESH_BEFORE_EXPIRATION
+
+  if (refreshDelay <= 0) {
+    console.log('⏰ URL expires soon, refreshing now...')
+    refreshVideoUrlSeamlessly()
+    return
+  }
+
+  console.log(`⏰ URL expires in ${Math.floor(timeUntilExpiration / 1000)}s, scheduling refresh in ${Math.floor(refreshDelay / 1000)}s`)
+
+  refreshUrlTimeout = window.setTimeout(async () => {
+    console.log('⏰ Auto-refreshing URL before expiration...')
+    await refreshVideoUrlSeamlessly()
+  }, refreshDelay)
+}
+
+/**
+ * Refresh video URL seamlessly while maintaining playback position
+ */
+async function refreshVideoUrlSeamlessly() {
+  if (isRefreshingUrl.value) {
+    console.log('⏳ URL refresh already in progress, skipping...')
+    return
+  }
+
+  const wasPlaying = player ? player.playing : false
+  const currentPosition = currentTime.value
+
+  console.log(`🔄 Refreshing video URL at position ${formatTime(currentPosition)}...`)
+  uiStore.showNotification('正在刷新视频链接...', 'info')
+
+  isRefreshingUrl.value = true
+
+  try {
+    // Fetch fresh URL from backend
+    const freshUrl = await playerStore.refreshVideoUrl()
+
+    if (!freshUrl) {
+      throw new Error('Failed to get fresh URL from backend')
+    }
+
+    console.log('✅ Got fresh URL:', freshUrl.substring(0, 80) + '...')
+
+    // Update Plyr source with the fresh URL
+    if (player) {
+      player.source = {
+        type: 'video',
+        sources: [{ src: freshUrl, type: 'video/mp4' }]
+      }
+
+      // Wait for source to load, then restore position quickly
+      player.once('ready', () => {
+        // Reduce delay to minimize visual jumping
+        setTimeout(() => {
+          if (player && currentPosition > 0) {
+            player.currentTime = currentPosition
+            console.log('✅ Restored playback position:', formatTime(currentPosition))
+          } else {
+            console.log('▶️ No saved position to resume')
+          }
+
+          if (wasPlaying) {
+            player.play()
+            console.log('▶️ Resumed playback after refresh')
+          }
+
+          uiStore.showNotification('视频链接已刷新', 'success')
+
+          // Schedule next refresh after successful URL refresh
+          scheduleUrlRefresh()
+        }, 100) // Reduced from 500ms to 100ms
+      })
+    } else {
+      // Fallback: direct video element manipulation
+      if (videoElement.value) {
+        videoElement.value.src = freshUrl
+        videoElement.value.currentTime = currentPosition
+        if (wasPlaying) {
+          videoElement.value.play()
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('❌ Failed to refresh video URL:', error.message)
+    uiStore.showNotification('刷新视频链接失败，请刷新页面', 'error')
+  } finally {
+    isRefreshingUrl.value = false
+  }
+}
+
+
 onMounted(async () => {
   uiStore.loadDarkModePreference()
+
+  // Setup test functions for manual testing
+  // These functions are attached to window for console access
+  ;(window as any).testForceRefresh = async function() {
+    console.log('🧪 Force refreshing video URL...')
+    await refreshVideoUrlSeamlessly()
+  }
+
+  ;(window as any).testCheckExpiration = function() {
+    const currentUrl = playerStore.currentVideoUrl
+    const expiresAt = playerStore.expiresAt
+    const timeUntilExpiration = playerStore.timeUntilExpiration
+
+    console.log('📍 Current URL:', currentUrl?.substring(0, 100) + '...')
+    console.log('⏰ Expires at:', expiresAt ? new Date(expiresAt).toLocaleString() : 'N/A')
+    console.log('⏳ Time until expiration:', timeUntilExpiration === Infinity ? 'Never' : `${Math.floor(timeUntilExpiration / 1000)}s`)
+    console.log('⏰ Auto-refresh scheduled in:', timeUntilExpiration === Infinity ? 'Never' : `${Math.floor((timeUntilExpiration - 5 * 1000) / 1000)}s (5s before expiration)`)
+  }
+
+  console.log('🧪 Test functions available: testForceRefresh(), testCheckExpiration()')
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
@@ -689,6 +821,9 @@ onMounted(async () => {
 onUnmounted(() => {
   if (saveInterval) {
     clearInterval(saveInterval)
+  }
+  if (refreshUrlTimeout) {
+    clearTimeout(refreshUrlTimeout)
   }
   if (player) {
     player.destroy()
@@ -873,6 +1008,9 @@ function initializePlyr() {
     })
 
     player.on('ended', onVideoEnd)
+
+    // Schedule automatic URL refresh before expiration
+    scheduleUrlRefresh()
 
     // Auto-resume from saved position after Plyr is ready
     player.on('ready', () => {

@@ -14,6 +14,21 @@ export const episodeService = {
   },
 
   /**
+   * Refresh video URL for an episode (handles expired URLs)
+   * Fetches a fresh, non-expired video URL from the backend
+   */
+  async refreshVideoUrl(
+    animeId: string,
+    season: number,
+    episode: number
+  ): Promise<{ realVideoUrl: string }> {
+    const response = await api.get<{ success: boolean; data: { realVideoUrl: string; originalEncryptedUrl: string } }>(
+      `/api/refresh-video-url/${animeId}/${season}/${episode}`
+    )
+    return { realVideoUrl: response.data.data.realVideoUrl }
+  },
+
+  /**
    * Parse and validate video URL
    * Handles different URL formats and ensures proper video source
    */
@@ -73,5 +88,29 @@ export const episodeService = {
     } catch {
       return null
     }
+  },
+
+  /**
+   * Parse x-expires timestamp from video URL
+   * Returns the expiration timestamp in milliseconds, or null if not found
+   */
+  parseUrlExpiration(videoUrl: string): number | null {
+    try {
+      const url = new URL(videoUrl)
+      const expiresParam = url.searchParams.get('x-expires')
+      return expiresParam ? parseInt(expiresParam) * 1000 : null
+    } catch {
+      return null
+    }
+  },
+
+  /**
+   * Calculate time remaining until URL expires (in milliseconds)
+   * Returns Infinity if URL doesn't expire
+   */
+  getTimeUntilExpiration(videoUrl: string): number {
+    const expires = this.parseUrlExpiration(videoUrl)
+    if (!expires) return Infinity
+    return expires - Date.now()
   }
 }

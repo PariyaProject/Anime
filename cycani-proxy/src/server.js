@@ -570,6 +570,9 @@ app.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
         // 解析页面中的视频信息
         const episodeData = parseEpisodeData($);
 
+        // Store the original encrypted URL (cycani- ID) for future refresh capability
+        const originalEncryptedUrl = episodeData.decryptedVideoUrl;
+
         // 尝试通过HTTP+AES解密获取真实的视频URL
         if (episodeData.decryptedVideoUrl) {
             console.log('🔍 尝试获取真实视频URL:', episodeData.decryptedVideoUrl);
@@ -591,12 +594,59 @@ app.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
                 season,
                 episode,
                 originalUrl: targetUrl,
+                originalEncryptedUrl: originalEncryptedUrl, // Store for refresh capability
                 ...episodeData
             }
         });
 
     } catch (error) {
         console.error('❌ 获取剧集信息失败:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// API路由 - 刷新视频URL (处理过期URL)
+app.get('/api/refresh-video-url/:animeId/:season/:episode', async (req, res) => {
+    try {
+        const { animeId, season, episode } = req.params;
+        const targetUrl = `https://www.cycani.org/watch/${animeId}/${season}/${episode}.html`;
+
+        console.log(`🔄 刷新视频URL: ${targetUrl}`);
+
+        // Fetch fresh episode data
+        const response = await httpClient.get(targetUrl, {
+            timeout: 10000
+        });
+
+        const $ = cheerio.load(response.data);
+        const episodeData = parseEpisodeData($);
+
+        if (!episodeData.decryptedVideoUrl) {
+            throw new Error('无法找到加密视频URL');
+        }
+
+        // Get fresh real video URL using Puppeteer
+        const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl);
+
+        if (!realVideoUrl) {
+            throw new Error('无法获取刷新后的视频URL');
+        }
+
+        console.log('✅ 成功刷新视频URL:', realVideoUrl.substring(0, 100) + '...');
+
+        res.json({
+            success: true,
+            data: {
+                realVideoUrl: realVideoUrl,
+                originalEncryptedUrl: episodeData.decryptedVideoUrl
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ 刷新视频URL失败:', error.message);
         res.status(500).json({
             success: false,
             error: error.message
