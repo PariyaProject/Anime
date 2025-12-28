@@ -140,21 +140,33 @@ function formatProgress(progress: number): string {
 
 <style scoped>
 .grouped-history-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
 }
 
 .grouped-history-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--shadow-hover);
 }
 
 .grouped-history-card .card-body {
   cursor: pointer;
+  background: transparent;
+}
+
+/* Override Bootstrap text colors */
+.grouped-history-card .card-title {
+  color: var(--text-primary);
+}
+
+.grouped-history-card .text-muted {
+  color: var(--text-secondary) !important;
 }
 
 .episode-list {
-  border-top: 1px solid var(--bs-border-color);
+  border-top: 1px solid var(--border-color);
 }
 
 .episode-list-scroll {
@@ -168,15 +180,21 @@ function formatProgress(progress: number): string {
   cursor: pointer;
   transition: background-color 0.15s ease;
   margin-bottom: 0.25rem;
+  color: var(--text-primary);
 }
 
 .episode-item:hover {
-  background-color: var(--bs-tertiary-bg);
+  background-color: var(--bg-tertiary);
 }
 
 .episode-item.active {
-  background-color: var(--bs-primary-bg-subtle);
-  border-left: 3px solid var(--bs-primary);
+  background-color: var(--accent-color);
+  border-left: 3px solid var(--accent-hover);
+  color: #fff;
+}
+
+.episode-item.active .text-muted {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .episode-number {
@@ -199,16 +217,16 @@ function formatProgress(progress: number): string {
 }
 
 .episode-list-scroll::-webkit-scrollbar-track {
-  background: var(--bs-tertiary-bg);
+  background: var(--bg-tertiary);
   border-radius: 3px;
 }
 
 .episode-list-scroll::-webkit-scrollbar-thumb {
-  background: var(--bs-secondary-bg);
+  background: var(--border-color);
   border-radius: 3px;
 }
 
 .episode-list-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--bs-secondary-color);
+  background: var(--text-secondary);
 }
 </style>

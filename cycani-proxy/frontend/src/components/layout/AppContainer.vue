@@ -12,5 +12,6 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 1rem;
+  min-height: 100vh;
 }
 </style>

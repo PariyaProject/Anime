@@ -167,16 +167,49 @@ onMounted(() => {
   min-height: 200px;
 }
 
+.weekly-schedule-section .card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+}
+
+.weekly-schedule-section .card-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.weekly-schedule-section .card-header h5 {
+  color: var(--text-primary);
+}
+
 .schedule-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
-  border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .schedule-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 8px var(--shadow-hover);
+}
+
+.schedule-card .card-body {
+  background: transparent;
+}
+
+.schedule-card .card-title {
+  color: var(--text-primary);
+}
+
+/* Override Bootstrap text colors */
+.weekly-schedule-section .text-muted {
+  color: var(--text-secondary) !important;
+}
+
+.schedule-card .text-muted {
+  color: var(--text-secondary) !important;
 }
 
 .cursor-pointer {
@@ -185,10 +218,22 @@ onMounted(() => {
 
 .nav-tabs .nav-link {
   cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--text-primary);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  border-color: var(--border-color) var(--border-color) var(--bg-primary);
 }
 
 .card-body {
   padding: 0.5rem;
+  background: transparent;
 }
 
 /* Make badges non-interactive so clicks pass through to card */

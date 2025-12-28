@@ -75,7 +75,8 @@
       "Bash(cd:*)",
       "Bash(pushd:*)",
       "Bash(popd:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(git -C cycani-proxy diff --stat --staged frontend/src/)"
     ],
     "deny": [],
     "ask": []

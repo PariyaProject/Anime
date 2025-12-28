@@ -1,144 +1,162 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark" role="navigation" aria-label="主导航">
-    <div class="container-fluid">
-      <router-link to="/" class="navbar-brand" aria-label="动画 首页">
-        <i class="bi bi-play-circle-fill me-2" aria-hidden="true"></i>
+  <nav class="navbar" role="navigation" aria-label="主导航">
+    <div class="navbar-container">
+      <router-link to="/" class="brand" aria-label="首页">
         动画
       </router-link>
 
-      <button
-        class="navbar-toggler"
-        type="button"
-        @click="toggleSidebar"
-        aria-label="切换导航菜单"
-        aria-expanded="false"
-        :aria-controls="'navbarNav'"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto" role="menubar">
-          <li class="nav-item" role="none">
-            <router-link to="/" class="nav-link" role="menuitem">动画列表</router-link>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Always-visible controls (outside collapsible section) -->
-      <div class="d-flex align-items-center gap-3" role="group" aria-label="用户操作">
+      <div class="nav-controls">
+        <div class="nav-links">
+          <router-link to="/" class="nav-link">动画列表</router-link>
+        </div>
         <!-- Watch History Dropdown -->
         <div class="dropdown" v-if="hasContinueWatching">
           <button
-            class="btn btn-outline-light dropdown-toggle"
+            class="dropdown-btn"
             type="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            aria-haspopup="true"
-            :id="'history-dropdown'"
+            @click="toggleHistoryDropdown"
+            :aria-expanded="historyDropdownOpen"
           >
-            <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
             继续观看
+            <span class="arrow" :class="{ open: historyDropdownOpen }">▼</span>
           </button>
-          <ul
-            class="dropdown-menu dropdown-menu-end history-dropdown-menu"
-            :aria-labelledby="'history-dropdown'"
-            role="menu"
+          <div
+            class="navbar-dropdown-menu"
+            v-show="historyDropdownOpen"
           >
-            <li v-for="anime in groupedAnime.slice(0, 5)" :key="`${anime.animeId}-${anime.season}`" role="none">
-              <div
-                class="dropdown-item p-2"
-                role="menuitem"
-                :aria-label="`继续观看 ${anime.animeTitle} 第${anime.season}季`"
-              >
-                <div class="d-flex align-items-center gap-2 history-dropdown-item">
-                  <img
-                    :src="anime.animeCover || placeholderImage"
-                    :alt="`${anime.animeTitle} 缩略图`"
-                    class="rounded flex-shrink-0"
-                    width="40"
-                    height="40"
-                    style="object-fit: cover"
-                  />
-                  <div class="flex-grow-1 min-w-0">
-                    <div class="fw-bold text-truncate" :title="anime.animeTitle">
-                      {{ anime.animeTitle }}
-                    </div>
-                    <div class="small text-muted text-truncate" :title="`第 ${anime.season} 季 · 已看 ${anime.totalWatched} 集`">
-                      第 {{ anime.season }} 季 · 已看 {{ anime.totalWatched }} 集
-                      <span v-if="anime.latestEpisode.position > 0">
-                        · {{ formatTime(anime.latestEpisode.position) }}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    class="btn btn-sm btn-primary flex-shrink-0 history-play-btn"
-                    @click="resumeWatching(anime)"
-                    :aria-label="`继续播放 ${anime.animeTitle}`"
-                  >
-                    <i class="bi bi-play-fill"></i>
-                  </button>
+            <div
+              v-for="anime in groupedAnime.slice(0, 5)"
+              :key="`${anime.animeId}-${anime.season}`"
+              class="dropdown-item"
+              @click="resumeWatching(anime)"
+            >
+              <img
+                :src="anime.animeCover || placeholderImage"
+                :alt="anime.animeTitle"
+                class="dropdown-cover"
+              />
+              <div class="dropdown-info">
+                <div class="dropdown-title">{{ anime.animeTitle }}</div>
+                <div class="dropdown-meta">
+                  第 {{ anime.season }} 季 · 已看 {{ anime.totalWatched }} 集
                 </div>
               </div>
-            </li>
-            <li role="none"><hr class="dropdown-divider" /></li>
-            <li role="none">
-              <router-link to="/history" class="dropdown-item" role="menuitem">查看全部</router-link>
-            </li>
-          </ul>
+            </div>
+            <div class="dropdown-divider"></div>
+            <router-link to="/history" class="dropdown-view-all" @click="historyDropdownOpen = false">
+              查看全部
+            </router-link>
+          </div>
         </div>
 
-        <!-- Server Status Indicator -->
-        <ServerStatusIndicator />
+        <!-- Settings Dropdown -->
+        <div class="dropdown">
+          <button
+            class="icon-btn"
+            type="button"
+            @click="toggleSettingsDropdown"
+            :aria-expanded="settingsDropdownOpen"
+            title="设置"
+          >
+            ⚙
+          </button>
+          <div
+            class="navbar-dropdown-menu settings-menu"
+            v-show="settingsDropdownOpen"
+          >
+            <!-- Cache Toggle -->
+            <div class="dropdown-item settings-item" @click="toggleCache">
+              <span class="settings-icon">💾</span>
+              <span class="settings-text">启用缓存</span>
+              <span class="settings-status" :class="{ enabled: cacheEnabled }">
+                {{ cacheEnabled ? '开启' : '关闭' }}
+              </span>
+            </div>
 
-        <!-- Dark Mode Toggle -->
-        <button
-          class="btn btn-outline-light"
-          type="button"
-          @click="uiStore.toggleDarkMode()"
-          :title="darkMode ? '关闭深色模式' : '开启深色模式'"
-          :aria-label="darkMode ? '关闭深色模式' : '开启深色模式'"
-          :aria-pressed="darkMode"
-        >
-          <i :class="darkMode ? 'bi bi-sun-fill' : 'bi bi-moon-fill'" aria-hidden="true"></i>
-        </button>
+            <!-- Server Status -->
+            <div class="dropdown-item settings-item" @click="toggleServerCheck">
+              <span class="settings-icon">{{ serverStatusIcon }}</span>
+              <span class="settings-text">服务器状态</span>
+              <span class="settings-status" :class="serverStatusClass">
+                {{ serverStatusText }}
+              </span>
+            </div>
 
-        <!-- Cache Toggle -->
-        <CacheToggle />
+            <div class="dropdown-divider"></div>
+
+            <!-- Dark Mode Toggle -->
+            <div class="dropdown-item settings-item" @click="uiStore.toggleDarkMode()">
+              <span class="settings-icon">{{ darkMode ? '☀' : '☾' }}</span>
+              <span class="settings-text">{{ darkMode ? '浅色模式' : '深色模式' }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
 import { useHistoryStore } from '@/stores/history'
+import { useCacheSettings } from '@/composables/useCacheSettings'
+import { useServerStatus } from '@/composables/useServerStatus'
 import { useGroupedHistory, type GroupedAnime } from '@/composables/useGroupedHistory'
-import ServerStatusIndicator from '@/components/common/ServerStatusIndicator.vue'
-import CacheToggle from '@/components/common/CacheToggle.vue'
-import type { WatchRecord } from '@/types/history.types'
 
 const router = useRouter()
 const uiStore = useUiStore()
 const historyStore = useHistoryStore()
+const { settings: cacheSettings, toggle: toggleCache } = useCacheSettings()
+const serverStatus = useServerStatus(30000, false)
 
-// Use static SVG file from backend server (computed to avoid initialization issues)
+const historyDropdownOpen = ref(false)
+const settingsDropdownOpen = ref(false)
+
 const placeholderImage = computed(() => `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-40x40.svg`)
 
 const darkMode = computed(() => uiStore.darkMode)
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => continueWatching.value.length > 0)
+const cacheEnabled = computed(() => cacheSettings.enabled)
 
-// Use grouped history for better UX
+const { status, loading, enabled: serverCheckEnabled, toggle: toggleServerCheck } = serverStatus
+
 const { groupedAnime } = useGroupedHistory(continueWatching)
 
-function toggleSidebar() {
-  uiStore.setSidebarOpen(!uiStore.sidebarOpen)
+const serverStatusIcon = computed(() => {
+  if (loading.value) return '⟳'
+  if (status.value.online) return '✓'
+  return '✕'
+})
+
+const serverStatusText = computed(() => {
+  if (!serverCheckEnabled.value) return '已禁用'
+  if (loading.value) return '检查中'
+  if (status.value.online) return status.value.latency ? `${status.value.latency}ms` : '在线'
+  return '离线'
+})
+
+const serverStatusClass = computed(() => {
+  if (!serverCheckEnabled.value) return 'disabled'
+  if (loading.value) return 'loading'
+  if (status.value.online) return 'online'
+  return 'offline'
+})
+
+function toggleHistoryDropdown() {
+  historyDropdownOpen.value = !historyDropdownOpen.value
+  settingsDropdownOpen.value = false
+}
+
+function toggleSettingsDropdown() {
+  settingsDropdownOpen.value = !settingsDropdownOpen.value
+  historyDropdownOpen.value = false
 }
 
 function resumeWatching(anime: GroupedAnime) {
+  historyDropdownOpen.value = false
   router.push({
     name: 'Watch',
     params: {
@@ -147,57 +165,296 @@ function resumeWatching(anime: GroupedAnime) {
     query: {
       season: anime.season.toString(),
       episode: anime.latestEpisode.episode.toString()
-      // Note: startTime is no longer needed - backend API will return the saved position
     }
   })
 }
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
+function handleClickOutside(event: Event) {
+  const target = event.target as Node
+  const navbar = document.querySelector('.navbar')
+  if (navbar && !navbar.contains(target)) {
+    historyDropdownOpen.value = false
+    settingsDropdownOpen.value = false
+  }
 }
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  // Load continue watching data for navbar
+  historyStore.loadContinueWatching().catch(err => {
+    console.warn('Failed to load continue watching for navbar:', err)
+  })
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
-.navbar-brand {
-  font-size: 1.25rem;
-  font-weight: 600;
+.navbar {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-/* History dropdown menu styling */
-.history-dropdown-menu {
-  min-width: 280px;
-  max-width: 350px;
-}
-
-.history-dropdown-item {
-  min-width: 0; /* Allow flex items to shrink */
+.navbar-container {
   width: 100%;
+  padding: 0 1.5rem;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: nowrap;
 }
 
-.history-dropdown-item > div {
-  min-width: 0; /* Allow text truncation to work */
+.brand {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
 }
 
-.dropdown-item {
+.nav-links {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav-link {
+  padding: 0.35rem 0.75rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.nav-link:hover,
+.nav-link.router-link-active {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
   cursor: pointer;
-  padding: 0.5rem 1rem;
-  background-color: transparent;
-}
-
-.dropdown-item:hover {
-  background-color: var(--bs-tertiary-bg);
-}
-
-.history-play-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  transition: all 0.2s;
   white-space: nowrap;
 }
 
-/* Ensure dropdown menu doesn't overflow */
-.dropdown-menu {
-  max-width: 90vw;
+.dropdown-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.arrow {
+  font-size: 0.6rem;
+  transition: transform 0.2s;
+}
+
+.arrow.open {
+  transform: rotate(180deg);
+}
+
+.navbar-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  max-width: 350px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 20px var(--shadow);
+  padding: 0.35rem;
+  z-index: 1001;
+}
+
+.settings-menu {
+  min-width: 180px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-secondary);
+}
+
+.dropdown-cover {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.dropdown-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-meta {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-top: 0.1rem;
+}
+
+/* Settings Item Styles */
+.settings-item {
+  justify-content: space-between;
+}
+
+.settings-icon {
+  font-size: 0.9rem;
+  width: 20px;
+  text-align: center;
+}
+
+.settings-text {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.settings-status {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.settings-status.enabled {
+  background: #67c23a;
+  color: white;
+}
+
+.settings-status.online {
+  background: #67c23a;
+  color: white;
+}
+
+.settings-status.offline {
+  background: #f56c6c;
+  color: white;
+}
+
+.settings-status.loading {
+  background: #e6a23c;
+  color: white;
+}
+
+.settings-status.disabled {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.2rem 0;
+}
+
+.dropdown-view-all {
+  display: block;
+  padding: 0.4rem;
+  text-align: center;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.dropdown-view-all:hover {
+  background: var(--bg-secondary);
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 0 0.75rem;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .dropdown-menu {
+    right: -0.75rem;
+    min-width: calc(100vw - 1.5rem);
+  }
+
+  .dropdown-btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+  }
 }
 </style>

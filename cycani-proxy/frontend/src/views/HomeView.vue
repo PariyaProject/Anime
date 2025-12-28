@@ -1,11 +1,10 @@
 <template>
   <div class="home-view py-4">
     <!-- Continue Watching Section -->
-    <section v-if="hasContinueWatching" class="continue-watching-section mb-4">
-      <h5 class="mb-3">
-        <i class="bi bi-clock-history me-2"></i>
+    <section v-if="hasContinueWatching" class="continue-watching-section mb-5">
+      <h2 class="section-header mb-4">
         继续观看
-      </h5>
+      </h2>
       <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
         <div
           v-for="anime in groupedAnime.slice(0, 4)"
@@ -26,14 +25,14 @@
 
     <!-- Filters Section -->
     <section class="filters-section mb-4">
-      <div class="card">
-        <div class="card-body">
+      <div class="filters-card">
+        <div class="filters-body">
           <div class="row g-3">
             <div class="col-md-4">
               <input
                 v-model="filters.search"
                 type="text"
-                class="form-control"
+                class="form-input"
                 placeholder="搜索动画..."
                 @input="debouncedSearch"
               />
@@ -62,7 +61,7 @@
               </select>
             </div>
             <div class="col-md-2">
-              <button class="btn btn-outline-secondary w-100" @click="resetFilters">
+              <button class="btn-reset w-100" @click="resetFilters">
                 重置筛选
               </button>
             </div>
@@ -84,7 +83,6 @@
 
       <div v-else-if="!hasAnime" class="text-center py-5">
         <EmptyState
-          icon="bi bi-search"
           title="未找到相关动画"
           description="试试调整筛选条件或搜索关键词"
         />
@@ -102,16 +100,16 @@
 
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="pagination-wrapper mt-4">
-          <nav>
-            <ul class="pagination justify-content-center">
+          <nav class="pagination">
+            <ul class="pagination-list">
               <li class="page-item" :class="{ disabled: !hasPrevPage }">
-                <a
+                <button
                   class="page-link"
-                  href="#"
-                  @click.prevent="goToPage(currentPage - 1)"
+                  @click="goToPage(currentPage - 1)"
+                  :disabled="!hasPrevPage"
                 >
                   上一页
-                </a>
+                </button>
               </li>
               <li
                 v-for="page in displayedPages"
@@ -119,26 +117,25 @@
                 class="page-item"
                 :class="{ active: page === currentPage }"
               >
-                <a
+                <button
                   class="page-link"
-                  href="#"
-                  @click.prevent="goToPage(page)"
+                  @click="goToPage(page)"
                 >
                   {{ page }}
-                </a>
+                </button>
               </li>
               <li class="page-item" :class="{ disabled: !hasNextPage }">
-                <a
+                <button
                   class="page-link"
-                  href="#"
-                  @click.prevent="goToPage(currentPage + 1)"
+                  @click="goToPage(currentPage + 1)"
+                  :disabled="!hasNextPage"
                 >
                   下一页
-                </a>
+                </button>
               </li>
             </ul>
           </nav>
-          <p class="text-center text-muted small">
+          <p class="text-center text-muted small mt-3">
             第 {{ currentPage }} / {{ totalPages }} 页，共 {{ totalCount }} 部动画
           </p>
         </div>
@@ -334,25 +331,176 @@ onMounted(async () => {
   min-height: 100vh;
 }
 
-.history-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
+/* Section Headers */
+.section-header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
 }
 
-.history-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+/* Filters Card */
+.filters-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
-.cursor-pointer {
+.filters-body {
+  padding: 1rem;
+}
+
+/* Form Input */
+.form-input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.form-input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Form Select */
+.form-select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
   cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* Reset Button */
+.btn-reset {
+  padding: 0.6rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-reset:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Pagination */
+.pagination {
+  margin-top: 2rem;
+}
+
+.pagination-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-item {
+  display: flex;
+}
+
+.page-link {
+  min-width: 40px;
+  height: 36px;
+  padding: 0 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.page-link:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--accent-color);
+}
+
+.page-item.active .page-link {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: var(--bg-primary);
+}
+
+.page-item.disabled .page-link {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-item.disabled .page-link:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .pagination-wrapper {
   margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.page-link {
-  cursor: pointer;
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .form-input,
+  .form-select,
+  .btn-reset,
+  .page-link {
+    transition: none;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .section-header {
+    font-size: 1.25rem;
+  }
+
+  .filters-body {
+    padding: 0.75rem;
+  }
+
+  .pagination-list {
+    gap: 0.25rem;
+  }
+
+  .page-link {
+    min-width: 36px;
+    height: 32px;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+  }
 }
 </style>

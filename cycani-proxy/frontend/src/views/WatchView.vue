@@ -1,199 +1,115 @@
 <template>
-  <div class="watch-view py-4">
+  <div class="watch-view">
+    <!-- Loading State -->
     <div v-if="loading" class="text-center py-5">
       <LoadingSpinner />
       <p class="mt-3 text-muted">加载中...</p>
     </div>
 
+    <!-- Error State -->
     <div v-else-if="error" class="text-center py-5">
       <ErrorMessage :message="error" @retry="loadEpisode" />
     </div>
 
-    <div v-else class="row">
-      <!-- Video Player Section -->
-      <div class="col-lg-8">
-        <div class="video-player-section mb-4">
-          <div class="card">
-            <div class="card-body p-0">
-              <!-- Use iframe for cycani- video IDs (player domain) -->
-              <iframe
-                v-if="useIframePlayer"
-                :src="playerUrl"
-                class="w-100"
-                style="aspect-ratio: 16/9; border: none"
-                allowfullscreen
-                allow="autoplay; fullscreen"
-              ></iframe>
+    <!-- Theater Mode Layout - True Center -->
+    <div v-else class="theater-mode">
+      <!-- Centered Video Player -->
+      <div class="video-container">
+        <div class="video-wrapper">
+          <!-- Use iframe for cycani- video IDs (player domain) -->
+          <iframe
+            v-if="useIframePlayer"
+            :src="playerUrl"
+            class="video-frame"
+            allowfullscreen
+            allow="autoplay; fullscreen"
+          ></iframe>
 
-              <!-- Use Plyr for direct video URLs -->
-              <div v-else id="plyr-player" ref="playerContainer">
-                <video
-                  v-if="videoUrl"
-                  ref="videoElement"
-                  controls
-                  :poster="posterImage"
-                  class="w-100"
-                >
-                  <source :src="videoUrl" type="video/mp4" />
-                  您的浏览器不支持视频播放。
-                </video>
-              </div>
-            </div>
-          </div>
-
-          <!-- Episode Info -->
-          <div class="episode-info mt-3">
-            <h4>{{ episodeTitle }}</h4>
-            <p class="text-muted mb-2">
-              <span v-if="animeTitle">{{ animeTitle }}</span>
-              <span v-if="season > 0"> · 第 {{ season }} 季</span>
-              · 第 {{ episode }} 集
-            </p>
-          </div>
-
-          <!-- Player Controls -->
-          <div class="player-controls mt-3">
-            <div class="card">
-              <div class="card-body">
-                <div class="row align-items-center g-3">
-                  <div class="col-auto">
-                    <button
-                      class="btn btn-primary"
-                      @click="playPrevious"
-                      :disabled="!hasPrevious"
-                    >
-                      <i class="bi bi-skip-start-fill"></i>
-                      上一集
-                    </button>
-                  </div>
-                  <div class="col-auto">
-                    <button
-                      class="btn btn-success"
-                      @click="playNext"
-                      :disabled="!hasNext"
-                    >
-                      下一集
-                      <i class="bi bi-skip-end-fill"></i>
-                    </button>
-                  </div>
-                  <div class="col">
-                    <div class="form-check form-switch">
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        id="autoplay-switch"
-                        :checked="autoPlayEnabled"
-                        @change="toggleAutoplay"
-                      />
-                      <label class="form-check-label" for="autoplay-switch">
-                        自动播放
-                      </label>
-                    </div>
-                  </div>
-                  <div class="col-auto">
-                    <router-link to="/" class="btn btn-outline-secondary">
-                      <i class="bi bi-arrow-left"></i>
-                      返回列表
-                    </router-link>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <!-- Use Plyr for direct video URLs -->
+          <div v-else id="plyr-player" ref="playerContainer" class="plyr-wrapper">
+            <video
+              v-if="videoUrl"
+              ref="videoElement"
+              controls
+              :poster="posterImage"
+              class="video-element"
+            >
+              <source :src="videoUrl" type="video/mp4" />
+              您的浏览器不支持视频播放。
+            </video>
           </div>
         </div>
 
-        <!-- Episode List -->
-        <div class="episode-list-section">
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">
-                <i class="bi bi-list-task me-2"></i>
-                选集
-              </h5>
-              <div class="input-group input-group-sm" style="width: 200px">
-                <input
-                  v-model.number="jumpEpisode"
-                  type="number"
-                  class="form-control"
-                  placeholder="集数"
-                  :min="1"
-                />
-                <button class="btn btn-outline-primary" @click="jumpToEpisode">
-                  跳转
-                </button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div v-if="episodesLoading" class="text-center py-3">
-                <div class="spinner-border spinner-border-sm" role="status"></div>
-                <span class="ms-2">加载中...</span>
-              </div>
-              <div v-else class="episode-grid">
-                <button
-                  v-for="ep in episodeList"
-                  :key="ep"
-                  class="btn episode-btn"
-                  :class="{
-                    'btn-primary': ep === episode && season === currentSeason,
-                    'btn-outline-primary': ep !== episode || season !== currentSeason
-                  }"
-                  @click="selectEpisode(ep)"
-                >
-                  {{ ep }}
-                </button>
-              </div>
-            </div>
-          </div>
+        <!-- Video Title Overlay -->
+        <div class="video-title-overlay">
+          <h1 class="video-title">{{ episodeTitle }}</h1>
+          <p class="video-meta">
+            <span v-if="animeTitle">{{ animeTitle }}</span>
+            <span v-if="season > 0"> · 第 {{ season }} 季</span>
+            <span> · 第 {{ episode }} 集</span>
+          </p>
+        </div>
+
+        <!-- Control Bar -->
+        <div class="control-bar">
+          <button class="btn-control" @click="playPrevious" :disabled="!hasPrevious" title="上一集">
+            ← 上一集
+          </button>
+          <label class="autoplay-toggle">
+            <input type="checkbox" :checked="autoPlayEnabled" @change="toggleAutoplay" />
+            <span>自动播放</span>
+          </label>
+          <button class="btn-control" @click="playNext" :disabled="!hasNext" title="下一集">
+            下一集 →
+          </button>
+          <router-link to="/" class="btn-back">返回列表</router-link>
         </div>
       </div>
 
-      <!-- Sidebar Section -->
-      <div class="col-lg-4">
+      <!-- Side Panel -->
+      <div class="side-panel">
         <!-- Anime Info -->
-        <div class="anime-info-section mb-4">
-          <div class="card">
-            <img
-              :src="displayCoverImage"
-              :alt="animeTitle"
-              class="card-img-top"
-              style="height: 300px; object-fit: cover"
-              @error="handleImageError"
-            />
-            <div class="card-body">
-              <h5 class="card-title">{{ animeTitle || '加载中...' }}</h5>
-              <div class="anime-meta mb-2">
-                <span class="badge bg-secondary me-1">{{ animeType || 'TV' }}</span>
-                <span class="badge bg-info text-dark me-1">{{ animeYear || '未知' }}</span>
-                <span class="badge bg-warning text-dark">
-                  {{ totalEpisodes || '?' }} 集
-                </span>
-              </div>
-              <p v-if="animeDescription" class="card-text small">
-                {{ animeDescription }}
-              </p>
+        <div class="panel-section anime-info">
+          <img :src="displayCoverImage" :alt="animeTitle" class="anime-cover" @error="handleImageError" />
+          <div class="anime-details">
+            <h3 class="anime-title">{{ animeTitle || '加载中...' }}</h3>
+            <div class="anime-tags">
+              <span class="tag">{{ animeType || 'TV' }}</span>
+              <span class="tag">{{ animeYear || '未知' }}</span>
+              <span class="tag">{{ totalEpisodes || '?' }} 集</span>
             </div>
+            <p v-if="animeDescription" class="anime-description" :title="animeDescription">{{ animeDescription }}</p>
           </div>
         </div>
 
-        <!-- Position Info -->
-        <div class="position-info-section">
-          <div class="card">
-            <div class="card-body">
-              <h6 class="card-title">
-                <i class="bi bi-bookmark-fill me-2"></i>
-                播放进度
-              </h6>
-              <div class="progress mb-2" style="height: 10px">
-                <div
-                  class="progress-bar"
-                  role="progressbar"
-                  :style="{ width: `${progress}%` }"
-                ></div>
-              </div>
-              <p class="small text-muted mb-0">
-                {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
-              </p>
+        <!-- Progress -->
+        <div class="panel-section progress-section">
+          <div class="progress-header">播放进度</div>
+          <div class="progress-track">
+            <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
+          </div>
+          <div class="progress-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</div>
+        </div>
+
+        <!-- Episode List -->
+        <div class="panel-section episode-list">
+          <div class="episode-header">
+            <span>选集</span>
+            <div class="jump-box">
+              <input v-model.number="jumpEpisode" type="number" placeholder="集数" :min="1" class="jump-input" />
+              <button class="jump-btn" @click="jumpToEpisode">跳转</button>
             </div>
+          </div>
+          <div class="episode-grid">
+            <button
+              v-for="ep in episodeList"
+              :key="ep"
+              class="episode-item"
+              :class="{ active: ep === episode && season === currentSeason }"
+              @click="selectEpisode(ep)"
+            >
+              {{ ep }}
+            </button>
           </div>
         </div>
       </div>
@@ -1099,28 +1015,373 @@ function initializePlyr() {
 </script>
 
 <style scoped>
+/* Minimalist Theater Mode */
 .watch-view {
   min-height: 100vh;
+  background: var(--bg-primary);
+  padding-top: 10px; /* Reduced navbar spacing */
+}
+
+.theater-mode {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Centered Video Container - Full Screen */
+.video-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  box-sizing: border-box;
+}
+
+/* True Center - Video Wrapper */
+.video-wrapper {
+  width: 100%;
+  max-width: 1280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-frame,
+.plyr-wrapper {
+  width: 100%;
+  max-width: 1280px;
+  aspect-ratio: 16/9;
+  display: block;
+  background: #000;
+}
+
+.video-frame {
+  border: none;
+}
+
+.video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Video Title Overlay - Minimal */
+.video-title-overlay {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.video-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.video-meta {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Control Bar - Minimal */
+.control-bar {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-tertiary);
+  border-radius: 50px;
+}
+
+.btn-control {
+  padding: 0.5rem 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-control:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+}
+
+.btn-control:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-back {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: var(--bg-tertiary);
+}
+
+.autoplay-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.autoplay-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Side Panel - Minimal */
+.side-panel {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+  box-sizing: border-box;
+}
+
+.panel-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+/* Anime Info */
+.anime-info {
+  display: flex;
+  gap: 0.75rem;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Progress */
+.progress-section {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* Episode List */
+.episode-list {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.anime-cover {
+  width: 80px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.anime-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.anime-details .anime-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.anime-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tag {
+  padding: 0.2rem 0.5rem;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.anime-description {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Progress */
+.progress-section {
+  grid-column: span 1;
+}
+
+.progress-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.progress-track {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--text-secondary);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.progress-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.episode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.jump-box {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.jump-input {
+  width: 50px;
+  padding: 0.25rem 0.4rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.jump-btn {
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.jump-btn:hover {
+  background: var(--border-color);
 }
 
 .episode-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
   gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
-.episode-btn {
-  padding: 0.5rem;
-  font-size: 0.875rem;
+.episode-item {
+  padding: 0.4rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.anime-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
+.episode-item:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
+.episode-item.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+/* Plyr customization */
 #plyr-player {
   background: #000;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .watch-view {
+    padding-top: 10px; /* Keep consistent navbar spacing */
+  }
+
+  .video-container {
+    padding: 1rem;
+  }
+
+  .video-title {
+    font-size: 1.2rem;
+  }
+
+  .control-bar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .side-panel {
+    padding: 1rem;
+    max-width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .anime-info,
+  .progress-section,
+  .episode-list {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .episode-list {
+    grid-row: auto;
+  }
 }
 </style>
