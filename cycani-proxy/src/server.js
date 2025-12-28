@@ -576,7 +576,7 @@ app.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
         // 尝试通过HTTP+AES解密获取真实的视频URL
         if (episodeData.decryptedVideoUrl) {
             console.log('🔍 尝试获取真实视频URL:', episodeData.decryptedVideoUrl);
-            const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl);
+            const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl, targetUrl);
             if (realVideoUrl) {
                 episodeData.realVideoUrl = realVideoUrl;
                 console.log('✅ 成功获取真实视频URL:', realVideoUrl.substring(0, 100) + '...');
@@ -629,7 +629,7 @@ app.get('/api/refresh-video-url/:animeId/:season/:episode', async (req, res) => 
         }
 
         // Get fresh real video URL using Puppeteer
-        const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl);
+        const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl, targetUrl);
 
         if (!realVideoUrl) {
             throw new Error('无法获取刷新后的视频URL');
@@ -1875,15 +1875,16 @@ function parseEpisodeData($) {
 }
 
 // 解析播放器页面获取真实视频URL
-async function parsePlayerPage(videoId) {
+async function parsePlayerPage(videoId, refererUrl = 'https://www.cycani.org/') {
     try {
         const playerUrl = `https://player.cycanime.com/?url=${videoId}`;
         console.log(`🎬 解析播放器页面: ${playerUrl}`);
+        console.log(`📌 使用 Referer: ${refererUrl}`);
 
         // 方法1: 尝试使用Puppeteer从video元素直接读取解密后的URL
         if (puppeteer) {
             console.log('🤖 使用Puppeteer从video元素读取URL...');
-            const videoUrl = await getVideoUrlFromPuppeteer(playerUrl);
+            const videoUrl = await getVideoUrlFromPuppeteer(playerUrl, refererUrl);
             if (videoUrl) {
                 console.log(`✅ Puppeteer成功: ${videoUrl.substring(0, 80)}...`);
                 return videoUrl;
@@ -1914,7 +1915,7 @@ async function parsePlayerPage(videoId) {
  * 这比拦截网络请求更可靠，因为我们获取的是浏览器已经解密后的URL
  * 使用浏览器实例池复用浏览器，提升性能
  */
-async function getVideoUrlFromPuppeteer(playerUrl) {
+async function getVideoUrlFromPuppeteer(playerUrl, refererUrl = 'https://www.cycani.org/') {
     if (!browserPool) return null;
 
     let page = null;
@@ -1925,68 +1926,55 @@ async function getVideoUrlFromPuppeteer(playerUrl) {
         page = await browser.newPage();
         await page.setUserAgent(getEnhancedHeaders()['User-Agent']);
 
-        // 关键：设置 Referer，模拟从 cycani.org 访问播放器
-        // 这是必须的，否则 player.cycanime.com 会拒绝请求
-        await page.setExtraHTTPHeaders({
-            'Referer': 'https://www.cycani.org/',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
-        });
+        console.log(`📄 访问剧集页面: ${refererUrl}`);
 
-        // 忽略 HTTPS 错误和资源加载错误
-        await page.setBypassCSP(true);
-        page.on('error', (err) => {
-            // 静默忽略资源加载错误
-        });
+        // 直接访问 cycani.org 剧集页面，让 MacPlayer 自动创建 iframe
+        await page.goto(refererUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-        console.log(`📄 访问播放器页面...`);
+        console.log(`⏳ 等待 player.cycanime.com iframe 出现...`);
 
-        try {
-            await page.goto(playerUrl, { waitUntil: 'networkidle0', timeout: 30000 });
-        } catch (gotoError) {
-            // 如果超时，尝试继续 - 页面可能已经加载完成了
-            if (gotoError.message.includes('timeout')) {
-                console.log(`⏱️ 页面加载超时，尝试继续...`);
-            } else {
-                throw gotoError;
-            }
+        // 主动等待 iframe 出现（最多等待 5 秒）
+        await page.waitForFunction(() => {
+            const iframes = Array.from(document.querySelectorAll('iframe'));
+            return iframes.some(iframe => iframe.src && iframe.src.includes('player.cycanime.com'));
+        }, { timeout: 5000 });
+
+        console.log(`✅ iframe 已出现，查找 video 元素...`);
+
+        // 使用 Puppeteer 的 frames() API 获取 player.cycanime.com 的 frame
+        const targetFrame = page.frames().find(f => f.url().includes('player.cycanime.com'));
+
+        if (!targetFrame) {
+            console.log(`⚠️ 未找到 player.cycanime.com frame`);
+            return null;
         }
 
-        // 等待video元素出现并获取src
-        const videoUrl = await page.evaluate(() => {
-            const video = document.querySelector('video');
-            if (video && (video.src || video.currentSrc)) {
-                return video.src || video.currentSrc;
-            }
-            return null;
-        });
+        console.log(`✅ 找到目标 frame，等待 video 元素...`);
 
-        // 如果第一次没找到，等待更长时间再试一次
-        if (!videoUrl) {
-            await page.waitForTimeout(3000);
-            const videoUrl2 = await page.evaluate(() => {
+        // 在 frame 中循环等待 video 元素出现
+        let videoUrl = null;
+        const maxAttempts = 20; // 最多尝试 20 次
+        for (let i = 0; i < maxAttempts; i++) {
+            const result = await targetFrame.evaluate(() => {
                 const video = document.querySelector('video');
-                if (video && (video.src || video.currentSrc)) {
-                    return video.src || video.currentSrc;
+                if (video && video.currentSrc) {
+                    return video.currentSrc;
                 }
                 return null;
             });
 
-            // 关闭页面，但保持浏览器运行
-            if (page) {
-                try {
-                    await page.close();
-                } catch (e) {
-                    // 忽略关闭错误
-                }
+            if (result && typeof result === 'string') {
+                videoUrl = result;
+                console.log(`✅ 成功获取视频URL: ${videoUrl.substring(0, 80)}...`);
+                break;
             }
 
-            if (videoUrl2) {
-                console.log(`✅ 成功获取视频URL`);
-            } else {
-                console.log(`⚠️ 未找到 video 元素`);
-            }
-            return videoUrl2;
+            // 等待 500ms 后重试
+            await page.waitForTimeout(500);
+        }
+
+        if (!videoUrl) {
+            console.log(`⚠️ 超时后仍未找到 video 元素`);
         }
 
         // 关闭页面，但保持浏览器运行
@@ -1998,7 +1986,6 @@ async function getVideoUrlFromPuppeteer(playerUrl) {
             }
         }
 
-        console.log(`✅ 成功获取视频URL`);
         return videoUrl;
 
     } catch (error) {
