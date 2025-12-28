@@ -109,19 +109,22 @@ frontend/src/
 ├── components/
 │   ├── anime/          # Anime-related components (AnimeCard, AnimeGrid)
 │   ├── common/         # Common components (LoadingSpinner, ErrorMessage)
-│   ├── history/        # History-related components (HistoryCard)
+│   ├── history/        # History-related components (HistoryCard, GroupedContinueWatchingCard)
 │   ├── layout/         # Layout components (AppNavbar, AppContainer)
 │   ├── player/         # Player components (VideoPlayer, EpisodeList)
+│   ├── schedule/       # Weekly schedule component (WeeklySchedule)
 │   └── VirtualList.vue # Virtual scrolling component
 ├── composables/
 │   ├── useAnimeApi.ts  # Anime API composable
 │   ├── useCacheSettings.ts  # Cache preference management (disabled by default)
 │   ├── useDarkMode.ts  # Dark mode toggle
+│   ├── useGroupedHistory.ts  # Group watch history by anime (for improved UX)
 │   ├── useHistory.ts   # Watch history management
 │   ├── useKeyboardShortcuts.ts  # Keyboard shortcuts (Space, Ctrl+Right)
 │   ├── useNotification.ts       # Toast notifications
 │   ├── usePlayer.ts    # Video player management
-│   └── useServerStatus.ts       # Server health monitoring
+│   ├── useServerStatus.ts       # Server health monitoring
+│   └── useWeeklySchedule.ts     # Weekly anime schedule with current day auto-select
 ├── stores/
 │   ├── anime.ts        # Anime store (list, current anime, pagination)
 │   ├── history.ts      # Watch history store
@@ -135,7 +138,7 @@ frontend/src/
 ├── types/              # TypeScript type definitions
 ├── utils/              # Utility functions (format, retry)
 └── views/
-    ├── HomeView.vue    # Main anime list page
+    ├── HomeView.vue    # Main anime list page with grouped continue watching
     ├── WatchView.vue   # Video player page
     └── HistoryView.vue # Watch history page
 ```
@@ -143,6 +146,8 @@ frontend/src/
 **Key Features:**
 - Dark mode with localStorage persistence
 - Watch history with position memory
+- Grouped continue watching display (episodes grouped by anime/season)
+- Weekly schedule with auto-select current day
 - Global cache toggle (disabled by default) for optional performance optimization
 - Keyboard shortcuts (Space: play/pause, Ctrl+Right: next episode)
 - Server status monitoring with health indicator
@@ -150,6 +155,37 @@ frontend/src/
 - Virtual scrolling for large lists
 - Auto-save watch position every 30 seconds
 - Toast notifications for errors/success
+
+**Grouped History Pattern:**
+The `useGroupedHistory` composable transforms flat watch records into a grouped structure by anime and season. This provides a better UX for users watching multiple episodes of the same anime:
+
+```typescript
+// Usage in components
+const { groupedAnime } = useGroupedHistory(continueWatching)
+
+// groupedAnime structure:
+// [
+//   {
+//     animeId: string
+//     animeTitle: string
+//     animeCover: string
+//     season: number
+//     episodes: WatchedEpisode[]  // All watched episodes for this anime/season
+//     totalWatched: number
+//     latestEpisode: WatchedEpisode
+//     overallProgress: number  // 0-100
+//   }
+// ]
+```
+
+**Weekly Schedule Pattern:**
+The `useWeeklySchedule` composable provides current day detection and schedule data:
+
+```typescript
+const { getCurrentDayKey, loadSchedule } = useWeeklySchedule()
+const currentDay = getCurrentDayKey()  // Returns 'monday', 'tuesday', etc.
+loadSchedule(currentDay, true)  // Load today's anime
+```
 
 ### Cross-Domain Data Flow
 

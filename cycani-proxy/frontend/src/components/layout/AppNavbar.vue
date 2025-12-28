@@ -41,38 +41,45 @@
             继续观看
           </button>
           <ul
-            class="dropdown-menu dropdown-menu-end"
+            class="dropdown-menu dropdown-menu-end history-dropdown-menu"
             :aria-labelledby="'history-dropdown'"
             role="menu"
           >
-            <li v-for="item in continueWatching.slice(0, 5)" :key="`${item.animeId}-${item.episode}`" role="none">
-              <a
-                class="dropdown-item d-flex align-items-center gap-2"
-                href="#"
-                @click.prevent="resumeWatching(item)"
+            <li v-for="anime in groupedAnime.slice(0, 5)" :key="`${anime.animeId}-${anime.season}`" role="none">
+              <div
+                class="dropdown-item p-2"
                 role="menuitem"
-                :aria-label="`继续观看 ${item.animeTitle} 第${item.episode}集`"
+                :aria-label="`继续观看 ${anime.animeTitle} 第${anime.season}季`"
               >
-                <img
-                  :src="item.animeCover || placeholderImage"
-                  :alt="`${item.animeTitle} 缩略图`"
-                  class="rounded"
-                  width="40"
-                  height="40"
-                  style="object-fit: cover"
-                />
-                <div class="flex-grow-1">
-                  <div class="fw-bold text-truncate" style="max-width: 200px">
-                    {{ item.animeTitle }}
+                <div class="d-flex align-items-center gap-2 history-dropdown-item">
+                  <img
+                    :src="anime.animeCover || placeholderImage"
+                    :alt="`${anime.animeTitle} 缩略图`"
+                    class="rounded flex-shrink-0"
+                    width="40"
+                    height="40"
+                    style="object-fit: cover"
+                  />
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-bold text-truncate" :title="anime.animeTitle">
+                      {{ anime.animeTitle }}
+                    </div>
+                    <div class="small text-muted text-truncate" :title="`第 ${anime.season} 季 · 已看 ${anime.totalWatched} 集`">
+                      第 {{ anime.season }} 季 · 已看 {{ anime.totalWatched }} 集
+                      <span v-if="anime.latestEpisode.position > 0">
+                        · {{ formatTime(anime.latestEpisode.position) }}
+                      </span>
+                    </div>
                   </div>
-                  <div class="small text-muted" aria-label="第{{ item.season }}季 第{{ item.episode }}集，播放至{{ formatTime(item.position) }}">
-                    S{{ item.season }} E{{ item.episode }}
-                    <span v-if="item.position > 0">
-                      · {{ formatTime(item.position) }}
-                    </span>
-                  </div>
+                  <button
+                    class="btn btn-sm btn-primary flex-shrink-0 history-play-btn"
+                    @click="resumeWatching(anime)"
+                    :aria-label="`继续播放 ${anime.animeTitle}`"
+                  >
+                    <i class="bi bi-play-fill"></i>
+                  </button>
                 </div>
-              </a>
+              </div>
             </li>
             <li role="none"><hr class="dropdown-divider" /></li>
             <li role="none">
@@ -108,6 +115,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
 import { useHistoryStore } from '@/stores/history'
+import { useGroupedHistory, type GroupedAnime } from '@/composables/useGroupedHistory'
 import ServerStatusIndicator from '@/components/common/ServerStatusIndicator.vue'
 import CacheToggle from '@/components/common/CacheToggle.vue'
 import type { WatchRecord } from '@/types/history.types'
@@ -123,19 +131,22 @@ const darkMode = computed(() => uiStore.darkMode)
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => continueWatching.value.length > 0)
 
+// Use grouped history for better UX
+const { groupedAnime } = useGroupedHistory(continueWatching)
+
 function toggleSidebar() {
   uiStore.setSidebarOpen(!uiStore.sidebarOpen)
 }
 
-function resumeWatching(item: WatchRecord) {
+function resumeWatching(anime: GroupedAnime) {
   router.push({
     name: 'Watch',
     params: {
-      animeId: item.animeId
+      animeId: anime.animeId
     },
     query: {
-      season: item.season.toString(),
-      episode: item.episode.toString()
+      season: anime.season.toString(),
+      episode: anime.latestEpisode.episode.toString()
       // Note: startTime is no longer needed - backend API will return the saved position
     }
   })
@@ -154,11 +165,39 @@ function formatTime(seconds: number): string {
   font-weight: 600;
 }
 
+/* History dropdown menu styling */
+.history-dropdown-menu {
+  min-width: 280px;
+  max-width: 350px;
+}
+
+.history-dropdown-item {
+  min-width: 0; /* Allow flex items to shrink */
+  width: 100%;
+}
+
+.history-dropdown-item > div {
+  min-width: 0; /* Allow text truncation to work */
+}
+
 .dropdown-item {
+  cursor: pointer;
   padding: 0.5rem 1rem;
+  background-color: transparent;
 }
 
 .dropdown-item:hover {
-  background-color: var(--bg-secondary);
+  background-color: var(--bs-tertiary-bg);
+}
+
+.history-play-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/* Ensure dropdown menu doesn't overflow */
+.dropdown-menu {
+  max-width: 90vw;
 }
 </style>

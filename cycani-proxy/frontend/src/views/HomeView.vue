@@ -8,38 +8,15 @@
       </h5>
       <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
         <div
-          v-for="item in continueWatching.slice(0, 4)"
-          :key="`${item.animeId}-${item.season}-${item.episode}`"
+          v-for="anime in groupedAnime.slice(0, 4)"
+          :key="`${anime.animeId}-${anime.season}`"
           class="col"
         >
-          <div
-            class="card history-card cursor-pointer"
-            @click="resumeWatching(item)"
-          >
-            <div class="card-body p-2 d-flex align-items-center gap-3">
-              <img
-                :src="item.animeCover || placeholderImage"
-                :alt="item.animeTitle"
-                class="rounded"
-                width="80"
-                height="80"
-                style="object-fit: cover"
-              />
-              <div class="flex-grow-1">
-                <h6 class="card-title mb-1 text-truncate">{{ item.animeTitle }}</h6>
-                <p class="card-text small text-muted mb-1">
-                  第 {{ item.season }} 季 · 第 {{ item.episode }} 集
-                </p>
-                <div class="progress" style="height: 4px">
-                  <div
-                    class="progress-bar"
-                    role="progressbar"
-                    :style="{ width: `${getProgress(item)}%` }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <GroupedContinueWatchingCard
+            :anime="anime"
+            @resume="resumeWatching"
+            @select-episode="selectEpisode"
+          />
         </div>
       </div>
     </section>
@@ -178,10 +155,12 @@ import { useAnimeStore } from '@/stores/anime'
 import { useHistoryStore } from '@/stores/history'
 import { useUiStore } from '@/stores/ui'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+import { useGroupedHistory, type GroupedAnime, type WatchedEpisode } from '@/composables/useGroupedHistory'
 import AnimeCard from '@/components/anime/AnimeCard.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorMessage from '@/components/common/ErrorMessage.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import GroupedContinueWatchingCard from '@/components/history/GroupedContinueWatchingCard.vue'
 import WeeklySchedule from '@/components/schedule/WeeklySchedule.vue'
 import type { Anime, FilterParams } from '@/types/anime.types'
 import type { WatchRecord } from '@/types/history.types'
@@ -221,6 +200,9 @@ const hasPrevPage = computed(() => animeStore.hasPrevPage)
 
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => historyStore.hasContinueWatching)
+
+// Use grouped history for better UX
+const { groupedAnime } = useGroupedHistory(continueWatching)
 
 const recentYears = computed(() => {
   const currentYear = new Date().getFullYear()
@@ -297,15 +279,29 @@ function handleViewDetails(anime: Anime) {
   handleSelectAnime(anime)
 }
 
-function resumeWatching(item: WatchRecord) {
+function resumeWatching(anime: GroupedAnime) {
   router.push({
     name: 'Watch',
     params: {
-      animeId: item.animeId
+      animeId: anime.animeId
     },
     query: {
-      season: item.season.toString(),
-      episode: item.episode.toString()
+      season: anime.season.toString(),
+      episode: anime.latestEpisode.episode.toString()
+      // Note: startTime is no longer needed - backend API will return the saved position
+    }
+  })
+}
+
+function selectEpisode(anime: GroupedAnime, episode: WatchedEpisode) {
+  router.push({
+    name: 'Watch',
+    params: {
+      animeId: anime.animeId
+    },
+    query: {
+      season: anime.season.toString(),
+      episode: episode.episode.toString()
       // Note: startTime is no longer needed - backend API will return the saved position
     }
   })

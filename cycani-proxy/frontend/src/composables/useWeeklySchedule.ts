@@ -3,6 +3,25 @@ import type { WeeklySchedule, WeeklyAnime } from '@/types/anime.types'
 import { weeklyScheduleService } from '@/services/weeklySchedule.service'
 
 /**
+ * Day keys used in the weekly schedule API
+ */
+export type DayKey = 'all' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+
+/**
+ * Map JavaScript Date.getDay() values to day keys
+ * Date.getDay() returns: 0=Sunday, 1=Monday, ..., 6=Saturday
+ */
+const DAY_KEY_MAP: Record<number, DayKey> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday'
+}
+
+/**
  * Composable for managing weekly anime schedule data.
  * Provides loading states, error handling, and schedule data access.
  */
@@ -29,6 +48,16 @@ export function useWeeklySchedule() {
   function getAllAnime(): WeeklyAnime[] {
     if (!schedule.value) return []
     return Object.values(schedule.value.schedule).flat()
+  }
+
+  /**
+   * Get the current day key based on the current date
+   * @returns The day key for today (e.g., 'monday', 'tuesday', etc.)
+   */
+  function getCurrentDayKey(): DayKey {
+    const today = new Date()
+    const dayIndex = today.getDay()
+    return DAY_KEY_MAP[dayIndex]
   }
 
   /**
@@ -72,6 +101,7 @@ export function useWeeklySchedule() {
     refresh,
     getAnimeForDay,
     getAllAnime,
+    getCurrentDayKey,
     clearError
   }
 }

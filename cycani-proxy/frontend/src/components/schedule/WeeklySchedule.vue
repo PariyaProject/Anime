@@ -124,10 +124,13 @@ const {
   hasSchedule,
   loadSchedule,
   refresh,
-  getAnimeForDay
+  getAnimeForDay,
+  getCurrentDayKey
 } = useWeeklySchedule()
 
-const selectedDay = ref<string>('all')
+// Get current day key for auto-selection
+const currentDayKey = getCurrentDayKey()
+const selectedDay = ref<string>(currentDayKey)
 
 const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-140x140.svg`
 
@@ -155,7 +158,7 @@ function selectAnime(anime: WeeklyAnime) {
 }
 
 onMounted(() => {
-  loadSchedule('all', true)  // Force refresh on initial load to get latest data
+  loadSchedule('all', true)  // Load all weekly data once, filter client-side
 })
 </script>
 
