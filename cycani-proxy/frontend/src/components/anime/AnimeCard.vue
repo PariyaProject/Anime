@@ -28,27 +28,13 @@
       <h6 class="card-title anime-title" :title="anime.title">
         {{ anime.title }}
       </h6>
-      <div class="anime-meta mb-2" role="list" aria-label="动画信息">
-        <span class="badge bg-secondary me-1" role="listitem">{{ anime.type || 'TV' }}</span>
-        <span class="badge bg-info text-dark me-1" role="listitem">{{ anime.year || '未知' }}</span>
-        <span class="badge bg-warning text-dark" role="listitem">
-          {{ anime.episodes || '?' }} 集
-        </span>
-      </div>
       <div class="anime-actions" role="group" aria-label="动画操作">
         <button
-          class="btn btn-success btn-sm w-100 mb-1"
+          class="btn btn-success btn-sm w-100"
           @click.stop="handleSelect"
           :aria-label="`播放 ${anime.title}`"
         >
           选择播放
-        </button>
-        <button
-          class="btn btn-outline-secondary btn-sm w-100"
-          @click.stop="handleDetails"
-          :aria-label="`查看 ${anime.title} 详情`"
-        >
-          查看详情
         </button>
       </div>
     </div>
@@ -67,7 +53,6 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   select: [anime: Anime]
-  details: [anime: Anime]
 }>()
 
 // Get placeholder image URL as a constant
@@ -108,10 +93,6 @@ const resolvedCover = computed(() => {
 
 function handleSelect() {
   emit('select', props.anime)
-}
-
-function handleDetails() {
-  emit('details', props.anime)
 }
 
 function handleImageError(event: Event) {

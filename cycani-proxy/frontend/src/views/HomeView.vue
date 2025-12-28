@@ -91,12 +91,11 @@
       </div>
 
       <div v-else>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-6 g-3">
           <div v-for="anime in animeList" :key="anime.id" class="col">
             <AnimeCard
               :anime="anime"
               @select="handleSelectAnime"
-              @details="handleViewDetails"
             />
           </div>
         </div>
@@ -271,12 +270,6 @@ function handleSelectAnime(anime: Anime | string) {
     name: 'Watch',
     params: { animeId }
   })
-}
-
-function handleViewDetails(anime: Anime) {
-  // For now, just navigate to watch page
-  // In the future, could show a detail modal
-  handleSelectAnime(anime)
 }
 
 function resumeWatching(anime: GroupedAnime) {

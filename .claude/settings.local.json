@@ -74,7 +74,8 @@
       "Bash(npx openspec:*)",
       "Bash(cd:*)",
       "Bash(pushd:*)",
-      "Bash(popd:*)"
+      "Bash(popd:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

@@ -20,11 +20,6 @@ describe('AnimeCard Component', () => {
     })
 
     expect(wrapper.text()).toContain('测试动画')
-    expect(wrapper.text()).toContain('TV')
-    expect(wrapper.text()).toContain('2024')
-    // The episodes display might be "12集" without space
-    expect(wrapper.text()).toContain('12')
-    expect(wrapper.text()).toContain('集')
   })
 
   it('displays score when available', () => {
@@ -58,17 +53,14 @@ describe('AnimeCard Component', () => {
     }
   })
 
-  it('emits details event when details button is clicked', async () => {
+  it('only shows one button (选择播放)', () => {
     const wrapper = mount(AnimeCard, {
       props: { anime: mockAnime }
     })
 
-    const detailsButton = wrapper.findAll('button').find(btn => btn.text() === '查看详情')
-    if (detailsButton) {
-      await detailsButton.trigger('click')
-      expect(wrapper.emitted('details')).toBeTruthy()
-      expect(wrapper.emitted('details')?.[0]).toEqual([mockAnime])
-    }
+    const buttons = wrapper.findAll('button')
+    expect(buttons.length).toBe(1)
+    expect(buttons[0].text()).toBe('选择播放')
   })
 
   it('handles image error and shows fallback', async () => {
