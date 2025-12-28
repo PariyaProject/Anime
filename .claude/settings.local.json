@@ -76,7 +76,8 @@
       "Bash(pushd:*)",
       "Bash(popd:*)",
       "Bash(echo:*)",
-      "Bash(git -C cycani-proxy diff --stat --staged frontend/src/)"
+      "Bash(git -C cycani-proxy diff --stat --staged frontend/src/)",
+      "Skill(openspec:apply)"
     ],
     "deny": [],
     "ask": []

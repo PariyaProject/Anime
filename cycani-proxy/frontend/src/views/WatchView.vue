@@ -312,10 +312,10 @@ async function loadEpisode() {
     const data = playerStore.currentEpisodeData
     if (data) {
       // Update season and episode from episode data
-      season.value = data.season
-      episode.value = data.episode
-      currentSeason.value = data.season
-      jumpEpisode.value = data.episode
+      season.value = Number(data.season)
+      episode.value = Number(data.episode)
+      currentSeason.value = Number(data.season)
+      jumpEpisode.value = Number(data.episode)
 
       // Note: animeTitle, animeCover, etc. are now set by loadAnimeDetails()
       // But keep fallback to episode data title if anime details failed
@@ -758,6 +758,7 @@ watch(() => route.query, () => {
   if (route.params.animeId === animeId.value) {
     season.value = Number(route.query.season) || 1
     episode.value = Number(route.query.episode) || 1
+    jumpEpisode.value = episode.value
     loadEpisode()
   }
 }, { deep: true })

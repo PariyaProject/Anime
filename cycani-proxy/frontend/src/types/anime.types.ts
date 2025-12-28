@@ -31,13 +31,25 @@ export interface FilterParams {
   sort?: 'time' | 'hits' | 'score'
 }
 
+/**
+ * Episode information from backend API
+ */
+export interface EpisodeInfo {
+  season: number
+  episode: number
+  title: string
+  url: string
+}
+
 export interface AnimeDetails {
   id: number | string
   title: string
   cover: string
   type: string
   year: string
-  episodes: number
+  episodes: EpisodeInfo[]
+  totalEpisodes: number
+  totalSeasons: number
   score: number
   status: string
   description: string
