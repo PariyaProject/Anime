@@ -116,16 +116,17 @@ export const animeService = {
   },
 
   /**
-   * Get properly proxied image URL for external images.
-   * Returns proxy URL for external images, null for invalid URLs.
+   * Get image URL directly without proxy.
+   * Returns the original URL for direct browser access.
    * @param originalUrl - Original image URL (can be http, https, or already proxied)
-   * @returns Proxied URL or null
+   * @returns Original image URL or null
    */
   getImageProxyUrl(originalUrl: string | null | undefined): string | null {
     if (!originalUrl) return null
-    if (originalUrl.startsWith('/api/')) return originalUrl // Already proxied
+    // Return original URL directly - no proxy needed
+    if (originalUrl.startsWith('/api/')) return originalUrl // Already proxied URL
     if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
-      return `/api/image-proxy?url=${encodeURIComponent(originalUrl)}`
+      return originalUrl // Use original URL directly
     }
     return null
   }

@@ -528,6 +528,68 @@ function togglePlayPause() {
   }
 }
 
+/**
+ * Seek forward by 5 seconds and save position
+ */
+function seekForward() {
+  if (player) {
+    const newPosition = Math.min(player.currentTime + 5, player.duration || 0)
+    player.currentTime = newPosition
+    console.log('⏩ Seeked forward 5s:', formatTime(newPosition))
+
+    // Save new position immediately
+    if (newPosition > 0) {
+      historyStore.savePositionImmediate(
+        {
+          id: currentAnimeId.value,
+          title: animeTitle.value,
+          cover: animeCover.value
+        },
+        {
+          season: season.value,
+          episode: episode.value,
+          title: episodeTitle.value,
+          duration: duration.value
+        },
+        newPosition,
+        0  // No threshold - always save on keyboard seek
+      )
+      console.log('💾 Position saved after keyboard seek')
+    }
+  }
+}
+
+/**
+ * Seek backward by 5 seconds and save position
+ */
+function seekBackward() {
+  if (player) {
+    const newPosition = Math.max(player.currentTime - 5, 0)
+    player.currentTime = newPosition
+    console.log('⏪ Seeked backward 5s:', formatTime(newPosition))
+
+    // Save new position immediately
+    if (newPosition > 0) {
+      historyStore.savePositionImmediate(
+        {
+          id: currentAnimeId.value,
+          title: animeTitle.value,
+          cover: animeCover.value
+        },
+        {
+          season: season.value,
+          episode: episode.value,
+          title: episodeTitle.value,
+          duration: duration.value
+        },
+        newPosition,
+        0  // No threshold - always save on keyboard seek
+      )
+      console.log('💾 Position saved after keyboard seek')
+    }
+  }
+}
+
 function onVideoEnd() {
   // Save position before loading next episode (mark as completed)
   if (duration.value > 0) {
@@ -607,6 +669,31 @@ async function refreshVideoUrlSeamlessly() {
 
   isRefreshingUrl.value = true
 
+  // Save to backend FIRST before refresh (continue even if fails)
+  if (currentPosition > 0) {
+    try {
+      await historyStore.savePositionImmediate(
+        {
+          id: currentAnimeId.value,
+          title: animeTitle.value,
+          cover: animeCover.value
+        },
+        {
+          season: season.value,
+          episode: episode.value,
+          title: episodeTitle.value,
+          duration: duration.value
+        },
+        currentPosition,
+        0  // No threshold - always save before refresh
+      )
+      console.log('💾 Position saved to backend:', formatTime(currentPosition))
+    } catch (err) {
+      console.warn('⚠️ Backend save failed, continuing with memory-only restore:', err)
+      // Don't block refresh - memory restore is better than nothing
+    }
+  }
+
   try {
     // Fetch fresh URL from backend
     const freshUrl = await playerStore.refreshVideoUrl()
@@ -624,27 +711,37 @@ async function refreshVideoUrlSeamlessly() {
         sources: [{ src: freshUrl, type: 'video/mp4' }]
       }
 
-      // Wait for source to load, then restore position quickly
-      player.once('ready', () => {
-        // Reduce delay to minimize visual jumping
-        setTimeout(() => {
-          if (player && currentPosition > 0) {
+      // Use loadedmetadata event (fires when duration is available)
+      // Poll for duration to be available before setting currentTime
+      player.once('loadedmetadata', () => {
+        let restoreAttempts = setInterval(() => {
+          if (player && player.duration && player.duration > 0 && currentPosition > 0) {
+            clearInterval(restoreAttempts)
+
             player.currentTime = currentPosition
-            console.log('✅ Restored playback position:', formatTime(currentPosition))
-          } else {
-            console.log('▶️ No saved position to resume')
+            console.log('✅ Position restored:', formatTime(currentPosition))
+
+            if (wasPlaying) {
+              player.play()
+              console.log('▶️ Resumed playback after refresh')
+            }
+
+            uiStore.showNotification('视频链接已刷新', 'success')
+
+            // Schedule next refresh after successful URL refresh
+            scheduleUrlRefresh()
           }
+        }, 100)
 
-          if (wasPlaying) {
-            player.play()
-            console.log('▶️ Resumed playback after refresh')
+        // Timeout: give up after 5 seconds
+        setTimeout(() => {
+          clearInterval(restoreAttempts)
+          if (player && !player.paused) {
+            console.warn('⚠️ Position restore timed out, starting from beginning')
+            uiStore.showNotification('视频链接已刷新', 'success')
+            scheduleUrlRefresh()
           }
-
-          uiStore.showNotification('视频链接已刷新', 'success')
-
-          // Schedule next refresh after successful URL refresh
-          scheduleUrlRefresh()
-        }, 100) // Reduced from 500ms to 100ms
+        }, 5000)
       })
     } else {
       // Fallback: direct video element manipulation
@@ -712,6 +809,8 @@ onMounted(async () => {
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
     'Space': togglePlayPause,
+    'ArrowRight': seekForward,
+    'ArrowLeft': seekBackward,
     'Ctrl+ArrowRight': playNext
   })
 
@@ -926,8 +1025,53 @@ function initializePlyr() {
             duration: duration.value
           },
           newPosition,
-          5  // 5 second threshold for seek
+          0  // No threshold - always save on seek completion
         )
+      }
+    })
+
+    // Event-driven save: fast forward/rewind buttons
+    player.on('fastforward', () => {
+      const newPosition = currentTime.value
+      if (newPosition > 0) {
+        historyStore.savePositionImmediate(
+          {
+            id: currentAnimeId.value,
+            title: animeTitle.value,
+            cover: animeCover.value
+          },
+          {
+            season: season.value,
+            episode: episode.value,
+            title: episodeTitle.value,
+            duration: duration.value
+          },
+          newPosition,
+          0  // No threshold - always save on button press
+        )
+        console.log('💾 Position saved after fast forward')
+      }
+    })
+
+    player.on('rewind', () => {
+      const newPosition = currentTime.value
+      if (newPosition > 0) {
+        historyStore.savePositionImmediate(
+          {
+            id: currentAnimeId.value,
+            title: animeTitle.value,
+            cover: animeCover.value
+          },
+          {
+            season: season.value,
+            episode: episode.value,
+            title: episodeTitle.value,
+            duration: duration.value
+          },
+          newPosition,
+          0  // No threshold - always save on button press
+        )
+        console.log('💾 Position saved after rewind')
       }
     })
 
