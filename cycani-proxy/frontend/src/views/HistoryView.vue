@@ -1,6 +1,6 @@
 <template>
   <div class="history-view py-4">
-    <h4 class="mb-4">
+    <h4 class="history-header mb-4">
       <i class="bi bi-clock-history me-2"></i>
       观看历史
     </h4>
@@ -25,14 +25,14 @@
     <div v-else>
       <!-- Search and Filter Section -->
       <section class="filters-section mb-4">
-        <div class="card">
-          <div class="card-body">
+        <div class="filters-card">
+          <div class="filters-body">
             <div class="row g-3">
               <div class="col-md-6">
                 <input
                   v-model="searchQuery"
                   type="text"
-                  class="form-control"
+                  class="form-input"
                   placeholder="搜索动画..."
                 />
               </div>
@@ -51,12 +51,12 @@
                 </select>
               </div>
             </div>
-            <div v-if="hasActiveFilters" class="mt-2">
-              <button class="btn btn-sm btn-outline-secondary" @click="resetFilters">
+            <div v-if="hasActiveFilters" class="mt-2 filter-actions">
+              <button class="btn-clear" @click="resetFilters">
                 <i class="bi bi-x-circle me-1"></i>
                 清除筛选
               </button>
-              <span class="ms-2 text-muted">
+              <span class="result-count">
                 找到 {{ filteredHistory.length }} 条记录
               </span>
             </div>
@@ -73,39 +73,37 @@
         />
       </div>
 
-      <div v-else class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+      <div v-else class="history-grid">
         <div
           v-for="item in filteredHistory"
           :key="`${item.animeId}-${item.season}-${item.episode}`"
-          class="col"
+          class="history-item"
         >
           <div
-            class="card history-card cursor-pointer"
+            class="history-card cursor-pointer"
             @click="resumeWatching(item)"
           >
             <img
               :src="item.animeCover || placeholderImage"
               :alt="item.animeTitle"
-              class="card-img-top"
-              style="height: 180px; object-fit: cover"
+              class="history-card-image"
             />
-            <div class="card-body">
-              <h6 class="card-title text-truncate">{{ item.animeTitle }}</h6>
-              <p class="card-text small text-muted mb-2">
+            <div class="history-card-body">
+              <h6 class="history-card-title">{{ item.animeTitle }}</h6>
+              <p class="history-card-meta">
                 第 {{ item.season }} 季 · 第 {{ item.episode }} 集
               </p>
-              <div class="progress" style="height: 6px">
+              <div class="progress-bar-container">
                 <div
-                  class="progress-bar"
-                  role="progressbar"
+                  class="progress-bar-fill"
                   :style="{ width: `${getProgress(item)}%` }"
                 ></div>
               </div>
-              <div class="d-flex justify-content-between align-items-center mt-2">
-                <small class="text-muted">
+              <div class="history-card-footer">
+                <span class="time-text">
                   {{ formatTime(item.position) }} / {{ formatTime(item.duration) }}
-                </small>
-                <span v-if="item.completed" class="badge bg-success">已看完</span>
+                </span>
+                <span v-if="item.completed" class="badge-completed">已看完</span>
               </div>
             </div>
           </div>
@@ -237,17 +235,219 @@ onMounted(async () => {
   min-height: 100vh;
 }
 
+/* Section Header */
+.history-header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* Filters Card */
+.filters-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.filters-body {
+  padding: 1rem;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Form Input */
+.form-input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.form-input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Form Select */
+.form-select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* Clear Button */
+.btn-clear {
+  padding: 0.4rem 0.8rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-clear:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Result Count */
+.result-count {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* History Grid */
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* History Card */
 .history-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .history-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow-hover);
 }
 
+.history-card-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.history-card-body {
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-card-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem 0;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* History Card Footer */
+.history-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.time-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Badge */
+.badge-completed {
+  padding: 0.25rem 0.5rem;
+  background: var(--accent-color);
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+/* Cursor */
 .cursor-pointer {
   cursor: pointer;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .form-input,
+  .form-select,
+  .btn-clear,
+  .history-card,
+  .progress-bar-fill {
+    transition: none;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .history-header {
+    font-size: 1.25rem;
+  }
+
+  .filters-body {
+    padding: 0.75rem;
+  }
+
+  .history-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
