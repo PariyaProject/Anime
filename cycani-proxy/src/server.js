@@ -2154,30 +2154,23 @@ async function getVideoUrlFromPuppeteer(playerUrl, refererUrl = 'https://www.cyc
 
         console.log(`✅ 找到目标 frame，等待 video 元素...`);
 
-        // 在 frame 中循环等待 video 元素出现
+        // 直接等待 video 元素出现并获取其 src（最多等待 10 秒）
         let videoUrl = null;
-        const maxAttempts = 20; // 最多尝试 20 次
-        for (let i = 0; i < maxAttempts; i++) {
-            const result = await targetFrame.evaluate(() => {
+        try {
+            await targetFrame.waitForSelector('video[src]', { timeout: 10000 });
+
+            videoUrl = await targetFrame.evaluate(() => {
                 const video = document.querySelector('video');
-                if (video && video.currentSrc) {
-                    return video.currentSrc;
-                }
-                return null;
+                return video ? video.currentSrc : null;
             });
 
-            if (result && typeof result === 'string') {
-                videoUrl = result;
+            if (videoUrl && typeof videoUrl === 'string') {
                 console.log(`✅ 成功获取视频URL: ${videoUrl.substring(0, 80)}...`);
-                break;
+            } else {
+                console.log(`⚠️ video 元素存在但未找到 src`);
             }
-
-            // 等待 500ms 后重试
-            await page.waitForTimeout(500);
-        }
-
-        if (!videoUrl) {
-            console.log(`⚠️ 超时后仍未找到 video 元素`);
+        } catch (e) {
+            console.log(`⚠️ 超时后仍未找到 video 元素: ${e.message}`);
         }
 
         // 关闭页面，但保持浏览器运行
