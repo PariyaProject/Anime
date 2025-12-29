@@ -11,6 +11,8 @@ const fsSync = require('fs');
 const { AnimeListUrlConstructor, ApiParameterValidator } = require('./urlConstructor');
 // Import enhanced HTTP client with rate limiting and retry logic
 const { httpClient, getEnhancedHeaders } = require('./httpClient');
+// Import anime index manager for local search
+const { getAnimeIndexManager } = require('./animeIndexManager');
 
 // 尝试引入Puppeteer
 let puppeteer;
@@ -1048,6 +1050,23 @@ app.get('/api/anime-list', async (req, res) => {
 
         console.log(`✅ 解析到 ${animeList.length} 个动画，提取 ${finalAnimeList.length} 个 (offset ${startIndex})`);
 
+        // ============================================================
+        // Incremental Index Update (Transparent)
+        // Runs on EVERY /api/anime-list request to actively grow the index
+        // Checks all returned anime IDs against the index, adds missing ones
+        // ============================================================
+        try {
+            const indexManager = getAnimeIndexManager();
+            // Use the full animeList (before slicing) for incremental update
+            const updateResult = await indexManager.incrementalUpdate(animeList);
+            if (updateResult.added > 0) {
+                console.log(`📈 Index updated: +${updateResult.added} new anime`);
+            }
+        } catch (indexError) {
+            // Don't fail the request if index update fails
+            console.warn(`⚠️ Index update failed: ${indexError.message}`);
+        }
+
         const responseData = {
             animeList: finalAnimeList,
             currentPage: pageNum,
@@ -1483,7 +1502,7 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
     }
 }
 
-// API路由 - 搜索动画
+// API路由 - 搜索动画 (Legacy - requires CAPTCHA, kept as fallback)
 app.get('/api/search-anime', async (req, res) => {
     try {
         const { q } = req.query;
@@ -1498,7 +1517,7 @@ app.get('/api/search-anime', async (req, res) => {
             });
         }
 
-        console.log(`🔍 搜索动画: ${q}`);
+        console.log(`🔍 搜索动画 (legacy): ${q}`);
 
         // 使用搜索接口
         const searchUrl = `https://www.cycani.org/search?wd=${encodeURIComponent(q)}`;
@@ -1532,7 +1551,7 @@ app.get('/api/search-anime', async (req, res) => {
             }
         });
 
-        console.log(`✅ 搜索到 ${searchResults.length} 个结果`);
+        console.log(`✅ 搜索到 ${searchResults.length} 个结果 (legacy)`);
 
         res.json({
             success: true,
@@ -1544,7 +1563,121 @@ app.get('/api/search-anime', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ 搜索动画失败:', error.message);
+        console.error('❌ 搜索动画失败 (legacy):', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// API路由 - 本地搜索 (New - uses local index, no CAPTCHA)
+app.get('/api/search-local', async (req, res) => {
+    try {
+        const { q } = req.query;
+
+        if (!q || q.trim().length < 2) {
+            return res.status(400).json({
+                success: false,
+                error: '搜索关键词至少需要2个字符'
+            });
+        }
+
+        const indexManager = getAnimeIndexManager();
+        const stats = indexManager.getIndexStats();
+
+        // Check if index is building
+        if (stats.isBuilding) {
+            return res.status(503).json({
+                success: false,
+                error: '索引正在构建中，请稍后再试',
+                isBuilding: true
+            });
+        }
+
+        // Check if index is empty
+        if (stats.totalAnime === 0) {
+            return res.status(503).json({
+                success: false,
+                error: '索引尚未构建，请先构建索引',
+                isEmpty: true
+            });
+        }
+
+        console.log(`🔍 本地搜索: ${q}`);
+
+        // Search in local index
+        const results = indexManager.search(q);
+
+        console.log(`✅ 本地搜索到 ${results.length} 个结果`);
+
+        res.json({
+            success: true,
+            data: {
+                animeList: results,
+                searchQuery: q,
+                totalCount: results.length,
+                indexLastUpdated: stats.lastUpdated
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ 本地搜索失败:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// API路由 - 索引状态
+app.get('/api/index-status', async (req, res) => {
+    try {
+        const indexManager = getAnimeIndexManager();
+        const stats = indexManager.getIndexStats();
+
+        res.json({
+            success: true,
+            data: stats
+        });
+
+    } catch (error) {
+        console.error('❌ 获取索引状态失败:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// API路由 - 重建索引 (Admin only)
+app.post('/api/index-rebuild', async (req, res) => {
+    try {
+        const indexManager = getAnimeIndexManager();
+
+        // Check if already building
+        if (indexManager.isBuilding) {
+            return res.status(409).json({
+                success: false,
+                error: '索引已在构建中',
+                isBuilding: true
+            });
+        }
+
+        console.log('🔄 触发索引重建...');
+
+        // Start rebuild in background
+        indexManager.buildInitialIndex().catch(error => {
+            console.error('❌ 索引重建失败:', error.message);
+        });
+
+        res.json({
+            success: true,
+            message: '索引重建已启动'
+        });
+
+    } catch (error) {
+        console.error('❌ 触发索引重建失败:', error.message);
         res.status(500).json({
             success: false,
             error: error.message
@@ -2205,6 +2338,30 @@ const server = app.listen(PORT, async () => {
     console.log(`🔍 Validating watch history data file...`);
     await WatchHistoryManager.loadHistory();
     console.log(`✅ Data storage initialization complete`);
+
+    // ============================================================
+    // Anime Index Initialization
+    // ============================================================
+
+    console.log(`📊 Initializing anime index...`);
+    const indexManager = getAnimeIndexManager();
+    await indexManager.initialize();
+
+    const indexStats = indexManager.getIndexStats();
+    // Only build if index is empty AND not already building
+    if (indexStats.totalAnime === 0 && !indexStats.isBuilding) {
+        console.log(`📋 Index is empty, starting initial build...`);
+        console.log(`⏳ This will take a few minutes, please wait...`);
+        // Build in background to not block server startup
+        indexManager.buildInitialIndex().catch(error => {
+            console.error(`❌ Initial index build failed: ${error.message}`);
+        });
+    } else if (indexStats.isBuilding) {
+        console.log(`⏳ Index build already in progress from previous run...`);
+    } else {
+        console.log(`✅ Anime index ready: ${indexStats.totalAnime} entries`);
+        console.log(`   Last updated: ${indexStats.lastUpdated || 'never'}`);
+    }
 
     // 验证必要的导入
     const requiredModules = {

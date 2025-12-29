@@ -10,11 +10,26 @@ import type { BackendResponse } from '@/types/api.types'
 import { useCacheSettings } from '@/composables/useCacheSettings'
 
 export const animeService = {
+  /**
+   * Get anime list with hybrid search mode support.
+   * - If search text is present: uses local search (/api/search-local)
+   * - If no search text: uses filter mode (/api/anime-list with filters)
+   * @param params - Filter parameters including optional search text
+   * @returns Anime list matching the criteria
+   */
   async getAnimeList(params: FilterParams = {}): Promise<AnimeListResponse['data']> {
+    const { search, ...filterParams } = params
+
+    // Hybrid Search Mode: use local search when search text is present
+    if (search && search.trim().length >= 2) {
+      return this.searchAnimeLocal(search.trim())
+    }
+
+    // Filter Mode: use anime-list endpoint with filters
     const { isEnabled } = useCacheSettings()
     const response = await api.get<AnimeListResponse>('/api/anime-list', {
       params: {
-        ...params,
+        ...filterParams,
         useCache: isEnabled() ? 'true' : 'false'
       }
     })
@@ -27,11 +42,53 @@ export const animeService = {
   },
 
   /**
-   * Search for anime using the dedicated search endpoint.
+   * Search for anime using the local search endpoint (no CAPTCHA).
+   * This is the preferred search method.
    * @param query - Search query string (minimum 2 characters)
    * @returns Search results with matching anime list
    */
-  async searchAnime(query: string): Promise<SearchResponse> {
+  async searchAnimeLocal(query: string): Promise<AnimeListResponse['data']> {
+    if (!query || query.trim().length < 2) {
+      return {
+        animeList: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: 1
+      }
+    }
+
+    try {
+      const response = await api.get<BackendResponse<SearchResponse & { indexLastUpdated?: string }>>('/api/search-local', {
+        params: { q: query.trim() }
+      })
+
+      // Transform search response to match AnimeListResponse format
+      return {
+        animeList: response.data.data.animeList as unknown as Anime[],
+        totalCount: response.data.data.totalCount,
+        totalPages: 1, // Search results are not paginated
+        currentPage: 1
+      }
+    } catch (error: any) {
+      // If local search fails (e.g., index not built), return empty results
+      console.warn('Local search failed, returning empty results:', error.message)
+      return {
+        animeList: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: 1
+      }
+    }
+  },
+
+  /**
+   * Search for anime using the legacy remote search endpoint (requires CAPTCHA).
+   * This is kept as a fallback if local search is not available.
+   * @param query - Search query string (minimum 2 characters)
+   * @returns Search results with matching anime list
+   * @deprecated Use searchAnimeLocal instead for better performance and no CAPTCHA
+   */
+  async searchAnimeLegacy(query: string): Promise<SearchResponse> {
     if (!query || query.trim().length < 2) {
       return {
         animeList: [],
@@ -43,6 +100,19 @@ export const animeService = {
       params: { q: query.trim() }
     })
     return response.data.data
+  },
+
+  /**
+   * Get index status for monitoring.
+   * @returns Index status information
+   */
+  async getIndexStatus(): Promise<{ totalAnime: number; lastUpdated: string | null; isBuilding: boolean }> {
+    try {
+      const response = await api.get<BackendResponse<{ totalAnime: number; lastUpdated: string | null; isBuilding: boolean }>>('/api/index-status')
+      return response.data.data
+    } catch (error) {
+      return { totalAnime: 0, lastUpdated: null, isBuilding: false }
+    }
   },
 
   /**

@@ -40,7 +40,13 @@
               />
             </div>
             <div class="col-md-2">
-              <select v-model="filters.genre" class="form-select" @change="applyFilters">
+              <select
+                v-model="filters.genre"
+                class="form-select"
+                @change="applyFilters"
+                :disabled="isSearchMode"
+                :title="isSearchMode ? '文本搜索时不可用' : ''"
+              >
                 <option value="">全部类型</option>
                 <option value="TV">TV版</option>
                 <option value="电影">电影</option>
@@ -48,7 +54,13 @@
               </select>
             </div>
             <div class="col-md-2">
-              <select v-model="filters.year" class="form-select" @change="applyFilters">
+              <select
+                v-model="filters.year"
+                class="form-select"
+                @change="applyFilters"
+                :disabled="isSearchMode"
+                :title="isSearchMode ? '文本搜索时不可用' : ''"
+              >
                 <option value="">全部年份</option>
                 <option v-for="year in recentYears" :key="year" :value="year.toString()">
                   {{ year }}
@@ -56,7 +68,13 @@
               </select>
             </div>
             <div class="col-md-2">
-              <select v-model="filters.sort" class="form-select" @change="applyFilters">
+              <select
+                v-model="filters.sort"
+                class="form-select"
+                @change="applyFilters"
+                :disabled="isSearchMode"
+                :title="isSearchMode ? '文本搜索时不可用' : ''"
+              >
                 <option value="time">最新</option>
                 <option value="hits">热门</option>
                 <option value="score">评分</option>
@@ -196,6 +214,9 @@ const totalCount = computed(() => animeStore.totalCount)
 const hasNextPage = computed(() => animeStore.hasNextPage)
 const hasPrevPage = computed(() => animeStore.hasPrevPage)
 
+// Search mode: true when user has entered text in search box
+const isSearchMode = computed(() => Boolean(filters.value.search && filters.value.search.trim().length >= 2))
+
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => historyStore.hasContinueWatching)
 
@@ -204,7 +225,12 @@ const { groupedAnime } = useGroupedHistory(continueWatching)
 
 const recentYears = computed(() => {
   const currentYear = new Date().getFullYear()
-  return Array.from({ length: 10 }, (_, i) => currentYear - i)
+  const startYear = 1980  // Website has data from 1980
+  const years = []
+  for (let year = currentYear; year >= startYear; year--) {
+    years.push(year)
+  }
+  return years
 })
 
 const displayedPages = computed(() => {
@@ -418,6 +444,12 @@ onMounted(async () => {
 .form-select:focus {
   outline: none;
   border-color: var(--accent-color);
+}
+
+.form-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
 }
 
 /* Reset Button */
