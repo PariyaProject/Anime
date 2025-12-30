@@ -1,16 +1,16 @@
 <template>
   <div class="home-view py-4">
     <!-- Continue Watching Section -->
-    <section v-if="hasContinueWatching" class="continue-watching-section mb-5">
+    <section v-if="hasContinueWatching" class="continue-watching-section mb-3">
       <h2 class="section-header mb-4">
         继续观看
       </h2>
       <div class="continue-watching-container">
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+        <div class="continue-watching-scroll">
           <div
             v-for="anime in groupedAnime"
             :key="`${anime.animeId}-${anime.season}`"
-            class="col"
+            class="continue-watching-item"
           >
             <GroupedContinueWatchingCard
               :anime="anime"
@@ -166,7 +166,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAnimeStore } from '@/stores/anime'
 import { useHistoryStore } from '@/stores/history'
 import { useUiStore } from '@/stores/ui'
@@ -182,6 +182,7 @@ import type { Anime, FilterParams } from '@/types/anime.types'
 import type { WatchRecord } from '@/types/history.types'
 
 const router = useRouter()
+const route = useRoute()
 const animeStore = useAnimeStore()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
@@ -198,6 +199,7 @@ const filters = ref<FilterParams>({
   genre: '',
   year: '',
   sort: 'time',
+  channel: uiStore.filters.channel,  // Initialize channel from uiStore
   page: 1,
   limit: 48
 })
@@ -216,6 +218,11 @@ const hasPrevPage = computed(() => animeStore.hasPrevPage)
 
 // Search mode: true when user has entered text in search box
 const isSearchMode = computed(() => Boolean(filters.value.search && filters.value.search.trim().length >= 2))
+
+// Current channel display name
+const channelDisplayName = computed(() => {
+  return filters.value.channel === 'movie' ? '剧场番剧' : 'TV番剧'
+})
 
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => historyStore.hasContinueWatching)
@@ -262,7 +269,7 @@ function debouncedSearch() {
   debounceTimer = window.setTimeout(() => {
     filters.value.page = 1
     loadAnimeList()
-  }, 500)
+  }, 800)
 }
 
 function applyFilters() {
@@ -276,6 +283,7 @@ function resetFilters() {
     genre: '',
     year: '',
     sort: 'time',
+    channel: uiStore.filters.channel,  // Keep current channel
     page: 1,
     limit: 48
   }
@@ -330,8 +338,27 @@ function getProgress(item: WatchRecord): number {
   return Math.min(100, (item.position / item.duration) * 100)
 }
 
+// Watch uiStore channel changes (from navbar tabs)
+watch(() => uiStore.filters.channel, (newChannel) => {
+  if (filters.value.channel !== newChannel) {
+    filters.value.channel = newChannel
+    filters.value.page = 1
+    loadAnimeList()
+    // Update URL query parameter without creating history entry
+    router.replace({ query: { ...route.query, channel: newChannel } })
+  }
+})
+
 onMounted(async () => {
   uiStore.loadDarkModePreference()
+
+  // Read channel from URL query parameter on initial load
+  const urlChannel = route.query.channel as string | undefined
+  if (urlChannel === 'tv' || urlChannel === 'movie') {
+    // Update both uiStore and local filters from URL
+    uiStore.updateFilters({ channel: urlChannel })
+    filters.value.channel = urlChannel
+  }
 
   // Setup keyboard shortcuts for pagination
   useKeyboardShortcuts({
@@ -369,29 +396,54 @@ onMounted(async () => {
   border-bottom: 2px solid var(--border-color);
 }
 
-/* Continue Watching Container - Scrollable */
+/* Continue Watching Container - Horizontal Scroll */
 .continue-watching-container {
-  max-height: 600px;
-  overflow-y: auto;
-  padding-right: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+  scroll-padding-inline-end: 0.5rem;
 }
 
-/* Scrollbar styling for dark mode compatibility */
+.continue-watching-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1rem;
+  padding: 0 0.5rem 0.5rem 0;
+}
+
+.continue-watching-item {
+  flex: 0 0 auto;
+  width: 280px;
+  max-width: 280px;
+}
+
+/* Horizontal scrollbar styling for dark mode compatibility */
 .continue-watching-container::-webkit-scrollbar {
-  width: 8px;
+  height: 8px;
 }
 
 .continue-watching-container::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: transparent;
   border-radius: 4px;
+  margin: 4px 0;
 }
 
 .continue-watching-container::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: transparent;
   border-radius: 4px;
+  transition: background 0.3s ease;
+  min-height: 8px;
 }
 
-.continue-watching-container::-webkit-scrollbar-thumb:hover {
+.continue-watching-container:hover::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.continue-watching-container:hover::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+}
+
+.continue-watching-container:hover::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
 

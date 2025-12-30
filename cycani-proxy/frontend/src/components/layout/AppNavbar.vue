@@ -6,8 +6,20 @@
       </router-link>
 
       <div class="nav-controls">
-        <div class="nav-links">
-          <router-link to="/" class="nav-link">动画列表</router-link>
+        <!-- Channel Tabs -->
+        <div class="channel-tabs">
+          <router-link
+            to="/"
+            class="channel-tab"
+            :class="{ active: currentChannel === 'tv' }"
+            @click="setChannel('tv')"
+          >TV</router-link>
+          <router-link
+            to="/"
+            class="channel-tab"
+            :class="{ active: currentChannel === 'movie' }"
+            @click="setChannel('movie')"
+          >剧场</router-link>
         </div>
         <!-- Watch History Dropdown -->
         <div class="dropdown" v-if="hasContinueWatching">
@@ -117,6 +129,7 @@ const settingsDropdownOpen = ref(false)
 const placeholderImage = computed(() => `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-40x40.svg`)
 
 const darkMode = computed(() => uiStore.darkMode)
+const currentChannel = computed(() => uiStore.filters.channel)
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => continueWatching.value.length > 0)
 const cacheEnabled = computed(() => cacheSettings.enabled)
@@ -167,6 +180,10 @@ function resumeWatching(anime: GroupedAnime) {
       episode: anime.latestEpisode.episode.toString()
     }
   })
+}
+
+function setChannel(channel: 'tv' | 'movie') {
+  uiStore.updateFilters({ channel })
 }
 
 function handleClickOutside(event: Event) {
@@ -220,24 +237,32 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
 }
 
-.nav-links {
+/* Channel Tabs */
+.channel-tabs {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
-.nav-link {
+.channel-tab {
   padding: 0.35rem 0.75rem;
   color: var(--text-secondary);
   text-decoration: none;
   border-radius: 4px;
   font-size: 0.85rem;
   transition: all 0.2s;
+  border: 1px solid transparent;
 }
 
-.nav-link:hover,
-.nav-link.router-link-active {
+.channel-tab:hover {
   color: var(--text-primary);
   background: var(--bg-secondary);
+}
+
+.channel-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  font-weight: 500;
 }
 
 .nav-controls {
@@ -437,8 +462,8 @@ onUnmounted(() => {
     padding: 0 0.75rem;
   }
 
-  .nav-links {
-    display: none;
+  .channel-tabs {
+    display: none;  /* Hide channel tabs on very small screens */
   }
 
   .dropdown-menu {

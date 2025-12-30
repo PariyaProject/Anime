@@ -16,10 +16,13 @@
         @error="handleImageError"
       />
       <div class="overlay" aria-hidden="true">
-        <span v-if="anime.score" class="badge score">
-          {{ anime.score }}
+        <span class="badge channel" :class="anime.channel || 'tv'">
+          {{ anime.channel === 'movie' ? '剧场' : 'TV' }}
         </span>
-        <span v-if="anime.status" class="badge status">
+        <span v-if="anime.score" class="badge score">
+          <i class="bi bi-star-fill"></i> {{ anime.score }}
+        </span>
+        <span v-if="anime.status" class="badge status" :class="{ 'bg-success': anime.status.includes('连载'), 'bg-secondary': anime.status.includes('完结') }">
           {{ anime.status }}
         </span>
       </div>
@@ -143,6 +146,30 @@ function handleImageError(event: Event) {
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
   backdrop-filter: blur(4px);
+}
+
+.badge.channel {
+  background: rgba(59, 130, 246, 0.9);  /* Blue for TV */
+}
+
+.badge.channel.movie {
+  background: rgba(168, 85, 247, 0.9);  /* Purple for movie/theater */
+}
+
+.badge.score {
+  background: rgba(255, 193, 7, 0.9);  /* Yellow for score (matches bg-warning) */
+  color: #000;  /* Dark text for readability */
+}
+
+/* Status badge colors - matching WeeklySchedule */
+.badge.status.bg-success {
+  background: rgba(25, 135, 84, 0.9) !important;  /* Green for 连载中/连载中 */
+  color: #fff;
+}
+
+.badge.status.bg-secondary {
+  background: rgba(108, 117, 125, 0.9) !important;  /* Gray for 已完结 */
+  color: #fff;
 }
 
 .card-body {

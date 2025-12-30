@@ -84,13 +84,13 @@
                   <h6 class="card-title small text-truncate mb-1" :title="anime.title">{{ anime.title }}</h6>
                   <p
                     v-if="anime.broadcastTime"
-                    class="card-text small text-muted mb-0"
+                    class="card-text small text-muted mb-0 d-flex align-items-center"
                     :title="anime.broadcastTime"
                   >
                     <i class="bi bi-clock me-1"></i>
-                    <span class="text-truncate d-inline-block">{{ anime.broadcastTime }}</span>
+                    <span class="text-truncate">{{ anime.broadcastTime }}</span>
                   </p>
-                  <p v-else class="card-text small text-muted mb-0">
+                  <p v-else class="card-text small text-muted mb-0 d-flex align-items-center">
                     <i class="bi bi-clock me-1"></i>
                     <span>暂无放送信息</span>
                   </p>

@@ -198,6 +198,42 @@ URL Structure:
 https://player.cycanime.com/?url=VIDEO_URL&episode=NUMBER&bangumiId=ID&season=SEASON&current_url=URL&next_episode=NUMBER&next_url=URL&timestamp=TIMESTAMP
 ```
 
+### Multi-Channel Architecture
+
+The system supports multiple anime channels (TV and Theater) with a unified index architecture:
+
+**Channel Types:**
+- **TV** (`tv`, channel 20): TV番组 - Regular TV anime series
+- **Theater** (`movie`, channel 21): 剧场番组 - Theatrical releases and movies
+- **Future**: 4K (channel 26), 国漫 (channel 27)
+
+**Channel Map (urlConstructor.js):**
+```javascript
+{
+    'tv': 20,      // TV番组
+    'movie': 21,   // 剧场番组
+    '4k': 26,      // 4K专区
+    'guoman': 27,  // 国漫
+    'default': 20
+}
+```
+
+**Unified Index Strategy:**
+- Single `anime-index.json` contains both TV and theater anime
+- Each index entry has `channel` field to distinguish source
+- Search returns results from all channels (no channel filtering in search)
+- Existing entries without `channel` field are treated as TV
+
+**Frontend Channel Selection:**
+- Navbar tabs: [TV] [剧场] for channel switching
+- URL sync: `?channel=movie` query parameter
+- Channel badges on anime cards (TV=blue, 剧场=purple)
+- Channel state persists in uiStore
+
+**Type vs Channel Distinction:**
+- **Channel** (`channel`): Content source category (tv/movie/4k/guoman) - determines which listing page to scrape
+- **Type** (`type`): Anime format classification (TV/剧场/OVA/OAD/电影) - displayed as metadata badge
+
 ## Testing and Debugging
 
 ### Chrome MCP Integration
@@ -433,10 +469,15 @@ curl -s "http://localhost:3017/api/continue-watching"
 ## Key API Endpoints
 
 **Anime Management:**
-- `GET /api/anime-list` - Fetch paginated anime list with metadata (supports optional `useCache` parameter for future opt-in caching)
+- `GET /api/anime-list` - Fetch paginated anime list with metadata
+  - Parameters: `page`, `limit`, `search`, `genre`, `year`, `sort`, `channel` (tv|movie)
+  - `channel` filters anime by channel (default: 'tv')
+  - `useCache` parameter for future opt-in caching
 - `GET /api/anime/:id` - Get detailed anime information
 - `GET /api/episode/:animeId/:season/:episode` - Get episode video URL
-- `GET /api/weekly-schedule` - Get weekly anime schedule (supports optional `useCache` parameter for future opt-in caching)
+- `GET /api/weekly-schedule` - Get weekly anime schedule (supports optional `useCache` parameter)
+- `GET /api/search-local` - Search anime using local index (searches all channels, channel-agnostic)
+- `GET /api/index-status` - Get anime index statistics (total anime count, last updated, building status)
 
 **Watch History:**
 - `GET /api/continue-watching` - Get incomplete content for resumption
@@ -503,10 +544,66 @@ curl -s "http://localhost:3017/api/continue-watching"
 }
 ```
 
+### Anime Index Data Structure
+
+**Location:** `cycani-proxy/config/anime-index.json`
+
+The anime index is a unified searchable database of all anime from TV and Theater channels:
+
+```json
+{
+  "meta": {
+    "version": 1,
+    "lastUpdated": "2025-12-30T10:00:00.000Z",
+    "totalAnime": 6500
+  },
+  "anime": {
+    "1234": {
+      "id": "1234",
+      "title": "Example TV Series",
+      "cover": "https://...",
+      "year": "2024",
+      "type": "TV",
+      "status": "连载中",
+      "episodes": "12",
+      "score": "8.5",
+      "url": "https://www.cycani.org/show/1234.html",
+      "channel": "tv",
+      "indexedAt": "2025-12-30T10:00:00.000Z"
+    },
+    "5678": {
+      "id": "5678",
+      "title": "Example Movie",
+      "cover": "https://...",
+      "year": "2024",
+      "type": "剧场",
+      "status": "已完结",
+      "episodes": "1",
+      "score": "9.0",
+      "url": "https://www.cycani.org/show/5678.html",
+      "channel": "movie",
+      "indexedAt": "2025-12-30T10:00:00.000Z"
+    }
+  }
+}
+```
+
+**Building the Index:**
+- TV index: `buildInitialIndex('tv')` - Scrapes `/show/20.html` (TV番组)
+- Theater index: `buildInitialIndex('movie')` - Appends `/show/21.html` (剧场番组) to existing index
+- Incremental updates happen automatically on every `/api/anime-list` request
+
+**Index Manager Methods:**
+- `buildInitialIndex(channel)` - Build index for specific channel (appends to existing)
+- `incrementalUpdate(animeList, channel)` - Add new anime from browsing to index
+- `searchAnime(query)` - Fast text search across all channels
+
 ### Data Storage Organization
 
 **Configuration vs. Runtime Data:**
-- `cycani-proxy/config/` - Runtime user data (watch history, auto-created)
+- `cycani-proxy/config/` - Runtime user data (watch history, anime index, auto-created)
+  - `watch-history.json` - User watch history and positions
+  - `anime-index.json` - Unified searchable anime index (TV + Theater)
 - `src/` - Application source code (never mixed with data)
 - `data/` - Test and archived artifacts only (not used for runtime data)
 

@@ -14,6 +14,7 @@ export interface FilterState {
   year: string
   month: string
   sort: 'time' | 'hits' | 'score'
+  channel: 'tv' | 'movie'  // Channel for filtering TV vs theater anime
 }
 
 export const useUiStore = defineStore('ui', () => {
@@ -25,7 +26,8 @@ export const useUiStore = defineStore('ui', () => {
     genre: '',
     year: '',
     month: '',
-    sort: 'time'
+    sort: 'time',
+    channel: 'tv'  // Default to TV channel
   })
   const notifications = ref<Notification[]>([])
 
@@ -48,7 +50,8 @@ export const useUiStore = defineStore('ui', () => {
       genre: '',
       year: '',
       month: '',
-      sort: 'time'
+      sort: 'time',
+      channel: 'tv'  // Reset to TV channel
     }
   }
 

@@ -18,9 +18,10 @@ export const animeService = {
    * @returns Anime list matching the criteria
    */
   async getAnimeList(params: FilterParams = {}): Promise<AnimeListResponse['data']> {
-    const { search, ...filterParams } = params
+    const { search, channel = 'tv', ...filterParams } = params
 
     // Hybrid Search Mode: use local search when search text is present
+    // Note: search returns results from all channels regardless of current channel filter
     if (search && search.trim().length >= 2) {
       return this.searchAnimeLocal(search.trim())
     }
@@ -30,6 +31,7 @@ export const animeService = {
     const response = await api.get<AnimeListResponse>('/api/anime-list', {
       params: {
         ...filterParams,
+        channel,  // Pass channel parameter to API
         useCache: isEnabled() ? 'true' : 'false'
       }
     })

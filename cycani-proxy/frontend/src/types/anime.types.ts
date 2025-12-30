@@ -3,6 +3,7 @@ export interface Anime {
   title: string
   cover: string
   type?: string
+  channel?: 'tv' | 'movie'  // Channel field for distinguishing TV vs theater anime
   year?: string
   episodes?: number
   score?: number
@@ -29,6 +30,7 @@ export interface FilterParams {
   year?: string
   month?: string
   sort?: 'time' | 'hits' | 'score'
+  channel?: 'tv' | 'movie'  // Channel parameter for filtering
 }
 
 /**

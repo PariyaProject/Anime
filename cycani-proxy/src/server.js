@@ -1058,9 +1058,10 @@ app.get('/api/anime-list', async (req, res) => {
         try {
             const indexManager = getAnimeIndexManager();
             // Use the full animeList (before slicing) for incremental update
-            const updateResult = await indexManager.incrementalUpdate(animeList);
+            // Pass channel parameter to store channel info in index
+            const updateResult = await indexManager.incrementalUpdate(animeList, channel);
             if (updateResult.added > 0) {
-                console.log(`📈 Index updated: +${updateResult.added} new anime`);
+                console.log(`📈 Index updated: +${updateResult.added} new anime (channel: ${channel})`);
             }
         } catch (indexError) {
             // Don't fail the request if index update fails
@@ -1709,14 +1710,15 @@ app.get('/api/anime/:animeId', async (req, res) => {
         let strategyUsed = 0;
 
         // 策略1: 尝试从页面标题获取 - 通用正则表达式解析
-        // 支持两种格式:
+        // 支持多种格式:
         // - 播放页面: 不擅吸血的吸血鬼_第01集_TV番组 - 次元城动画 - 海量蓝光番剧免费看！
-        // - 详情页面: 不擅吸血的吸血鬼_TV番组 - 次元城动画 - 海量蓝光番剧免费看！
+        // - TV详情页面: 不擅吸血的吸血鬼_TV番组 - 次元城动画 - 海量蓝光番剧免费看！
+        // - 剧场详情页面: 剧场版 鬼灭之刃 无限城篇_剧场番组 - 次元城动画 - 海量蓝光番剧免费看！
         const pageTitle = $('title').text().trim();
         let titleMatch = pageTitle.match(/^(.+?)_第\d+集_/);
         if (!titleMatch) {
-            // 如果没有集数匹配，尝试匹配详情页面格式
-            titleMatch = pageTitle.match(/^(.+?)_TV番组/);
+            // 如果没有集数匹配，尝试匹配详情页面格式（支持TV和剧场）
+            titleMatch = pageTitle.match(/^(.+?)_(?:TV番组|剧场番组)/);
         }
         if (titleMatch && titleMatch[1]) {
             title = titleMatch[1].trim();
@@ -2057,7 +2059,8 @@ function parseEpisodeData($) {
 
         // 如果没有解析到数据，返回基本信息
         const rawTitle = $('title').text() || '未知剧集';
-        const title = rawTitle.replace(/_TV番组.*$/, '').trim();
+        // 支持TV番组和剧场番组的标题格式
+        const title = rawTitle.replace(/_(?:TV番组|剧场番组).*$/, '').trim();
 
         return {
             title,
