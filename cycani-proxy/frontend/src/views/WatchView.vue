@@ -119,7 +119,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useHistoryStore } from '@/stores/history'
 import { useUiStore } from '@/stores/ui'
@@ -853,6 +853,29 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', handlePageHide)
 })
 
+// Router navigation guard - save position before navigating away
+onBeforeRouteLeave((to, from, next) => {
+  if (currentTime.value > 0) {
+    historyStore.savePositionImmediate(
+      {
+        id: currentAnimeId.value,
+        title: animeTitle.value,
+        cover: animeCover.value
+      },
+      {
+        season: season.value,
+        episode: episode.value,
+        title: episodeTitle.value,
+        duration: duration.value
+      },
+      currentTime.value,
+      0  // No threshold - always save on navigation
+    )
+    console.log('💾 Position saved on route navigation guard')
+  }
+  next()  // Don't block navigation
+})
+
 watch(() => route.query, () => {
   if (route.params.animeId === animeId.value) {
     season.value = Number(route.query.season) || 1
@@ -966,24 +989,22 @@ function initializePlyr() {
 
     // Event-driven save: play/pause
     player.on('play', () => {
-      // Save position when user resumes playback
-      if (currentTime.value > 0) {
-        historyStore.savePositionImmediate(
-          {
-            id: currentAnimeId.value,
-            title: animeTitle.value,
-            cover: animeCover.value
-          },
-          {
-            season: season.value,
-            episode: episode.value,
-            title: episodeTitle.value,
-            duration: duration.value
-          },
-          currentTime.value,
-          5  // 5 second threshold for play/pause
-        )
-      }
+      // Always save position when video starts playing (including first autoplay)
+      historyStore.savePositionImmediate(
+        {
+          id: currentAnimeId.value,
+          title: animeTitle.value,
+          cover: animeCover.value
+        },
+        {
+          season: season.value,
+          episode: episode.value,
+          title: episodeTitle.value,
+          duration: duration.value
+        },
+        currentTime.value,
+        0  // No threshold - always save on play
+      )
     })
 
     player.on('pause', () => {

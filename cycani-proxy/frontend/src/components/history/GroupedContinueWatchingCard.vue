@@ -1,5 +1,10 @@
 <template>
-  <div class="card grouped-history-card" :class="{ 'expanded': isExpanded }">
+  <div class="card grouped-history-card" :class="{ 'expanded': isExpanded, 'has-local-only': anime.hasLocalOnly }">
+    <!-- 未同步角标 - 右上角三角形 -->
+    <div v-if="anime.hasLocalOnly" class="corner-badge" title="仅本地存储">
+      <span class="corner-text">本地</span>
+    </div>
+
     <!-- Collapsed State -->
     <div class="card-body p-3" @click="toggleExpand">
       <div class="d-flex align-items-center gap-3">
@@ -12,7 +17,7 @@
           style="object-fit: cover"
         />
         <div class="flex-grow-1">
-          <h6 class="card-title mb-1 text-truncate">{{ anime.animeTitle }}</h6>
+          <h6 class="card-title mb-1 text-truncate" :title="anime.animeTitle">{{ anime.animeTitle }}</h6>
           <p class="card-text small text-muted mb-1">
             第 {{ anime.season }} 季 · 已看 {{ anime.totalWatched }} 集
           </p>
@@ -60,14 +65,14 @@
             v-for="episode in sortedEpisodes"
             :key="episode.episode"
             class="episode-item"
-            :class="{ 'active': episode.episode === anime.latestEpisode.episode }"
+            :class="{ 'active': episode.episode === anime.latestEpisode.episode, 'local-only': episode.isLocalOnly }"
             @click="handleSelectEpisode(episode)"
           >
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center">
               <span class="episode-number">
                 第 {{ episode.episode }} 集
               </span>
-              <div class="episode-progress flex-grow-1">
+              <div class="episode-progress flex-grow-1 ms-1">
                 <div class="progress" style="height: 3px">
                   <div
                     class="progress-bar"
@@ -81,7 +86,7 @@
                 {{ episode.completed ? '已看完' : formatProgress(getEpisodeProgress(episode)) }}
               </span>
             </div>
-            <p v-if="episode.episodeTitle" class="small text-muted mb-0 mt-1 text-truncate">
+            <p v-if="episode.episodeTitle" class="small text-muted mb-0 mt-1 text-truncate" :title="episode.episodeTitle">
               {{ episode.episodeTitle }}
             </p>
           </div>
@@ -109,7 +114,8 @@ const emit = defineEmits<Emits>()
 
 const isExpanded = ref(false)
 
-const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-80x80.svg`
+// Placeholder image via Vite proxy
+const placeholderImage = '/placeholder/placeholder-80x80.svg'
 
 // Sort episodes by episode number
 const sortedEpisodes = computed(() => {
@@ -144,6 +150,45 @@ function formatProgress(progress: number): string {
   border: 1px solid var(--border-color);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+  position: relative; /* For absolute positioning of badge */
+  overflow: visible; /* Allow corner badge to extend beyond */
+}
+
+/* 三角形角标 - 右上角 */
+.corner-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.corner-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #ff9f43 0%, #ff7f11 50%, #ee5a24 100%);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.corner-text {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: rotate(45deg);
+  transform-origin: center;
+  white-space: nowrap;
 }
 
 .grouped-history-card:hover {
@@ -159,6 +204,15 @@ function formatProgress(progress: number): string {
 /* Override Bootstrap text colors */
 .grouped-history-card .card-title {
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0; /* Allow flex item to shrink */
+}
+
+/* Ensure flex container allows text truncation */
+.grouped-history-card .flex-grow-1 {
+  min-width: 0; /* Allow flex child to shrink */
 }
 
 .grouped-history-card .text-muted {
@@ -167,11 +221,13 @@ function formatProgress(progress: number): string {
 
 .episode-list {
   border-top: 1px solid var(--border-color);
+  background-color: transparent;
 }
 
 .episode-list-scroll {
   max-height: 300px;
   overflow-y: auto;
+  background-color: transparent;
 }
 
 .episode-item {
@@ -180,17 +236,19 @@ function formatProgress(progress: number): string {
   cursor: pointer;
   transition: background-color 0.15s ease;
   margin-bottom: 0.25rem;
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .episode-item:hover {
-  background-color: var(--bg-tertiary);
+  background-color: var(--bg-tertiary) !important;
 }
 
 .episode-item.active {
-  background-color: var(--accent-color);
-  border-left: 3px solid var(--accent-hover);
-  color: #fff;
+  background-color: #4a9eff !important;
+  border-left: 3px solid #2d7dd2 !important;
+  color: #fff !important;
 }
 
 .episode-item.active .text-muted {
@@ -200,6 +258,32 @@ function formatProgress(progress: number): string {
 .episode-number {
   font-weight: 500;
   min-width: 70px;
+}
+
+/* 未同步集数的橙色背景 */
+.episode-item.local-only {
+  background: rgba(255, 159, 67, 0.15) !important;
+  border-left: 3px solid #ff7f11 !important;
+}
+
+.episode-item.local-only:hover {
+  background: rgba(255, 159, 67, 0.25) !important;
+}
+
+/* local-only 状态下的文字颜色 */
+.episode-item.local-only .episode-number {
+  color: #ff7f11;
+  font-weight: 600;
+}
+
+/* 既是 local-only 又是 active 的状态 - 优先显示 active 样式但保留橙色边框 */
+.episode-item.local-only.active {
+  background: #4a9eff !important;
+  border-left: 3px solid #ff7f11 !important;
+}
+
+.episode-item.local-only.active .episode-number {
+  color: #fff !important;
 }
 
 .episode-progress {

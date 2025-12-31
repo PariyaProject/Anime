@@ -115,7 +115,8 @@ const serverStatus = useServerStatus(30000, false)
 const historyDropdownOpen = ref(false)
 const settingsDropdownOpen = ref(false)
 
-const placeholderImage = computed(() => `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-40x40.svg`)
+// Placeholder image via Vite proxy
+const placeholderImage = computed(() => '/placeholder/placeholder-40x40.svg')
 
 const darkMode = computed(() => uiStore.darkMode)
 const currentChannel = computed(() => uiStore.filters.channel)

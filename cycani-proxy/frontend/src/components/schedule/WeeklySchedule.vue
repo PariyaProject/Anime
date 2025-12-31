@@ -132,7 +132,8 @@ const {
 const currentDayKey = getCurrentDayKey()
 const selectedDay = ref<string>(currentDayKey)
 
-const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-140x140.svg`
+// Placeholder image via Vite proxy
+const placeholderImage = '/placeholder/placeholder-140x140.svg'
 
 const dayLabels: Record<string, string> = {
   all: '全部',

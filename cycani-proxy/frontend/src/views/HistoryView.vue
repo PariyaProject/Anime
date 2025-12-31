@@ -81,6 +81,7 @@
         >
           <div
             class="history-card cursor-pointer"
+            :class="{ 'local-only': (item as any).isLocalOnly }"
             @click="resumeWatching(item)"
           >
             <img
@@ -88,6 +89,11 @@
               :alt="item.animeTitle"
               class="history-card-image"
             />
+
+            <!-- 本地角标 - 放在图片后面 -->
+            <div v-if="(item as any).isLocalOnly" class="corner-badge" title="仅本地存储">
+              <span class="corner-text">本地</span>
+            </div>
             <div class="history-card-body">
               <h6 class="history-card-title">{{ item.animeTitle }}</h6>
               <p class="history-card-meta">
@@ -118,6 +124,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHistoryStore } from '@/stores/history'
 import { useUiStore } from '@/stores/ui'
+import { useGroupedHistory } from '@/composables/useGroupedHistory'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorMessage from '@/components/common/ErrorMessage.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -127,8 +134,8 @@ const router = useRouter()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
 
-// Use static SVG file from backend server
-const placeholderImage = `${import.meta.env.VITE_API_BASE_URL || ''}/placeholder/placeholder-300x180.svg`
+// Use static SVG file from backend server (via Vite proxy in dev)
+const placeholderImage = '/placeholder/placeholder-300x180.svg'
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -137,8 +144,36 @@ const searchQuery = ref('')
 const filterStatus = ref('')
 const sortBy = ref('date')
 
-const historyItems = computed(() => historyStore.watchHistory)
-const hasHistory = computed(() => historyStore.hasHistory)
+// Get backend history data
+const backendHistory = computed(() => historyStore.watchHistory)
+
+// Merge with localStorage data using useGroupedHistory
+const { groupedAnime } = useGroupedHistory(backendHistory)
+
+// Convert grouped anime back to flat list for history display
+const historyItems = computed(() => {
+  const flatList: (WatchRecord & { isLocalOnly?: boolean })[] = []
+  for (const anime of groupedAnime.value) {
+    for (const episode of anime.episodes) {
+      flatList.push({
+        animeId: anime.animeId,
+        animeTitle: anime.animeTitle,
+        animeCover: anime.animeCover,
+        season: anime.season,
+        episode: episode.episode,
+        episodeTitle: episode.episodeTitle,
+        position: episode.position,
+        duration: episode.duration,
+        watchDate: episode.watchDate,
+        completed: episode.completed,
+        isLocalOnly: episode.isLocalOnly  // 保留 isLocalOnly 标志
+      })
+    }
+  }
+  return flatList
+})
+
+const hasHistory = computed(() => historyItems.value.length > 0)
 
 const hasActiveFilters = computed(() => {
   return searchQuery.value !== '' || filterStatus.value !== '' || sortBy.value !== 'date'
@@ -345,11 +380,55 @@ onMounted(async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .history-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 4px 12px var(--shadow-hover);
+}
+
+/* 本地记录的橙色边框 */
+.history-card.local-only {
+  border: 2px solid #ff7f11;
+}
+
+/* 三角形角标 - 右上角 */
+.history-card .corner-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.history-card .corner-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #ff9f43 0%, #ff7f11 50%, #ee5a24 100%);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.history-card .corner-text {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: rotate(45deg);
+  transform-origin: center;
+  white-space: nowrap;
+  z-index: 101;
 }
 
 .history-card-image {

@@ -29,6 +29,7 @@ interface LocalPositionRecord {
   lastUpdated: string  // ISO timestamp
   animeId: string
   animeTitle: string
+  animeCover: string  // Cover image URL
   season: number
   episode: number
 }
@@ -91,7 +92,8 @@ function saveToLocal(
   season: number,
   episode: number,
   position: number,
-  animeTitle: string
+  animeTitle: string,
+  animeCover: string
 ): boolean {
   try {
     const key = getLocalKey(animeId, season, episode)
@@ -100,6 +102,7 @@ function saveToLocal(
       lastUpdated: new Date().toISOString(),
       animeId,
       animeTitle,
+      animeCover,
       season,
       episode
     }
@@ -117,6 +120,7 @@ function saveToLocal(
           lastUpdated: new Date().toISOString(),
           animeId,
           animeTitle,
+          animeCover,
           season,
           episode
         }
@@ -224,7 +228,7 @@ export const historyService = {
     episodeInfo: EpisodeInfo,
     position: number
   ): boolean {
-    return saveToLocal(animeInfo.id, episodeInfo.season, episodeInfo.episode, position, animeInfo.title)
+    return saveToLocal(animeInfo.id, episodeInfo.season, episodeInfo.episode, position, animeInfo.title, animeInfo.cover)
   },
 
   /**
