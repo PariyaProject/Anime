@@ -21,36 +21,12 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    // Enable source maps for production debugging
-    sourcemap: true,
+    // Disable source maps for production (smaller files)
+    sourcemap: false,
     // Use esbuild for minification (built-in, faster)
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        // Manual chunk splitting for better caching
-        manualChunks: (id) => {
-          // Vendor chunks
-          if (id.includes('node_modules')) {
-            // Vue core
-            if (id.includes('vue') || id.includes('pinia') || id.includes('@vue')) {
-              return 'vendor'
-            }
-            // Router
-            if (id.includes('vue-router')) {
-              return 'router'
-            }
-            // UI library
-            if (id.includes('element-plus')) {
-              return 'ui'
-            }
-            // Video player
-            if (id.includes('plyr')) {
-              return 'player'
-            }
-            // Other dependencies
-            return 'vendor'
-          }
-        },
         // Asset naming for cache busting
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
@@ -58,7 +34,7 @@ export default defineConfig({
       }
     },
     // Chunk size warning limit
-    chunkSizeWarningLimit: 600
+    chunkSizeWarningLimit: 1000
   },
   // Optimize dependencies
   optimizeDeps: {

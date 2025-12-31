@@ -10,7 +10,6 @@ services:
     volumes:
       # Local directory binding for data persistence
       - ./config:/app/config
-      - ./logs:/app/logs
     environment:
       - NODE_ENV=production
       - PORT=3006

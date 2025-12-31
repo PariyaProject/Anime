@@ -24,9 +24,30 @@ COPY cycani-proxy/src/ ./src/
 # Install javascript-obfuscator
 RUN npm install -g javascript-obfuscator
 
-# Obfuscate JavaScript files
+# Obfuscate JavaScript files with strong options
 RUN find ./src -name "*.js" -type f -exec sh -c \
-    'javascript-obfuscator "$1" --output "$1.obf" && mv "$1.obf" "$1"' _ {} \;
+    'javascript-obfuscator "$1" --output "$1.obf" \
+    --compact true \
+    --control-flow-flattening true \
+    --control-flow-flattening-threshold 0.75 \
+    --dead-code-injection true \
+    --dead-code-injection-threshold 0.4 \
+    --debug-protection false \
+    --disable-console-output false \
+    --identifier-names-generator hexadecimal \
+    --log false \
+    --rename-globals false \
+    --rotate-string-array true \
+    --self-defending false \
+    --shuffle-string-array true \
+    --split-strings true \
+    --split-strings-chunk-length 10 \
+    --string-array true \
+    --string-array-encoding base64 \
+    --string-array-threshold 0.75 \
+    --transform-object-keys true \
+    --unicode-escape-sequence false && \
+    mv "$1.obf" "$1"' _ {} \;
 
 # Stage 3: Runtime Image
 FROM node:24-alpine
@@ -59,10 +80,8 @@ COPY --from=frontend-builder /app/dist ./dist/
 # Copy legacy public files as fallback
 COPY cycani-proxy/public/ ./public/
 
-# Create data directories
-RUN mkdir -p /app/config /app/logs
-
-VOLUME ["/app/config", "/app/logs"]
+# Config directory will be created by the application and mounted as volume
+VOLUME ["/app/config"]
 
 EXPOSE 3006
 

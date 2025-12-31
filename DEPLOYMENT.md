@@ -30,7 +30,7 @@ docker ps
 
 ```bash
 # Create project directory
-mkdir -p ~/anime-project/config ~/anime-project/logs ~/anime-project/scripts
+mkdir -p ~/anime-project/config ~/anime-project/scripts
 cd ~/anime-project
 ```
 
@@ -50,7 +50,6 @@ services:
       - "3006:3006"
     volumes:
       - ./config:/app/config
-      - ./logs:/app/logs
     environment:
       - NODE_ENV=production
       - PORT=3006
@@ -141,11 +140,9 @@ docker-compose logs -f app-watchdog
 │   ├── watch-history.json     # Watch history data
 │   ├── anime-index.json       # Anime search index
 │   └── *.backup.*             # Automatic backups
-├── logs/                      # Mounted to /app/logs
-│   └── app-*.log              # Application logs
 ├── docker-compose.yml
 └── scripts/
-    └── app-watchdog.sh
+    └── update-agent.sh
 ```
 
 ### Backup Data
@@ -175,11 +172,8 @@ docker-compose up -d
 ### View Logs
 
 ```bash
-# View Docker logs
+# View Docker logs (application uses console.log)
 docker-compose logs -f app-service
-
-# View local log files
-tail -f ~/anime-project/logs/app-*.log
 
 # View update agent logs
 docker-compose logs -f app-watchdog
