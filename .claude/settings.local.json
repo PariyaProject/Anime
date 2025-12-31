@@ -79,7 +79,8 @@
       "Bash(git -C cycani-proxy diff --stat --staged frontend/src/)",
       "Skill(openspec:apply)",
       "Bash(npm:*)",
-      "Bash(more:*)"
+      "Bash(more:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,7 +4,7 @@
   "description": "MVP版本 - 次元城视频代理服务",
   "main": "src/server.js",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "start": "node src/server.js",

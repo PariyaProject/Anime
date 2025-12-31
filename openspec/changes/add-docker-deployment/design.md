@@ -82,7 +82,7 @@
 ```
 ┌──────────────────────────┐
 │  Stage 1: Frontend Build │
-│  - node:22-alpine        │
+│  - node:24-alpine        │
 │  - npm ci                │
 │  - npm run build         │
 │  Output: /dist/          │
@@ -91,7 +91,7 @@
            ▼
 ┌──────────────────────────┐
 │  Stage 2: Backend Build  │
-│  - node:22-alpine        │
+│  - node:24-alpine        │
 │  - npm ci --production   │
 │  - javascript-obfuscator │
 │  - Obfuscate src/*.js    │
@@ -101,7 +101,7 @@
            ▼
 ┌──────────────────────────┐
 │  Stage 3: Runtime Image  │
-│  - node:22-alpine        │
+│  - node:24-alpine        │
 │  - chromium + deps       │
 │  - Copy obfuscated src   │
 │  - Copy /dist            │
@@ -144,12 +144,12 @@
 **关键技术点**:
 ```dockerfile
 # 1. 多阶段构建减少最终镜像大小
-FROM node:22-alpine AS frontend-builder
-FROM node:22-alpine AS backend-builder
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS frontend-builder
+FROM node:24-alpine AS backend-builder
+FROM node:24-alpine AS runtime
 
 # 2. Alpine 基础镜像 (~5MB vs Debian ~200MB)
-FROM node:22-alpine
+FROM node:24-alpine
 
 # 3. 安装系统依赖最小化
 RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont

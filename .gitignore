@@ -108,6 +108,14 @@ cycani-proxy/config/*.corrupted
 *.bak
 *~
 
+# Docker volumes (bind mounts)
+config/
+logs/
+
+# Docker build artifacts
+*.tar
+*.tar.gz
+
 # OS files
 .DS_Store
 .DS_Store?

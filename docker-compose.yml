@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app-service:
+    image: ghcr.io/PariyaProject/Anime:latest
+    container_name: app-main
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    volumes:
+      # Local directory binding for data persistence
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - PORT=3006
+      - RATE_LIMIT_DELAY=1000
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3006/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app-watchdog:
+    image: ghcr.io/PariyaProject/Anime:watchdog
+    container_name: app-monitor
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts:/scripts
+    environment:
+      - CHECK_INTERVAL=86400
+      - IMAGE_NAME=ghcr.io/PariyaProject/Anime:latest
+      - COMPOSE_FILE=docker-compose.yml

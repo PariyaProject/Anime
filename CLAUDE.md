@@ -654,6 +654,105 @@ The project has reached a stable state with:
 
 The archived userscripts in `data/archive/legacy-userscripts/` contain the final production-ready versions for reference.
 
+## Docker Deployment
+
+The project supports Docker containerization for production deployment with automatic updates.
+
+### Quick Start
+
+**Build and run locally:**
+```bash
+# Build the Docker image
+docker build -t app-service .
+
+# Run the container
+docker run -d -p 3006:3006 -v ./config:/app/config -v ./logs:/app/logs app-service
+```
+
+**Deploy with Docker Compose:**
+```bash
+# Create project directory
+mkdir -p ~/anime-project/config ~/anime-project/logs ~/anime-project/scripts
+cd ~/anime-project
+
+# Create docker-compose.yml (see DEPLOYMENT.md for full example)
+# Then start services
+docker-compose up -d
+```
+
+### Docker Files
+
+- **Dockerfile**: Multi-stage build with frontend compilation and JavaScript code obfuscation (uses Node.js 24 Alpine)
+- **Dockerfile.update-agent**: Lightweight image for watchdog service
+- **docker-compose.yml**: Service orchestration with data persistence
+- **.dockerignore**: Build context exclusion rules
+- **scripts/update-agent.sh**: Update polling script (checks every 5 minutes)
+
+### Key Features
+
+- **Code Obfuscation**: JavaScript source code is obfuscated during build for protection
+- **Multi-Architecture**: Supports both linux/amd64 and linux/arm64 (Apple Silicon)
+- **Data Persistence**: Config and logs are stored in local bind mounts
+- **Auto-Updates**: Watchdog service polls GHCR every 5 minutes and deploys new versions
+- **Health Checks**: Built-in health check endpoint for monitoring
+
+### CI/CD Pipeline
+
+GitHub Actions automatically builds and pushes Docker images on every push to master:
+
+- **Trigger**: Push to `master` branch or manual workflow dispatch
+- **Registry**: GitHub Container Registry (GHCR)
+- **Platforms**: linux/amd64, linux/arm64
+- **Tags**: `latest`, `watchdog` + commit SHA
+
+### Update Process
+
+1. Push code to master branch
+2. GitHub Actions builds and pushes new image to GHCR (~5-10 minutes)
+3. Watchdog detects new version within 5 minutes
+4. Automatically pulls new image and restarts containers
+5. Data persists in local bind mounts
+
+### Manual Update
+
+```bash
+cd ~/anime-project
+docker-compose pull
+docker-compose up -d
+docker image prune -f
+```
+
+### Monitoring
+
+```bash
+# View logs
+docker-compose logs -f app-service
+docker-compose logs -f app-watchdog
+
+# Check health status
+docker inspect --format='{{.State.Health.Status}}' app-main
+
+# View resource usage
+docker stats
+```
+
+### Data Management
+
+**Backup:**
+```bash
+cp -r ~/anime-project/config ~/anime-project/config.backup.$(date +%Y%m%d)
+```
+
+**Restore:**
+```bash
+docker-compose down
+rm -rf config
+cp -r config.backup.20251231 config
+docker-compose up -d
+```
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ## Important
 
 - That ports 3000 and 3006 are currently open, with the frontend and backend services deployed respectively. Please do not start or stop the services. If necessary, use Chrome MCP for debugging.
