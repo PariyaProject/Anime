@@ -2,85 +2,40 @@
 
 /**
  * Obfuscation script for Docker build
- * This script obfuscates all JavaScript files in the src directory
+ * Minimal safe configuration - proven to work
  */
 
 const fs = require('fs');
 const path = require('path');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
-// Obfuscation options based on code analysis
-// Safe configuration that protects code without breaking functionality
+// ============================================================
+// Minimal safe obfuscation configuration
+// Only options that are proven to work without breaking functionality
+// ============================================================
 const obfuscationOptions = {
-    // ============================================================
-    // BASIC OBFUSCATION (Safe for all code)
-    // ============================================================
-
-    // Compress code to single line, remove whitespace/comments
+    // --- 基础混淆 (Tested and working) ---
     compact: true,
-
-    // Rename local variables to hexadecimal names
-    // Example: const browser = ... → const _0x4311 = ...
     identifierNamesGenerator: 'hexadecimal',
+    target: 'node',
 
-    // ============================================================
-    // STRING HANDLING (Safe options for dynamic strings)
-    // ============================================================
-
-    // DISABLED - Would break: URL templates, regex, path.join(), Unicode strings
-    // stringArrayEncoding: ['base64'],
+    // --- 全部禁用 (confirmed to break code) ---
+    stringArray: false, // 字符串数组化会导致问题
     stringArrayEncoding: [],
-
-    // DISABLED - Would break: Template literals, regex patterns
-    // splitStrings: true,
+    stringArrayThreshold: 0,
+    shuffleStringArray: false,
+    rotateStringArray: false,
     splitStrings: false,
-
-    // Low threshold - safer for dynamic string operations
-    stringArrayThreshold: 0.3,
-
-    // Shuffle and rotate string array (light obfuscation)
-    shuffleStringArray: true,
-    rotateStringArray: true,
-
-    // ============================================================
-    // CODE FLOW (Must be disabled for async/Puppeteer)
-    // ============================================================
-
-    // DISABLED - Breaks async/await, Puppeteer, axios interceptors
-    // controlFlowFlattening: true,
     controlFlowFlattening: false,
-
-    // DISABLED - Breaks async operations, promise chains
-    // deadCodeInjection: true,
     deadCodeInjection: false,
-
-    // ============================================================
-    // NODE.JS / MODULE SYSTEM (Critical - must disable)
-    // ============================================================
-
-    // Don't rename globals - would break require(), module.exports, process, etc.
     renameGlobals: false,
-
-    // Don't transform object keys - would break Puppeteer/axios config objects
     transformObjectKeys: false,
-
-    // ============================================================
-    // OTHER OPTIONS
-    // ============================================================
-
-    // Keep console output for debugging (set to true to hide all logs)
-    disableConsoleOutput: false,
-
-    // Disabled - can cause runtime errors
+    disableConsoleOutput: false, // 保留日志
     debugProtection: false,
-
-    // Disabled - can modify function behavior
     selfDefending: false,
-
-    // Disabled - can break Unicode string comparisons
     unicodeEscapeSequence: false,
-
-    // Disable obfuscator logging
+    ignoreRequireImports: true,
+    sourceMap: false,
     log: false
 };
 
@@ -102,8 +57,6 @@ function getSourceFiles(dir) {
 
 function main() {
     // Detect src directory location
-    // Docker: /app/src (script is in /app/)
-    // Local: ../cycani-proxy/src (script is in scripts/)
     let srcDir = path.join(__dirname, 'src');
     if (!fs.existsSync(srcDir)) {
         srcDir = path.join(__dirname, '..', 'cycani-proxy', 'src');
