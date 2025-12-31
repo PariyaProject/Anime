@@ -2,7 +2,7 @@
 set -e
 
 INTERVAL=${CHECK_INTERVAL:-300}
-IMAGE_NAME=${IMAGE_NAME:-ghcr.io/PariyaProject/Anime:latest}
+IMAGE_NAME=${IMAGE_NAME:-ghcr.io/pariyaproject/anime:latest}
 COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}
 
 echo "🔄 Update Agent Started"

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app-service:
-    image: ghcr.io/PariyaProject/Anime:latest
+    image: ghcr.io/pariyaproject/anime:latest
     container_name: app-main
     restart: unless-stopped
     ports:
@@ -28,7 +28,7 @@ services:
         max-file: "3"
 
   app-watchdog:
-    image: ghcr.io/PariyaProject/Anime:watchdog
+    image: ghcr.io/pariyaproject/anime:watchdog
     container_name: app-monitor
     restart: unless-stopped
     volumes:
@@ -36,5 +36,5 @@ services:
       - ./scripts:/scripts
     environment:
       - CHECK_INTERVAL=86400
-      - IMAGE_NAME=ghcr.io/PariyaProject/Anime:latest
+      - IMAGE_NAME=ghcr.io/pariyaproject/anime:latest
       - COMPOSE_FILE=docker-compose.yml

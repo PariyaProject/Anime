@@ -43,7 +43,7 @@ version: '3.8'
 
 services:
   app-service:
-    image: ghcr.io/PariyaProject/Anime:latest
+    image: ghcr.io/pariyaproject/anime:latest
     container_name: app-main
     restart: unless-stopped
     ports:
@@ -63,18 +63,18 @@ services:
       start_period: 40s
 
   app-watchdog:
-    image: ghcr.io/PariyaProject/Anime:watchdog
+    image: ghcr.io/pariyaproject/anime:watchdog
     container_name: app-monitor
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - CHECK_INTERVAL=86400
-      - IMAGE_NAME=ghcr.io/PariyaProject/Anime:latest
+      - IMAGE_NAME=ghcr.io/pariyaproject/anime:latest
       - COMPOSE_FILE=docker-compose.yml
 ```
 
-**Important:** Replace `PariyaProject/Anime` with your actual GitHub repository path.
+**Important:** Replace `pariyaproject/anime` with your actual GitHub repository path.
 
 ### Step 3: Start Services
 
@@ -238,11 +238,11 @@ docker exec app-monitor /usr/local/bin/update-agent.sh
 
 ```bash
 # Login to GitHub Container Registry (if using private images)
-echo $GITHUB_TOKEN | docker login ghcr.io -u PariyaProject --password-stdin
+echo $GITHUB_TOKEN | docker login ghcr.io -u pariyaproject --password-stdin
 
 # Pull images manually
-docker pull ghcr.io/PariyaProject/Anime:latest
-docker pull ghcr.io/PariyaProject/Anime:watchdog
+docker pull ghcr.io/pariyaproject/anime:latest
+docker pull ghcr.io/pariyaproject/anime:watchdog
 ```
 
 ### Full Reset
@@ -257,8 +257,8 @@ docker-compose down
 docker-compose down -v
 
 # Remove images
-docker rmi ghcr.io/PariyaProject/Anime:latest
-docker rmi ghcr.io/PariyaProject/Anime:watchdog
+docker rmi ghcr.io/pariyaproject/anime:latest
+docker rmi ghcr.io/pariyaproject/anime:watchdog
 
 # Start fresh
 docker-compose up -d

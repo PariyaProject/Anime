@@ -19,8 +19,11 @@ data/
 
 # ALL documentation
 *.md
+README*
 LICENSE
 .txt
+CHANGELOG*
+CONTRIBUTING*
 
 # Git and version control
 .git/
