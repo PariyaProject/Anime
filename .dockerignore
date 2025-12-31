@@ -74,6 +74,7 @@ out/
 # Scripts and tools
 scripts/
 !scripts/update-agent.sh
+!scripts/obfuscate.js
 tools/
 .devcontainer/
 
