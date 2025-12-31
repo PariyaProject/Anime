@@ -10,12 +10,18 @@
     "build": "npm run build --prefix cycani-proxy/frontend",
     "start": "npm start --prefix cycani-proxy",
     "stop": "node scripts/stop.js",
-    "install:all": "npm install && npm install --prefix cycani-proxy && npm install --prefix cycani-proxy/frontend"
+    "install:all": "npm install && npm install --prefix cycani-proxy && npm install --prefix cycani-proxy/frontend",
+    "test:obfuscation": "node scripts/test-obfuscation.js"
   },
   "devDependencies": {
+    "javascript-obfuscator": "^5.1.0",
     "npm-run-all": "^4.1.5"
   },
-  "keywords": ["cycani", "anime", "proxy"],
+  "keywords": [
+    "cycani",
+    "anime",
+    "proxy"
+  ],
   "author": "",
   "license": "MIT"
 }

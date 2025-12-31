@@ -16,17 +16,18 @@ WORKDIR /app
 
 # Copy backend package files
 COPY cycani-proxy/package*.json ./
-RUN npm ci --production
+
+# Install javascript-obfuscator for obfuscation stage only
+RUN npm install javascript-obfuscator
 
 # Copy backend source code
 COPY cycani-proxy/src/ ./src/
 
-# Install javascript-obfuscator
-RUN npm install -g javascript-obfuscator
-
-# Obfuscate JavaScript files with strong options
-RUN find ./src -name "*.js" -type f -exec sh -c \
-    'javascript-obfuscator "$1" --output "$1.obf" \
+# Obfuscate JavaScript files using the locally installed package
+# Using npx to run the locally installed javascript-obfuscator
+RUN for file in $(find ./src -name "*.js" -type f); do \
+    echo "🔒 Obfuscating: $file" && \
+    npx javascript-obfuscator "$file" --output "$file.obf" \
     --compact true \
     --control-flow-flattening true \
     --control-flow-flattening-threshold 0.75 \
@@ -43,11 +44,29 @@ RUN find ./src -name "*.js" -type f -exec sh -c \
     --split-strings true \
     --split-strings-chunk-length 10 \
     --string-array true \
-    --string-array-encoding base64 \
+    --string-array-encoding '["base64"]' \
     --string-array-threshold 0.75 \
-    --transform-object-keys true \
+    --transform-object-keys false \
     --unicode-escape-sequence false && \
-    mv "$1.obf" "$1"' _ {} \;
+    mv "$file.obf" "$file"; \
+    if [ $? -ne 0 ]; then \
+        echo "❌ Failed to obfuscate: $file" && \
+        exit 1; \
+    fi; \
+done && \
+echo "✅ All JavaScript files obfuscated successfully"
+
+# Verify obfuscation worked - show first few lines (should be minified/obfuscated)
+RUN echo "=== Obfuscation Verification ===" && \
+    echo "First 10 lines of server.js (should be obfuscated):" && \
+    head -10 /app/src/server.js && \
+    echo "================================" && \
+    wc -l /app/src/*.js && \
+    echo "=== Obfuscation Complete ==="
+
+# Now install production dependencies (after obfuscation to keep node_modules clean)
+RUN rm -rf node_modules package-lock.json && \
+    npm ci --production
 
 # Stage 3: Runtime Image
 FROM node:24-alpine
