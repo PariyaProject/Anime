@@ -23,44 +23,18 @@ RUN npm install javascript-obfuscator
 # Copy backend source code
 COPY cycani-proxy/src/ ./src/
 
-# Obfuscate JavaScript files using the locally installed package
-# Using npx to run the locally installed javascript-obfuscator
-RUN for file in $(find ./src -name "*.js" -type f); do \
-    echo "🔒 Obfuscating: $file" && \
-    npx javascript-obfuscator "$file" --output "$file.obf" \
-    --compact true \
-    --control-flow-flattening true \
-    --control-flow-flattening-threshold 0.75 \
-    --dead-code-injection true \
-    --dead-code-injection-threshold 0.4 \
-    --debug-protection false \
-    --disable-console-output false \
-    --identifier-names-generator hexadecimal \
-    --log false \
-    --rename-globals false \
-    --rotate-string-array true \
-    --self-defending false \
-    --shuffle-string-array true \
-    --split-strings true \
-    --split-strings-chunk-length 10 \
-    --string-array true \
-    --string-array-encoding '["base64"]' \
-    --string-array-threshold 0.75 \
-    --transform-object-keys false \
-    --unicode-escape-sequence false && \
-    mv "$file.obf" "$file"; \
-    if [ $? -ne 0 ]; then \
-        echo "❌ Failed to obfuscate: $file" && \
-        exit 1; \
-    fi; \
-done && \
-echo "✅ All JavaScript files obfuscated successfully"
+# Copy the obfuscation script
+COPY scripts/obfuscate.js ./
+
+# Run the obfuscation script
+RUN node obfuscate.js
 
 # Verify obfuscation worked - show first few lines (should be minified/obfuscated)
 RUN echo "=== Obfuscation Verification ===" && \
-    echo "First 10 lines of server.js (should be obfuscated):" && \
-    head -10 /app/src/server.js && \
+    echo "First 3 lines of server.js (should be obfuscated):" && \
+    head -3 /app/src/server.js && \
     echo "================================" && \
+    echo "File line counts:" && \
     wc -l /app/src/*.js && \
     echo "=== Obfuscation Complete ==="
 

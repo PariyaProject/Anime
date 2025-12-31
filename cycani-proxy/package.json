@@ -11,8 +11,15 @@
     "dev": "nodemon src/server.js"
   },
   "nodemonConfig": {
-    "watch": ["src"],
-    "ignore": ["config/*", "*.log", ".git/*", "node_modules/*"]
+    "watch": [
+      "src"
+    ],
+    "ignore": [
+      "config/*",
+      "*.log",
+      ".git/*",
+      "node_modules/*"
+    ]
   },
   "dependencies": {
     "axios": "^1.6.2",
