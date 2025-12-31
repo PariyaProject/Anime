@@ -8,7 +8,7 @@ RUN npm ci
 
 # Copy frontend source and build
 COPY cycani-proxy/frontend/ ./
-RUN npm run build && ls -la /app/frontend/dist
+RUN npm run build && ls -la /app/dist
 
 # Stage 2: Backend with Obfuscation
 FROM node:24-alpine AS backend-builder
@@ -54,7 +54,7 @@ COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/package*.json ./
 
 # Copy built frontend
-COPY --from=frontend-builder /app/frontend/dist ./dist/
+COPY --from=frontend-builder /app/dist ./dist/
 
 # Copy legacy public files as fallback
 COPY cycani-proxy/public/ ./public/
