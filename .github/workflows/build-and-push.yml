@@ -30,7 +30,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/pariyaproject/anime
           tags: |
             type=raw,value=latest
             type=sha,prefix={{branch}}-
@@ -52,5 +52,5 @@ jobs:
           context: .
           file: Dockerfile.update-agent
           push: true
-          tags: ghcr.io/${{ github.repository }}:watchdog
+          tags: ghcr.io/pariyaproject/anime:watchdog
           platforms: linux/amd64,linux/arm64
