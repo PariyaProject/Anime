@@ -9,13 +9,6 @@ vi.mock('@/services/api', () => ({
   }
 }))
 
-// Mock the useCacheSettings composable
-vi.mock('@/composables/useCacheSettings', () => ({
-  useCacheSettings: () => ({
-    isEnabled: () => false // Default: cache disabled
-  })
-}))
-
 // Import the mocked api
 import api from '@/services/api'
 
@@ -48,9 +41,7 @@ describe('Anime Service', () => {
       const result = await animeService.getAnimeList()
 
       expect(mockApiGet).toHaveBeenCalledWith('/api/anime-list', {
-        params: {
-          useCache: 'false'
-        }
+        params: { channel: 'tv' }
       })
       expect(result.animeList).toEqual(mockResponse)
       expect(result.totalCount).toBe(2)
@@ -87,10 +78,7 @@ describe('Anime Service', () => {
       const result = await animeService.getAnimeList(filterParams)
 
       expect(mockApiGet).toHaveBeenCalledWith('/api/anime-list', {
-        params: {
-          ...filterParams,
-          useCache: 'false'
-        }
+        params: { ...filterParams, channel: 'tv' }
       })
       expect(result.animeList).toHaveLength(1)
     })

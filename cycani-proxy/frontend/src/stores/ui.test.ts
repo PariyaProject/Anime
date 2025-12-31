@@ -24,7 +24,8 @@ describe('UI Store', () => {
       genre: '',
       year: '',
       month: '',
-      sort: 'time'
+      sort: 'time',
+      channel: 'tv'
     })
   })
 

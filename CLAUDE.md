@@ -116,7 +116,6 @@ frontend/src/
 │   └── VirtualList.vue # Virtual scrolling component
 ├── composables/
 │   ├── useAnimeApi.ts  # Anime API composable
-│   ├── useCacheSettings.ts  # Cache preference management (disabled by default)
 │   ├── useDarkMode.ts  # Dark mode toggle
 │   ├── useGroupedHistory.ts  # Group watch history by anime (for improved UX)
 │   ├── useHistory.ts   # Watch history management
@@ -148,7 +147,6 @@ frontend/src/
 - Watch history with position memory
 - Grouped continue watching display (episodes grouped by anime/season)
 - Weekly schedule with auto-select current day
-- Global cache toggle (disabled by default) for optional performance optimization
 - Keyboard shortcuts (Space: play/pause, Ctrl+Right: next episode)
 - Server status monitoring with health indicator
 - Responsive design (mobile/tablet/desktop)
@@ -472,10 +470,9 @@ curl -s "http://localhost:3017/api/continue-watching"
 - `GET /api/anime-list` - Fetch paginated anime list with metadata
   - Parameters: `page`, `limit`, `search`, `genre`, `year`, `sort`, `channel` (tv|movie)
   - `channel` filters anime by channel (default: 'tv')
-  - `useCache` parameter for future opt-in caching
 - `GET /api/anime/:id` - Get detailed anime information
 - `GET /api/episode/:animeId/:season/:episode` - Get episode video URL
-- `GET /api/weekly-schedule` - Get weekly anime schedule (supports optional `useCache` parameter)
+- `GET /api/weekly-schedule` - Get weekly anime schedule
 - `GET /api/search-local` - Search anime using local index (searches all channels, channel-agnostic)
 - `GET /api/index-status` - Get anime index statistics (total anime count, last updated, building status)
 
@@ -491,8 +488,6 @@ curl -s "http://localhost:3017/api/continue-watching"
 **Utility:**
 - `GET /api/placeholder-image` - Fallback image service
 - Static file serving from `/dist` (Vue frontend) or `/public` (legacy) directory
-
-**Note:** Server-side in-memory caching has been removed to ensure fresh data during development. The API accepts an optional `useCache` query parameter (default: `false`) for future caching implementation. The frontend provides a global cache toggle (disabled by default) in the navbar for users who prefer to enable caching for better performance.
 
 ## Data Storage
 

@@ -756,10 +756,6 @@ app.get('/api/anime-list', async (req, res) => {
             });
         }
 
-        // Note: useCache parameter can be used for future opt-in caching implementation
-        // Currently always fetches fresh data to support development workflow
-        const useCache = req.query.useCache === 'true' || req.query.useCache === '1';
-
         // Construct target URL using the new URL constructor
         // NOTE: We need to handle pagination mapping
         // User requests page X with limit Y (e.g., page=4, limit=24)
@@ -1266,10 +1262,6 @@ app.get('/api/last-position/:animeId/:season/:episode', async (req, res) => {
 app.get('/api/weekly-schedule', async (req, res) => {
     try {
         const { day = 'all', refresh } = req.query; // day: 'monday', 'tuesday', ..., 'all', refresh: legacy parameter
-
-        // Note: useCache parameter can be used for future opt-in caching implementation
-        // Currently always fetches fresh data to support development workflow
-        const useCache = req.query.useCache === 'true' || req.query.useCache === '1';
 
         // Keep refresh parameter for legacy compatibility
         if (refresh === 'true' || refresh === '1') {

@@ -76,15 +76,6 @@
             class="navbar-dropdown-menu settings-menu"
             v-show="settingsDropdownOpen"
           >
-            <!-- Cache Toggle -->
-            <div class="dropdown-item settings-item" @click="toggleCache">
-              <span class="settings-icon">💾</span>
-              <span class="settings-text">启用缓存</span>
-              <span class="settings-status" :class="{ enabled: cacheEnabled }">
-                {{ cacheEnabled ? '开启' : '关闭' }}
-              </span>
-            </div>
-
             <!-- Server Status -->
             <div class="dropdown-item settings-item" @click="toggleServerCheck">
               <span class="settings-icon">{{ serverStatusIcon }}</span>
@@ -113,14 +104,12 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
 import { useHistoryStore } from '@/stores/history'
-import { useCacheSettings } from '@/composables/useCacheSettings'
 import { useServerStatus } from '@/composables/useServerStatus'
 import { useGroupedHistory, type GroupedAnime } from '@/composables/useGroupedHistory'
 
 const router = useRouter()
 const uiStore = useUiStore()
 const historyStore = useHistoryStore()
-const { settings: cacheSettings, toggle: toggleCache } = useCacheSettings()
 const serverStatus = useServerStatus(30000, false)
 
 const historyDropdownOpen = ref(false)
@@ -132,7 +121,6 @@ const darkMode = computed(() => uiStore.darkMode)
 const currentChannel = computed(() => uiStore.filters.channel)
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => continueWatching.value.length > 0)
-const cacheEnabled = computed(() => cacheSettings.enabled)
 
 const { status, loading, enabled: serverCheckEnabled, toggle: toggleServerCheck } = serverStatus
 
@@ -388,11 +376,6 @@ onUnmounted(() => {
   border-radius: 3px;
   background: var(--bg-secondary);
   color: var(--text-secondary);
-}
-
-.settings-status.enabled {
-  background: #67c23a;
-  color: white;
 }
 
 .settings-status.online {

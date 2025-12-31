@@ -7,7 +7,6 @@ import type {
   SearchResponse
 } from '@/types/anime.types'
 import type { BackendResponse } from '@/types/api.types'
-import { useCacheSettings } from '@/composables/useCacheSettings'
 
 export const animeService = {
   /**
@@ -27,12 +26,10 @@ export const animeService = {
     }
 
     // Filter Mode: use anime-list endpoint with filters
-    const { isEnabled } = useCacheSettings()
     const response = await api.get<AnimeListResponse>('/api/anime-list', {
       params: {
         ...filterParams,
-        channel,  // Pass channel parameter to API
-        useCache: isEnabled() ? 'true' : 'false'
+        channel  // Pass channel parameter to API
       }
     })
     return response.data.data

@@ -1,7 +1,6 @@
 import api from './api'
 import type { WeeklySchedule } from '@/types/anime.types'
 import type { BackendResponse } from '@/types/api.types'
-import { useCacheSettings } from '@/composables/useCacheSettings'
 
 /**
  * Service for fetching weekly anime schedule from backend.
@@ -15,14 +14,12 @@ export const weeklyScheduleService = {
    * @returns Weekly schedule with anime grouped by broadcast day
    */
   async getWeeklySchedule(day: string = 'all', refresh: boolean = false): Promise<WeeklySchedule> {
-    const { isEnabled } = useCacheSettings()
     const response = await api.get<BackendResponse<WeeklySchedule>>(
       '/api/weekly-schedule',
       {
         params: {
           day,
-          refresh: refresh ? '1' : '0',
-          useCache: isEnabled() ? 'true' : 'false'
+          refresh: refresh ? '1' : '0'
         }
       }
     )
