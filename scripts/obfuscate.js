@@ -9,27 +9,79 @@ const fs = require('fs');
 const path = require('path');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
+// Obfuscation options based on code analysis
+// Safe configuration that protects code without breaking functionality
 const obfuscationOptions = {
+    // ============================================================
+    // BASIC OBFUSCATION (Safe for all code)
+    // ============================================================
+
+    // Compress code to single line, remove whitespace/comments
     compact: true,
-    controlFlowFlattening: true,
-    controlFlowFlatteningThreshold: 0.75,
-    deadCodeInjection: true,
-    deadCodeInjectionThreshold: 0.4,
-    debugProtection: false,
-    disableConsoleOutput: false,
+
+    // Rename local variables to hexadecimal names
+    // Example: const browser = ... → const _0x4311 = ...
     identifierNamesGenerator: 'hexadecimal',
-    log: false,
-    renameGlobals: false,
-    rotateStringArray: true,
-    selfDefending: false,
+
+    // ============================================================
+    // STRING HANDLING (Safe options for dynamic strings)
+    // ============================================================
+
+    // DISABLED - Would break: URL templates, regex, path.join(), Unicode strings
+    // stringArrayEncoding: ['base64'],
+    stringArrayEncoding: [],
+
+    // DISABLED - Would break: Template literals, regex patterns
+    // splitStrings: true,
+    splitStrings: false,
+
+    // Low threshold - safer for dynamic string operations
+    stringArrayThreshold: 0.3,
+
+    // Shuffle and rotate string array (light obfuscation)
     shuffleStringArray: true,
-    splitStrings: true,
-    splitStringsChunkLength: 10,
-    stringArray: true,
-    stringArrayEncoding: ['base64'],
-    stringArrayThreshold: 0.75,
+    rotateStringArray: true,
+
+    // ============================================================
+    // CODE FLOW (Must be disabled for async/Puppeteer)
+    // ============================================================
+
+    // DISABLED - Breaks async/await, Puppeteer, axios interceptors
+    // controlFlowFlattening: true,
+    controlFlowFlattening: false,
+
+    // DISABLED - Breaks async operations, promise chains
+    // deadCodeInjection: true,
+    deadCodeInjection: false,
+
+    // ============================================================
+    // NODE.JS / MODULE SYSTEM (Critical - must disable)
+    // ============================================================
+
+    // Don't rename globals - would break require(), module.exports, process, etc.
+    renameGlobals: false,
+
+    // Don't transform object keys - would break Puppeteer/axios config objects
     transformObjectKeys: false,
-    unicodeEscapeSequence: false
+
+    // ============================================================
+    // OTHER OPTIONS
+    // ============================================================
+
+    // Keep console output for debugging (set to true to hide all logs)
+    disableConsoleOutput: false,
+
+    // Disabled - can cause runtime errors
+    debugProtection: false,
+
+    // Disabled - can modify function behavior
+    selfDefending: false,
+
+    // Disabled - can break Unicode string comparisons
+    unicodeEscapeSequence: false,
+
+    // Disable obfuscator logging
+    log: false
 };
 
 function getSourceFiles(dir) {
