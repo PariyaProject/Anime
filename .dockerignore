@@ -73,6 +73,7 @@ out/
 
 # Scripts and tools
 scripts/
+!scripts/update-agent.sh
 tools/
 .devcontainer/
 
