@@ -1,5 +1,5 @@
-# Stage 1: Frontend Build
-FROM node:24-alpine AS frontend-builder
+# Stage 1: Frontend Build (linux/amd64 only, since dist is platform-independent)
+FROM --platform=linux/amd64 node:24-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 # Copy frontend package files
@@ -8,7 +8,7 @@ RUN npm ci
 
 # Copy frontend source and build
 COPY cycani-proxy/frontend/ ./
-RUN npm run build
+RUN npm run build && ls -la /app/frontend/dist
 
 # Stage 2: Backend with Obfuscation
 FROM node:24-alpine AS backend-builder
