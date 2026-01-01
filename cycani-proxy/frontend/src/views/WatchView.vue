@@ -153,14 +153,15 @@ let player: Plyr | null = null
 const savedPositionForResume = ref<number | null>(null)
 const savedPositionEpisode = ref<{ season: number; episode: number } | null>(null)
 
-// Flag to trigger auto-play after Plyr is ready
-const shouldAutoPlay = ref(false)
-
 // Guard to prevent concurrent episode loading
 let isLoadingEpisode = false
 
 // Guard to prevent concurrent Plyr initialization
 let isInitializingPlyr = false
+
+// Refresh status
+let isRefreshReload = false
+let playingBeforeRefresh = false
 
 const loading = ref(false)
 const episodesLoading = ref(false)
@@ -297,9 +298,6 @@ async function loadEpisode() {
   loading.value = true
   error.value = null
 
-  // Reset auto-play flag for new episode
-  shouldAutoPlay.value = false
-
   // CRITICAL: Destroy old Plyr instance before loading new episode
   // This prevents dual audio issue when switching episodes
   if (player && !useIframePlayer.value) {
@@ -375,10 +373,6 @@ async function loadEpisode() {
           type: 'video',
           sources: [{ src: videoUrl.value, type: 'video/mp4' }]
         }
-
-        // Set flag for auto-play - will be triggered by 'ready' event
-        console.log('🎵 Auto-play enabled:', autoPlayEnabled.value)
-        shouldAutoPlay.value = autoPlayEnabled.value
       }
     }
   } catch (err: any) {
@@ -564,14 +558,20 @@ function onVideoEnd() {
 
 function autoplay(delay: number = 0) {
   // Check if auto-play is enabled
-  // Note: Check both shouldAutoPlay flag and autoPlayEnabled composable
   // because ready event may fire before loadEpisode sets the flag
-  const shouldPlay = shouldAutoPlay.value || autoPlayEnabled.value
+  let shouldPlay = autoPlayEnabled.value
+  if (isRefreshReload) {
+    shouldPlay = playingBeforeRefresh
+  }
   console.log('▶️ Auto-play check:', {
-    flag: shouldAutoPlay.value,
-    composable: autoPlayEnabled.value,
+    autoPlayEnabled: autoPlayEnabled.value,
+    isRefreshReload,
+    playingBeforeRefresh,
     shouldPlay
   })
+  // Clear refresh status
+  isRefreshReload = false
+
   if (shouldPlay) {
     console.log('▶️ Auto-play enabled, starting playback...')
     setTimeout(() => {
@@ -681,53 +681,25 @@ async function refreshVideoUrlSeamlessly() {
     console.log('✅ Got fresh URL:', freshUrl.substring(0, 80) + '...')
 
     // Update Plyr source with the fresh URL
-    if (player) {
+    if (player && currentPosition > 0) {
       player.source = {
         type: 'video',
         sources: [{ src: freshUrl, type: 'video/mp4' }]
       }
 
+      isRefreshReload = true
+      playingBeforeRefresh = wasPlaying
+      savedPositionForResume.value = currentPosition
+      savedPositionEpisode.value = { season: season.value, episode: episode.value }
+
       // Use loadedmetadata event (fires when duration is available)
       // Poll for duration to be available before setting currentTime
       player.once('loadedmetadata', () => {
-        let restoreAttempts = setInterval(() => {
-          if (player && player.duration && player.duration > 0 && currentPosition > 0) {
-            clearInterval(restoreAttempts)
+        uiStore.showNotification('视频链接已刷新', 'success')
 
-            player.currentTime = currentPosition
-            console.log('✅ Position restored:', formatTime(currentPosition))
-
-            if (wasPlaying) {
-              player.play()
-              console.log('▶️ Resumed playback after refresh')
-            }
-
-            uiStore.showNotification('视频链接已刷新', 'success')
-
-            // Schedule next refresh after successful URL refresh
-            scheduleUrlRefresh()
-          }
-        }, 100)
-
-        // Timeout: give up after 5 seconds
-        setTimeout(() => {
-          clearInterval(restoreAttempts)
-          if (player && !player.paused) {
-            console.warn('⚠️ Position restore timed out, starting from beginning')
-            uiStore.showNotification('视频链接已刷新', 'success')
-            scheduleUrlRefresh()
-          }
-        }, 5000)
+        // Schedule next refresh after successful URL refresh
+        scheduleUrlRefresh()
       })
-    } else {
-      // Fallback: direct video element manipulation
-      if (videoElement.value) {
-        videoElement.value.src = freshUrl
-        videoElement.value.currentTime = currentPosition
-        if (wasPlaying) {
-          videoElement.value.play()
-        }
-      }
     }
   } catch (error: any) {
     console.error('❌ Failed to refresh video URL:', error.message)
@@ -905,15 +877,6 @@ watch(videoUrl, async (newUrl, oldUrl) => {
     clearTimeout(refreshUrlTimeout)
     refreshUrlTimeout = null
   }
-
-  // Wait for DOM to update, then reinitialize Plyr
-  await nextTick()
-  await new Promise(resolve => setTimeout(resolve, 100))
-
-  console.log('🔄 Reinitializing Plyr for new episode...')
-  initializePlyr()
-
-  // Auto-play if enabled (will be handled by initializePlyr and loadEpisode)
 })
 
 // Note: Route watcher removed - with :key on router-view, component is properly
@@ -1119,7 +1082,7 @@ function initializePlyr() {
           }
   
           // Check if saved position is near end (within 30 seconds)
-          if (duration && savedPos >= duration - 30) {
+          if (duration > 1 && savedPos >= duration - 30) {
             console.log('⚠️ Episode already completed, starting from beginning')
             savedPositionForResume.value = null
             savedPositionEpisode.value = null
@@ -1215,7 +1178,6 @@ function initializePlyr() {
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 1400px;
   margin: 0 auto;
   padding: 1rem 2rem;
   box-sizing: border-box;
@@ -1224,7 +1186,6 @@ function initializePlyr() {
 /* True Center - Video Wrapper */
 .video-wrapper {
   width: 100%;
-  max-width: 1280px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1233,7 +1194,6 @@ function initializePlyr() {
 .video-frame,
 .plyr-wrapper {
   width: 100%;
-  max-width: 1280px;
   aspect-ratio: 16/9;
   display: block;
   background: #000;
@@ -1529,6 +1489,22 @@ function initializePlyr() {
 /* Plyr customization */
 #plyr-player {
   background: #000;
+}
+
+/* Override Plyr's default max-width restrictions */
+.plyr {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.plyr__video-wrapper {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.plyr__poster {
+  max-width: none !important;
+  width: 100% !important;
 }
 
 /* Mobile Responsive */

@@ -9,7 +9,7 @@
 
 <style scoped>
 .app-container {
-  max-width: 1400px;
+  max-width: 152vh;
   margin: 0 auto;
   padding: 0 1rem;
   min-height: 100vh;
