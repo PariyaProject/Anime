@@ -849,36 +849,6 @@ watch(videoElement, async (element) => {
   }
 })
 
-// Watch videoUrl to update source on episode changes
-// CRITICAL: This watcher destroys and recreates Plyr to prevent dual audio
-watch(videoUrl, async (newUrl, oldUrl) => {
-  // Skip: first load, iframe mode, player not ready, no new URL
-  if (!oldUrl || !newUrl || useIframePlayer.value || !player || !videoElement.value) {
-    return
-  }
-
-  console.log('🔄 Episode change detected - destroying old Plyr instance')
-  console.log('🔄 Old URL:', oldUrl?.substring(0, 30))
-  console.log('🔄 New URL:', newUrl.substring(0, 30))
-
-  // Destroy old Plyr instance completely to prevent dual audio
-  if (player) {
-    console.log('🗑️ Destroying old Plyr instance...')
-    player.destroy()
-    player = null
-    console.log('✅ Old Plyr instance destroyed')
-  }
-
-  // Reset state
-  currentTime.value = 0
-
-  // Clear old refresh timer
-  if (refreshUrlTimeout) {
-    clearTimeout(refreshUrlTimeout)
-    refreshUrlTimeout = null
-  }
-})
-
 // Note: Route watcher removed - with :key on router-view, component is properly
 // destroyed and recreated on navigation, so this workaround is no longer needed
 
