@@ -82,7 +82,11 @@
       "Bash(more:*)",
       "Bash(git checkout:*)",
       "Bash(docker exec:*)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(git restore:*)",
+      "Bash(git -C D:CodeClaudeCode checkout cycani-proxy/frontend/src/App.vue cycani-proxy/frontend/src/views/WatchView.vue)"
     ],
     "deny": [],
     "ask": []

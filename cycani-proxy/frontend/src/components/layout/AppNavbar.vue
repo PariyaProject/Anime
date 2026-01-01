@@ -92,6 +92,43 @@
               <span class="settings-icon">{{ darkMode ? '☀' : '☾' }}</span>
               <span class="settings-text">{{ darkMode ? '浅色模式' : '深色模式' }}</span>
             </div>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Player Mode Selection -->
+            <div class="settings-header">
+              <span class="settings-label">播放器模式</span>
+            </div>
+            <div
+              class="dropdown-item settings-item"
+              :class="{ active: playerMode === 'plyr' }"
+              @click="setPlayerMode('plyr')"
+              title="推荐使用"
+            >
+              <span class="settings-radio">{{ playerMode === 'plyr' ? '●' : '○' }}</span>
+              <span class="settings-text">Plyr 模式</span>
+              <span class="settings-hint">推荐 ✅</span>
+            </div>
+            <div
+              class="dropdown-item settings-item"
+              :class="{ active: playerMode === 'iframe' }"
+              @click="setPlayerMode('iframe')"
+              title="不支持视频历史以及自动播放控制"
+            >
+              <span class="settings-radio">{{ playerMode === 'iframe' ? '●' : '○' }}</span>
+              <span class="settings-text">iframe 模式</span>
+              <span class="settings-hint">兼容 ⚠️</span>
+            </div>
+            <div
+              class="dropdown-item settings-item"
+              :class="{ active: playerMode === 'hybrid' }"
+              @click="setPlayerMode('hybrid')"
+              title="根据解析内容自动选择播放器"
+            >
+              <span class="settings-radio">{{ playerMode === 'hybrid' ? '●' : '○' }}</span>
+              <span class="settings-text">混合模式</span>
+              <span class="settings-hint">自动 🔄</span>
+            </div>
           </div>
         </div>
       </div>
@@ -119,6 +156,7 @@ const settingsDropdownOpen = ref(false)
 const placeholderImage = computed(() => '/placeholder/placeholder-40x40.svg')
 
 const darkMode = computed(() => uiStore.darkMode)
+const playerMode = computed(() => uiStore.playerModePreference)
 const currentChannel = computed(() => uiStore.filters.channel)
 const continueWatching = computed(() => historyStore.continueWatching)
 const hasContinueWatching = computed(() => continueWatching.value.length > 0)
@@ -173,6 +211,25 @@ function resumeWatching(anime: GroupedAnime) {
 
 function setChannel(channel: 'tv' | 'movie') {
   uiStore.updateFilters({ channel })
+}
+
+function setPlayerMode(mode: 'plyr' | 'iframe' | 'hybrid') {
+  uiStore.setPlayerMode(mode)
+
+  // Show notification
+  const modeNames = {
+    plyr: 'Plyr 模式 (插件优先)',
+    iframe: 'iframe 模式 (兼容)',
+    hybrid: '混合模式 (自动)'
+  }
+  uiStore.showNotification(`播放器模式已切换到 ${modeNames[mode]}`, 'success')
+
+  // If currently on watch page, reload to apply new mode
+  if (router.currentRoute.value.name === 'Watch') {
+    setTimeout(() => {
+      window.location.reload()
+    }, 500)
+  }
 }
 
 function handleClickOutside(event: Event) {
@@ -359,16 +416,44 @@ onUnmounted(() => {
   justify-content: space-between;
 }
 
+.settings-item.active {
+  background: var(--bg-tertiary);
+}
+
+.settings-header {
+  padding: 0.4rem 0.6rem 0.2rem;
+}
+
+.settings-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .settings-icon {
   font-size: 0.9rem;
   width: 20px;
   text-align: center;
 }
 
+.settings-radio {
+  font-size: 0.8rem;
+  width: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
 .settings-text {
   flex: 1;
   font-size: 0.85rem;
   color: var(--text-primary);
+}
+
+.settings-hint {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
 }
 
 .settings-status {

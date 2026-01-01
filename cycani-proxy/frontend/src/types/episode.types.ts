@@ -13,6 +13,7 @@ export interface EpisodeData {
   episode: number
   videoUrl?: string
   realVideoUrl?: string
+  iframeVideoUrl?: string
   originalUrl?: string
   nextEpisode?: Episode
 }

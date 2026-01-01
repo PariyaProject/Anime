@@ -21,6 +21,7 @@ export const useUiStore = defineStore('ui', () => {
   // State
   const darkMode = ref(false)
   const sidebarOpen = ref(false)
+  const playerModePreference = ref<'plyr' | 'iframe' | 'hybrid'>('plyr')  // Default to Plyr for plugin compatibility
   const filters = ref<FilterState>({
     search: '',
     genre: '',
@@ -85,6 +86,25 @@ export const useUiStore = defineStore('ui', () => {
     addNotification({ message, type, duration })
   }
 
+  // Player mode preference
+  function setPlayerMode(mode: string) {
+    if (['plyr', 'iframe', 'hybrid'].includes(mode)) {
+      playerModePreference.value = mode as 'plyr' | 'iframe' | 'hybrid'
+      localStorage.setItem('playerModePreference', mode)
+    }
+  }
+
+  function loadPlayerModePreference() {
+    const saved = localStorage.getItem('playerModePreference')
+    if (saved && ['plyr', 'iframe', 'hybrid'].includes(saved)) {
+      playerModePreference.value = saved as 'plyr' | 'iframe' | 'hybrid'
+    } else {
+      // Default to Plyr mode for plugin compatibility
+      playerModePreference.value = 'plyr'
+      localStorage.setItem('playerModePreference', 'plyr')
+    }
+  }
+
   // Persistence
   let isLoadingPreference = true
 
@@ -127,6 +147,7 @@ export const useUiStore = defineStore('ui', () => {
     // State
     darkMode,
     sidebarOpen,
+    playerModePreference,
     filters,
     notifications,
     // Actions
@@ -138,6 +159,8 @@ export const useUiStore = defineStore('ui', () => {
     removeNotification,
     clearNotifications,
     showNotification,
+    setPlayerMode,
+    loadPlayerModePreference,
     loadDarkModePreference
   }
 })

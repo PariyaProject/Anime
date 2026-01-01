@@ -5,7 +5,7 @@
       <AppContainer>
         <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
-            <component :is="Component" :key="route.fullPath" />
+            <component :is="Component" :key="route.name === 'Watch' ? route.path : route.fullPath" />
           </transition>
         </router-view>
       </AppContainer>
@@ -55,6 +55,7 @@ function getNotificationIcon(type: string): string {
 
 onMounted(() => {
   uiStore.loadDarkModePreference()
+  uiStore.loadPlayerModePreference()
 })
 </script>
 

@@ -26,15 +26,14 @@
           ></iframe>
 
           <!-- Use Plyr for direct video URLs -->
-          <div v-else id="plyr-player" ref="playerContainer" class="plyr-wrapper">
+          <div v-if="!useIframePlayer" id="plyr-player" ref="playerContainer" class="plyr-wrapper">
             <video
-              v-if="videoUrl"
               ref="videoElement"
               controls
               :poster="posterImage"
               class="video-element"
             >
-              <source :src="videoUrl" type="video/mp4" />
+              <source :src="videoUrl || ''" type="video/mp4" />
               您的浏览器不支持视频播放。
             </video>
           </div>
@@ -137,7 +136,7 @@ const router = useRouter()
 const playerStore = usePlayerStore()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
-const { autoplay: autoPlayEnabled, toggleAutoplay, setAutoplay } = useAutoplay()
+const { autoplay: autoPlayEnabled, toggleAutoplay } = useAutoplay()
 
 // Get placeholder image URL as a constant
 const getPlaceholderImage = () => {
@@ -152,6 +151,16 @@ let player: Plyr | null = null
 
 // Store saved position for resume after Plyr is initialized
 const savedPositionForResume = ref<number | null>(null)
+const savedPositionEpisode = ref<{ season: number; episode: number } | null>(null)
+
+// Flag to trigger auto-play after Plyr is ready
+const shouldAutoPlay = ref(false)
+
+// Guard to prevent concurrent episode loading
+let isLoadingEpisode = false
+
+// Guard to prevent concurrent Plyr initialization
+let isInitializingPlyr = false
 
 const loading = ref(false)
 const episodesLoading = ref(false)
@@ -167,60 +176,47 @@ const currentSeason = ref(season.value)
 const jumpEpisode = ref<number>(episode.value)
 
 // Check if we should use iframe player
-// Use Plyr for cycani- IDs to enable progress tracking and auto-resume
+// Respects user's player mode preference
 const useIframePlayer = computed(() => {
-  const url = playerStore.currentEpisodeData?.realVideoUrl
-  if (!url) return false
+  const playerMode = uiStore.playerModePreference || 'plyr' // Default: plyr
 
-  // Use Plyr for cycani- IDs (no iframe for better progress tracking)
-  if (url.startsWith('cycani-')) {
+  // Plyr 模式
+  if (playerMode === 'plyr') {
     return false
   }
 
-  // Only use iframe for existing player.cycanime.com URLs
-  return url.includes('player.cycanime.com')
+  // iframe 模式
+  if (playerMode === 'iframe') {
+    return true
+  }
+
+  // 混合模式：自动选择
+  const url = playerStore.currentEpisodeData?.realVideoUrl
+  if (!url) {
+    return true  // 需要 iframe
+  }
+  return false  // 直接视频 URL，使用 Plyr
 })
 
 // Generate player URL for iframe
 const playerUrl = computed(() => {
-  const url = playerStore.currentEpisodeData?.realVideoUrl
+  const url = playerStore.currentEpisodeData?.iframeVideoUrl
   if (!url) return ''
 
-  // If URL already contains player.cycanime.com, use it directly
-  if (url.includes('player.cycanime.com')) {
-    // Add autoplay parameter if not already present
-    const autoplayParam = autoPlayEnabled.value ? (url.includes('?') ? '&autoplay=1' : '?autoplay=1') : ''
-    return url + autoplayParam
-  }
-
-  // If URL is a cycani- ID, construct the player URL
-  if (url.startsWith('cycani-')) {
-    const autoplayParam = autoPlayEnabled.value ? '&autoplay=1' : ''
-    return `https://player.cycanime.com/?url=${url}${autoplayParam}`
-  }
-
-  return ''
+  // Add autoplay parameter if not already present
+  const autoplayParam = autoPlayEnabled.value ? (url.includes('?') ? '&autoplay=1' : '?autoplay=1') : ''
+  return url + autoplayParam
 })
 
 // Direct video URL for Plyr player
-// Returns cycani- IDs directly (Plyr will handle them via backend proxy or player URL resolution)
-// Returns direct MP4 URLs as-is
-// Returns null for player.cycanime.com URLs (use iframe instead)
+// Returns direct video URLs (mp4, m3u8, etc.) for Plyr to play
+// Returns null for iframe URLs (use iframe instead)
 const videoUrl = computed(() => {
   const url = playerStore.currentEpisodeData?.realVideoUrl
   if (!url) return null
 
-  // Return cycani- IDs directly for Plyr to handle
-  if (url.startsWith('cycani-')) {
-    return url
-  }
-
-  // Don't use player URLs with Plyr
-  if (url.includes('player.cycanime.com')) {
-    return null
-  }
-
-  return url  // Direct MP4 URLs
+  // Direct video URLs (mp4, m3u8, etc.) - use with Plyr
+  return url
 })
 
 const animeTitle = ref('')
@@ -291,8 +287,35 @@ async function loadAnimeDetails(id: string): Promise<void> {
 }
 
 async function loadEpisode() {
+  // Guard: Prevent concurrent requests
+  if (isLoadingEpisode) {
+    console.log('⏸️ Episode load already in progress, skipping')
+    return
+  }
+
+  isLoadingEpisode = true
   loading.value = true
   error.value = null
+
+  // Reset auto-play flag for new episode
+  shouldAutoPlay.value = false
+
+  // CRITICAL: Destroy old Plyr instance before loading new episode
+  // This prevents dual audio issue when switching episodes
+  if (player && !useIframePlayer.value) {
+    console.log('🗑️ Destroying old Plyr instance before loading new episode...')
+    player.destroy()
+    player = null
+    console.log('✅ Old Plyr instance destroyed')
+    // Wait for DOM to clean up AND for any pending initializations to complete
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // Clear any pending initialization guard that might be stuck
+    if (isInitializingPlyr) {
+      console.warn('⚠️ Clearing stuck initialization guard')
+      isInitializingPlyr = false
+    }
+  }
 
   try {
     // Load episode data and anime details in parallel using Promise.allSettled
@@ -336,113 +359,33 @@ async function loadEpisode() {
       if (savedPos > 5) {
         console.log('📌 Saved position found:', formatTime(savedPos), '- will resume after player ready')
         savedPositionForResume.value = savedPos
-
-        // If player already exists (route navigation), immediately seek to position
-        if (player && !useIframePlayer.value) {
-          console.log('🎯 Player already exists, seeking to saved position immediately')
-          player.pause()
-          setTimeout(() => {
-            if (player) {
-              player.currentTime = savedPos
-              console.log('✅ Resumed from saved position (existing player):', formatTime(savedPos))
-              uiStore.showNotification(`恢复上次播放位置: ${formatTime(savedPos)}`, 'info')
-              savedPositionForResume.value = null
-
-              // Resume playback after seek
-              setTimeout(() => {
-                if (autoPlayEnabled.value && player) {
-                  player.play()
-                }
-              }, 200)
-            }
-          }, 100)
-        }
+        savedPositionEpisode.value = { season: Number(data.season), episode: Number(data.episode) }
       } else {
         console.log('▶️ No saved position, starting from beginning')
         savedPositionForResume.value = null
-      }
-
-      // Initialize Plyr if not using iframe and player doesn't exist
-      if (!useIframePlayer.value && videoUrl.value && !player) {
-        console.log('🎬 Initializing Plyr after loadEpisode...')
-        // Wait for DOM to render, then poll for video element
-        await nextTick()
-
-        // Poll for video element with increasing delays
-        let attempts = 0
-        const maxAttempts = 10
-        while (attempts < maxAttempts) {
-          const target = videoElement.value || document.querySelector('#plyr-player video')
-          if (target) {
-            console.log('✅ Found video element after', attempts * 50, 'ms, calling initializePlyr()')
-            initializePlyr()
-            break
-          }
-          attempts++
-          await new Promise(resolve => setTimeout(resolve, 50))
-        }
-
-        if (attempts >= maxAttempts) {
-          console.error('❌ Video element not found after', maxAttempts * 50, 'ms')
-        }
+        savedPositionEpisode.value = null
       }
 
       // Note: Plyr will be initialized by the watcher on useIframePlayer
       // This ensures DOM has updated before we try to initialize
-      if (!useIframePlayer.value && videoUrl.value) {
+      if (!useIframePlayer.value && videoUrl.value && player) {
         // Set Plyr source after initialization
-        if (player) {
-          console.log('🎬 Setting Plyr source:', videoUrl.value?.substring(0, 50))
-          player.source = {
-            type: 'video',
-            sources: [{ src: videoUrl.value, type: 'video/mp4' }]
-          }
+        console.log('🎬 Setting Plyr source:', videoUrl.value?.substring(0, 50))
+        player.source = {
+          type: 'video',
+          sources: [{ src: videoUrl.value, type: 'video/mp4' }]
         }
 
-        // Auto-play with delay (similar to old version)
+        // Set flag for auto-play - will be triggered by 'ready' event
         console.log('🎵 Auto-play enabled:', autoPlayEnabled.value)
-        if (autoPlayEnabled.value) {
-          // Wait for video to be ready before playing
-          setTimeout(() => {
-            console.log('▶️ Attempting to play, player exists:', !!player, 'videoElement:', !!videoElement.value)
-            // Use the native video element for more reliable autoplay
-            if (videoElement.value) {
-              const media = videoElement.value
-              console.log('🎬 Video element state:', {
-                muted: media.muted,
-                paused: media.paused,
-                readyState: media.readyState
-              })
-
-              // Try unmuted autoplay, fall back to muted if blocked by browser
-              const playPromise = media.play()
-              if (playPromise && typeof playPromise.catch === 'function') {
-                playPromise.catch((err: any) => {
-                  if (err.name === 'NotAllowedError') {
-                    console.log('⚠️ Unmuted autoplay blocked, using muted fallback')
-                    media.muted = true
-                    media.play()
-                  } else {
-                    console.warn('Autoplay failed:', err)
-                  }
-                })
-              } else if (playPromise === undefined) {
-                // play() succeeded synchronously (no promise)
-                console.log('✅ Playback started (synchronous)')
-              }
-            } else if (player) {
-              // Fallback to Plyr's play method if video element is not available
-              console.log('⚠️ videoElement not available, using Plyr play()')
-              player.play()
-            }
-          }, 1000)  // Reduced from 2000ms to match legacy implementation
-        }
+        shouldAutoPlay.value = autoPlayEnabled.value
       }
     }
   } catch (err: any) {
     error.value = err.message || 'Failed to load episode'
   } finally {
     loading.value = false
+    isLoadingEpisode = false
   }
 }
 
@@ -459,7 +402,9 @@ function selectEpisode(ep: number) {
     }
   })
 
-  loadEpisode()
+  // Note: Don't call loadEpisode() here
+  // The route.query watcher will trigger it automatically
+  // This prevents dual invocation and race conditions
 }
 
 function jumpToEpisode() {
@@ -617,6 +562,37 @@ function onVideoEnd() {
   }
 }
 
+function autoplay(delay: number = 0) {
+  // Check if auto-play is enabled
+  // Note: Check both shouldAutoPlay flag and autoPlayEnabled composable
+  // because ready event may fire before loadEpisode sets the flag
+  const shouldPlay = shouldAutoPlay.value || autoPlayEnabled.value
+  console.log('▶️ Auto-play check:', {
+    flag: shouldAutoPlay.value,
+    composable: autoPlayEnabled.value,
+    shouldPlay
+  })
+  if (shouldPlay) {
+    console.log('▶️ Auto-play enabled, starting playback...')
+    setTimeout(() => {
+      if (player) {
+        console.log('▶️ Attempting auto-play...')
+        const playPromise = player.play()
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch((err: any) => {
+            if (err.name === 'NotAllowedError') {
+              console.log('⚠️ Unmuted autoplay blocked, trying muted fallback')
+              player!.muted = true
+              player!.play()
+            } else {
+              console.warn('Auto-play failed:', err)
+            }
+          })
+        }
+      }
+    }, delay)
+  }
+}
 /**
  * Schedule automatic URL refresh before expiration
  * Sets a timeout to refresh the URL 5 seconds before it expires
@@ -885,61 +861,81 @@ watch(() => route.query, () => {
   }
 }, { deep: true })
 
-// Watch for videoElement to be set before initializing Plyr
+// Backup watcher: Initialize Plyr when videoElement ref is set
+// This handles cases where the useIframePlayer watcher fires before video element is rendered
 watch(videoElement, async (element) => {
-  if (element && !player && !useIframePlayer.value && videoUrl.value) {
+  // Only initialize if:
+  // - Element exists
+  // - Not using iframe mode
+  // - Plyr not already initialized
+  // - Has video URL
+  if (element && videoElement.value && !useIframePlayer.value && !player && videoUrl.value) {
     console.log('🎬 videoElement ref set, initializing Plyr...')
     // Small delay to ensure Plyr can attach to the element
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await new Promise(resolve => setTimeout(resolve, 80))
     initializePlyr()
   }
 })
 
-// Watch useIframePlayer to initialize Plyr when DOM has updated
-watch(useIframePlayer, async (newValue) => {
-  // Only initialize Plyr when using Plyr player (not iframe)
-  if (newValue === false && !player && videoUrl.value) {
-    console.log('🎬 useIframePlayer is false, initializing Plyr...')
-    // Wait for DOM to update
-    await nextTick()
-    // Longer delay to ensure browser has rendered
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    const target = videoElement.value || document.querySelector('#plyr-player video')
-    if (target) {
-      console.log('✅ Found video element, calling initializePlyr()')
-      initializePlyr()
-    } else {
-      console.error('❌ Video element not found after useIframePlayer check')
-    }
-  }
-}, { immediate: true })
-
-// Also watch videoUrl in case it changes after useIframePlayer watcher
+// Watch videoUrl to update source on episode changes
+// CRITICAL: This watcher destroys and recreates Plyr to prevent dual audio
 watch(videoUrl, async (newUrl, oldUrl) => {
-  console.log('🔄 videoUrl watcher triggered:', { newUrl, oldUrl, player, useIframePlayer: useIframePlayer.value })
-  if (newUrl && !useIframePlayer.value && !player) {
-    console.log('🎬 videoUrl changed, initializing Plyr...')
-    // Wait for DOM to update
-    await nextTick()
-    // Longer delay to ensure browser has rendered the video element
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    const target = videoElement.value || document.querySelector('#plyr-player video')
-    if (target) {
-      console.log('✅ Found video element via videoUrl watcher, calling initializePlyr()')
-      initializePlyr()
-    } else {
-      console.error('❌ Video element not found after videoUrl changed')
-    }
+  // Skip: first load, iframe mode, player not ready, no new URL
+  if (!oldUrl || !newUrl || useIframePlayer.value || !player || !videoElement.value) {
+    return
   }
-}, { immediate: true })
+
+  console.log('🔄 Episode change detected - destroying old Plyr instance')
+  console.log('🔄 Old URL:', oldUrl?.substring(0, 30))
+  console.log('🔄 New URL:', newUrl.substring(0, 30))
+
+  // Destroy old Plyr instance completely to prevent dual audio
+  if (player) {
+    console.log('🗑️ Destroying old Plyr instance...')
+    player.destroy()
+    player = null
+    console.log('✅ Old Plyr instance destroyed')
+  }
+
+  // Reset state
+  currentTime.value = 0
+
+  // Clear old refresh timer
+  if (refreshUrlTimeout) {
+    clearTimeout(refreshUrlTimeout)
+    refreshUrlTimeout = null
+  }
+
+  // Wait for DOM to update, then reinitialize Plyr
+  await nextTick()
+  await new Promise(resolve => setTimeout(resolve, 100))
+
+  console.log('🔄 Reinitializing Plyr for new episode...')
+  initializePlyr()
+
+  // Auto-play if enabled (will be handled by initializePlyr and loadEpisode)
+})
 
 // Note: Route watcher removed - with :key on router-view, component is properly
 // destroyed and recreated on navigation, so this workaround is no longer needed
 
 function initializePlyr() {
-  if (player) return // Already initialized
+  // Guard: Prevent concurrent initialization (causes dual audio bug)
+  if (isInitializingPlyr) {
+    console.log('⏸️ Plyr initialization already in progress, skipping duplicate call')
+    return
+  }
+
+  // Note: We assume player has already been destroyed by loadEpisode()
+  // This function should only be called when player is null
+  if (player) {
+    console.warn('⚠️ Plyr already exists when initializePlyr() was called. This should not happen.')
+    console.warn('⚠️ Destroying existing player and reinitializing...')
+    player.destroy()
+    player = null
+  }
+
+  isInitializingPlyr = true
 
   try {
     console.log('🎬 Initializing Plyr...')
@@ -950,6 +946,7 @@ function initializePlyr() {
 
     if (!target) {
       console.error('❌ Video element not found!')
+      isInitializingPlyr = false
       return
     }
 
@@ -1029,7 +1026,7 @@ function initializePlyr() {
     })
 
     // Event-driven save: seek
-    player.on('seeked', (event) => {
+    player.on('seeked', (event: any) => {
       const plyr = event.detail.plyr
       const newPosition = plyr.currentTime
       if (newPosition > 0) {
@@ -1105,51 +1102,58 @@ function initializePlyr() {
     player.on('ready', () => {
       console.log('✅ Plyr ready, checking for saved position...')
       const savedPos = savedPositionForResume.value
+      const savedEp = savedPositionEpisode.value
 
-      if (savedPos && savedPos > 5) {
-        console.log('📍 Resuming to saved position:', formatTime(savedPos))
+      // Check if saved position is for current episode
+      const isCurrentEpisode = savedEp && savedEp.season === season.value && savedEp.episode === episode.value
 
-        // Pause first to ensure seek works properly
-        player.pause()
-        console.log('⏸️ Paused for seek')
+      if (savedPos && savedPos > 5 && isCurrentEpisode) {
+        console.log('📍 Resuming to saved position:', formatTime(savedPos), 'for episode', savedEp)
 
         // Wait a bit for duration to be available, then seek
         setTimeout(() => {
           const duration = player?.duration || videoElement.value?.duration
-
+  
           if (!duration || !isFinite(duration) || duration === 0) {
             console.log('⏳ Duration not loaded yet, will try to seek anyway')
           }
-
+  
           // Check if saved position is near end (within 30 seconds)
           if (duration && savedPos >= duration - 30) {
             console.log('⚠️ Episode already completed, starting from beginning')
             savedPositionForResume.value = null
-            // Resume autoplay if needed
-            if (autoPlayEnabled.value) {
-              player.play()
-            }
+            savedPositionEpisode.value = null
+  
+            // Resume playback after seek
+            autoplay()
             return
           }
-
+  
           // Seek to saved position
           if (player) {
             player.currentTime = savedPos
             console.log('✅ Resumed from saved position:', formatTime(savedPos), duration ? `/ ${formatTime(duration)}` : '')
             uiStore.showNotification(`恢复上次播放位置: ${formatTime(savedPos)}`, 'info')
             savedPositionForResume.value = null
-
+            savedPositionEpisode.value = null
+  
             // Resume playback after seek
-            setTimeout(() => {
-              if (autoPlayEnabled.value) {
-                console.log('▶️ Resuming playback after seek')
-                player.play()
-              }
-            }, 200)
+            autoplay()
           }
         }, 500)
       } else {
-        console.log('▶️ No saved position to resume')
+        // Either no saved position, or saved position is for a different episode
+        // In both cases, start from beginning and check auto-play
+        if (savedPos && !isCurrentEpisode) {
+          console.log('⚠️ Saved position is for different episode, ignoring')
+          savedPositionForResume.value = null
+          savedPositionEpisode.value = null
+        } else {
+          console.log('▶️ No saved position to resume')
+        }
+
+        // Resume playback
+        autoplay()
       }
     })
 
@@ -1183,6 +1187,9 @@ function initializePlyr() {
     console.log('✅ Plyr fully initialized with event-driven save listeners')
   } catch (err) {
     console.error('❌ Failed to initialize Plyr:', err)
+  } finally {
+    // Always reset the initialization guard, even if initialization failed
+    isInitializingPlyr = false
   }
 }
 </script>
@@ -1240,6 +1247,9 @@ function initializePlyr() {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  /* Ensure empty video element has proper background */
+  background: #000;
+  min-height: 300px;
 }
 
 /* Video Title Overlay - Minimal */
