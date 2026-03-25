@@ -1,6 +1,6 @@
-# Cycani 视频代理服务 MVP
+# Anime
 
-这是一个用于次元城(cycani.org)的视频代理服务，解决跨域问题并提供更好的播放体验。
+这是 Anime 项目的后端服务，负责动画数据抓取、剧集播放地址解析、观看历史持久化，以及前端所需的 API 能力。
 
 注意：当前仓库的实际后端目录是 `backend/`，请按当前根目录工作区结构使用。
 
@@ -57,11 +57,21 @@ GET /api/episode/:bangumiId/:season/:episode
     "season": 1,
     "episode": 14,
     "title": "剧集标题",
-    "videoUrl": "视频地址",
-    "originalUrl": "原始页面URL"
+    "realVideoUrl": "https://example.com/video.mp4?x-expires=1760000000",
+    "videoUrlCacheHit": true,
+    "videoUrlExpiresAt": 1760000000000,
+    "videoUrlFetchedAt": 1759999400000
   }
 }
 ```
+
+说明：
+- `realVideoUrl`: 当前可直接用于播放的真实视频地址
+- `videoUrlCacheHit`: 是否命中后端轻量缓存
+- `videoUrlExpiresAt`: 解析出的链接过期时间，毫秒时间戳；无法解析时为 `null`
+- `videoUrlFetchedAt`: 当前链接生成或写入缓存的时间，毫秒时间戳
+
+后端当前只缓存“每一集最近一次解析出的播放链接和元数据”，不会缓存视频文件本身，因此不会把视频流量中转到后端，也不会占用大量磁盘。
 
 ### 视频代理
 ```

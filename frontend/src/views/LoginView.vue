@@ -9,8 +9,8 @@
 
       <div class="hero-layout">
         <div class="hero-copy">
-          <p class="eyebrow">ANIME ACCESS</p>
-          <h1>{{ bootstrap?.loginTitle || 'ANIME' }}</h1>
+          <p class="eyebrow">Anime Access</p>
+          <h1>{{ bootstrap?.loginTitle || 'Anime' }}</h1>
           <div class="hero-signals" aria-hidden="true">
             <span class="signal-pill">SYNC</span>
             <span class="signal-pill">WATCH</span>
@@ -110,7 +110,7 @@
               <div class="panel-card">
                 <div class="card-sheen" aria-hidden="true"></div>
                 <div class="card-header">
-                  <p class="card-kicker">{{ bootstrap?.siteName || 'ANIME' }}</p>
+                  <p class="card-kicker">{{ bootstrap?.siteName || 'Anime' }}</p>
                   <h2>账号登录</h2>
                 </div>
 
@@ -121,7 +121,7 @@
                       v-model.trim="username"
                       type="text"
                       autocomplete="username"
-                      placeholder="输入管理员分配的用户名"
+                      placeholder="输入用户名"
                       required
                     />
                   </label>
@@ -184,7 +184,7 @@
         <div class="panel-card">
           <div class="card-sheen" aria-hidden="true"></div>
           <div class="card-header">
-            <p class="card-kicker">{{ bootstrap?.siteName || 'ANIME' }}</p>
+            <p class="card-kicker">{{ bootstrap?.siteName || 'Anime' }}</p>
             <h2>账号登录</h2>
           </div>
 
@@ -195,7 +195,7 @@
                 v-model.trim="username"
                 type="text"
                 autocomplete="username"
-                placeholder="输入管理员分配的用户名"
+                placeholder="输入用户名"
                 required
               />
             </label>

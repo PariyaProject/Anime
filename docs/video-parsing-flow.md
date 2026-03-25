@@ -8,6 +8,11 @@
 
 视频解析的目标是从 cycani.org 获取加密的视频ID，然后通过 player.cycanime.com 播放器页面解密获取真实的视频播放地址。
 
+当前实现额外加了一层“轻量链接缓存”：
+- 后端按 `bangumiId + season + episode` 缓存最近一次解析出的 `realVideoUrl`
+- 如果该链接距离真实过期时间仍有安全余量，则直接复用
+- 缓存内容只包含链接和元数据，不缓存视频文件本身
+
 ---
 
 ## 完整流程
@@ -23,9 +28,18 @@ GET /api/episode/6004/1/1
 
 **目标页面**：`https://www.cycani.org/watch/6004/1/1.html`
 
+在真正抓取剧集页之前，后端会先检查这集是否有可复用的缓存链接：
+
+```javascript
+const cacheKey = `${bangumiId}:${season}:${episode}`;
+const reusableEntry = videoUrlCacheManager.getReusableEntry(cacheKey);
+```
+
+如果缓存命中且链接还没有临近过期，就直接返回缓存结果，不再重复抓取剧集页和播放器页。
+
 ---
 
-### 第二步：获取剧集页面 HTML
+### 第二步：缓存未命中时获取剧集页面 HTML
 
 ```javascript
 const response = await httpClient.get(targetUrl);
@@ -167,7 +181,7 @@ https://player.cycanime.com/?url=cycani-dcd01-40890417c254f4ca839391fe8fb334e017
 
 ---
 
-### 第六步：返回给前端
+### 第六步：写入轻量缓存并返回给前端
 
 ```javascript
 res.json({
@@ -177,13 +191,21 @@ res.json({
         season: 1,
         episode: 1,
         title: "xxx 第1集",
-        videoUrl: "cycani-dcd01-...",          // 加密的视频ID
-        decryptedVideoUrl: "cycani-dcd01-...", // 解密后的视频ID
-        realVideoUrl: "https://tos-cn...",    // 真实视频URL（如果成功）
-        originalUrl: "https://www.cycani.org/watch/6004/1/1.html"
+        realVideoUrl: "https://tos-cn...&x-expires=1760000000",
+        videoUrlCacheHit: false,
+        videoUrlExpiresAt: 1760000000000,
+        videoUrlFetchedAt: 1759999400000
     }
 })
 ```
+
+其中：
+- `realVideoUrl` 是前端真正用于播放的地址
+- `videoUrlCacheHit` 表示这次响应是否直接复用了后端缓存
+- `videoUrlExpiresAt` 优先从 URL 中的 `x-expires` 解析得出
+- `videoUrlFetchedAt` 是当前链接生成或写入缓存的时间
+
+后端内部仍会保留 `originalEncryptedUrl` 这类刷新时需要的元数据，但这些字段不再暴露给前端。
 
 ---
 
@@ -192,28 +214,28 @@ res.json({
 ```
 用户请求 GET /api/episode/6004/1/1
     ↓
-[1] 获取 cycani.org/watch/6004/1/1.html 页面 HTML
+[1] 先检查该集是否已有可复用的真实视频链接缓存
     ↓
-[2] 解析 <script> 中的 player_aaaa 变量（包含加密的视频ID）
+[2] 命中缓存: 直接返回 realVideoUrl + 缓存元数据
     ↓
-[3] 提取加密的 video ID (Base64编码的JSON字符串)
+[3] 未命中缓存: 获取 cycani.org/watch/6004/1/1.html 页面 HTML
     ↓
-[4] Base64 解码 → URL 解码 → 得到加密ID
+[4] 解析 <script> 中的 player_aaaa 变量（包含加密的视频ID）
+    ↓
+[5] Base64 解码 → URL 解码 → 得到加密ID
     输出示例: cycani-dcd01-40890417c254f4ca839391fe8fb334e01759801315
     ↓
-[5] 访问 player.cycanime.com/?url=加密ID
+[6] 访问 player.cycanime.com/?url=加密ID
     ↓
-[6] Puppeteer 获取浏览器实例（复用）
+[7] Puppeteer 获取浏览器实例（复用）
     ↓
-[7] 创建新页面并设置关键 HTTP 头
+[8] 创建新页面并设置关键 HTTP 头
     - Referer: https://www.cycani.org/ ⚠️ 必须设置
     - Accept, Accept-Language 等
     ↓
-[8] 访问播放器 URL，等待 networkidle0
-    ↓
 [9] 执行 JS 提取 video.src
     ↓
-[10] 返回真实视频URL (如 https://tos-cn-...)
+[10] 解析 x-expires，写入轻量缓存
     ↓
 返回给前端
 ```
@@ -244,7 +266,14 @@ res.json({
 - 使用 MuiPlayer PRO 播放器
 - **重要**：需要 `Referer: https://www.cycani.org/` 头，否则会拒绝请求
 
-### 4. 原网站的播放器加载机制
+### 4. 轻量链接缓存
+
+- 缓存键：`bangumiId:season:episode`
+- 缓存内容：`realVideoUrl`、`originalEncryptedUrl`、`expiresAt`、`fetchedAt`、`lastAccessAt`
+- 复用依据：优先使用链接自身的 `x-expires`；只有距离过期还有安全余量时才复用
+- 设计目标：减少重复解析和重复换链接，不承担视频文件缓存和视频带宽
+
+### 5. 原网站的播放器加载机制
 
 #### 原网站**不使用 iframe**，而是通过 JavaScript 动态加载播放器：
 
@@ -367,7 +396,7 @@ try {
 
 ## 相关文件
 
-- **后端主文件**：`cycani-proxy/src/server.js`
+- **后端主文件**：`backend/src/server.js`
 - **关键函数**：
   - `parseEpisodeData($)` - 解析 player_aaaa
   - `decryptVideoUrl(encryptedUrl)` - 解密视频ID

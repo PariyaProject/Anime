@@ -5,18 +5,21 @@ const Database = require('better-sqlite3');
 const { getDatabase, DATABASE_FILE, closeDatabase } = require('./AppDatabase');
 
 const DEFAULT_SETTINGS = {
-    siteName: 'ANIME',
-    loginTitle: 'ANIME',
-    loginSubtitle: '仅受邀用户可访问，请使用管理员发放的邀请码创建账号。',
-    inviteWelcomeTitle: '创建受邀账号',
-    inviteWelcomeMessage: '这是一份由管理员签发的访问邀请。设置你的用户名和密码后即可进入站点。',
+    siteName: 'Anime',
+    loginTitle: 'Anime',
     supportContact: '',
-    allowInvites: '1'
+    allowInvites: true
 };
 
-const LEGACY_DEFAULT_SETTINGS = {
-    siteName: 'Anime Private Theater',
-    loginTitle: '私人放映室'
+const OBSOLETE_SETTING_KEYS = [
+    'loginSubtitle',
+    'inviteWelcomeTitle',
+    'inviteWelcomeMessage'
+];
+
+const LEGACY_DEFAULT_VALUES = {
+    siteName: ['Anime Private Theater', 'ANIME'],
+    loginTitle: ['私人放映室', 'ANIME']
 };
 
 function nowIso() {
@@ -69,15 +72,22 @@ class AdminManager {
         `);
 
         Object.entries(DEFAULT_SETTINGS).forEach(([key, value]) => {
-            insertStatement.run(key, value, nowIso());
+            insertStatement.run(key, serializeSettingValue(key, value), nowIso());
         });
 
-        Object.entries(LEGACY_DEFAULT_SETTINGS).forEach(([key, legacyValue]) => {
-            database.prepare(`
-                UPDATE app_settings
-                SET value = ?, updated_at = ?
-                WHERE key = ? AND value = ?
-            `).run(DEFAULT_SETTINGS[key], nowIso(), key, legacyValue);
+        database.prepare(`
+            DELETE FROM app_settings
+            WHERE key IN (${OBSOLETE_SETTING_KEYS.map(() => '?').join(', ')})
+        `).run(...OBSOLETE_SETTING_KEYS);
+
+        Object.entries(LEGACY_DEFAULT_VALUES).forEach(([key, legacyValues]) => {
+            legacyValues.forEach((legacyValue) => {
+                database.prepare(`
+                    UPDATE app_settings
+                    SET value = ?, updated_at = ?
+                    WHERE key = ? AND value = ?
+                `).run(serializeSettingValue(key, DEFAULT_SETTINGS[key]), nowIso(), key, legacyValue);
+            });
         });
     }
 
@@ -102,11 +112,7 @@ class AdminManager {
         return {
             siteName: settings.siteName,
             loginTitle: settings.loginTitle,
-            loginSubtitle: settings.loginSubtitle,
-            inviteWelcomeTitle: settings.inviteWelcomeTitle,
-            inviteWelcomeMessage: settings.inviteWelcomeMessage,
             supportContact: settings.supportContact,
-            authMode: 'invite-only',
             allowInvites: Boolean(settings.allowInvites)
         };
     }
@@ -332,7 +338,7 @@ class AdminManager {
             const missingTables = requiredTables.filter(name => !tables.includes(name));
 
             if (missingTables.length > 0) {
-                throw new Error(`导入文件不是有效的 ANIME 数据库，缺少表: ${missingTables.join(', ')}`);
+                throw new Error(`导入文件不是有效的 Anime 数据库，缺少表: ${missingTables.join(', ')}`);
             }
         } finally {
             if (validationDatabase) {

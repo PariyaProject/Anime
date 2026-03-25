@@ -3,7 +3,7 @@
     <div class="admin-layout">
       <section class="admin-hero">
         <div class="hero-copy">
-          <p class="eyebrow">ANIME CONTROL</p>
+          <p class="eyebrow">Anime Control</p>
           <h1>站点与账号管理</h1>
           <p>
             统一管理站点文案、邀请链接、用户登录权限，以及每个账号的最近登录和观看记录。
@@ -623,13 +623,9 @@ const userPagination = ref<AdminPaginationMeta>({
 })
 
 const settings = reactive<SiteSettings>({
-  siteName: 'ANIME',
-  loginTitle: 'ANIME',
-  loginSubtitle: '',
-  inviteWelcomeTitle: '',
-  inviteWelcomeMessage: '',
+  siteName: 'Anime',
+  loginTitle: 'Anime',
   supportContact: '',
-  authMode: 'invite-only',
   allowInvites: true
 })
 
@@ -750,7 +746,7 @@ async function saveSettings() {
     const saved = await adminService.updateSettings(settings)
     assignSettings(saved)
     authStore.applyPublicBootstrap(saved)
-    document.title = `${String(route.meta.title || '站点管理')} - ${saved.siteName || 'ANIME'}`
+    document.title = `${String(route.meta.title || '站点管理')} - ${saved.siteName || 'Anime'}`
     uiStore.showNotification('站点设置已保存', 'success')
   } catch (err: any) {
     uiStore.showNotification(err.message || '保存设置失败', 'error')

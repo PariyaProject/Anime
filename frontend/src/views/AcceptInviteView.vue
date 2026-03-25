@@ -2,7 +2,7 @@
   <div class="invite-screen">
     <section class="invite-card">
       <header class="invite-header">
-        <p class="eyebrow">{{ inviteInfo?.site.siteName || bootstrap?.siteName || 'ANIME' }}</p>
+        <p class="eyebrow">{{ inviteInfo?.site.siteName || bootstrap?.siteName || 'Anime' }}</p>
         <h1>创建账号</h1>
         <p>
           使用这份邀请完成账号创建后，即可进入站点。

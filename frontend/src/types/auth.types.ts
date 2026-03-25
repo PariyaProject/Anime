@@ -18,11 +18,7 @@ export interface AuthCredentials {
 export interface PublicSiteBootstrap {
   siteName: string
   loginTitle: string
-  loginSubtitle: string
-  inviteWelcomeTitle: string
-  inviteWelcomeMessage: string
   supportContact: string
-  authMode: 'invite-only'
   allowInvites: boolean
 }
 

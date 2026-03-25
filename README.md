@@ -123,7 +123,7 @@ Anime/
 ### Anime Management
 - `GET /api/anime-list` - Get paginated anime list with metadata
 - `GET /api/anime/:id` - Get detailed anime information
-- `GET /api/episode/:animeId/:season/:episode` - Get episode video URL
+- `GET /api/episode/:animeId/:season/:episode` - Get episode playback data with lightweight video URL cache metadata
 
 ### Watch History
 - `GET /api/continue-watching` - Get incomplete content for resumption

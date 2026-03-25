@@ -65,7 +65,7 @@ router.beforeEach(async (to) => {
   await authStore.initialize()
 
   const title = to.meta.title as string
-  const siteName = authStore.publicBootstrap?.siteName || 'ANIME'
+  const siteName = authStore.publicBootstrap?.siteName || 'Anime'
   document.title = to.meta.hideAppChrome
     ? siteName
     : (title ? `${title} - ${siteName}` : siteName)
