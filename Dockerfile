@@ -78,8 +78,10 @@ COPY --from=backend-builder /app/package.json ./
 # Copy built frontend from frontend-builder
 COPY --from=frontend-builder /app/dist ./dist/
 
-# Copy legacy public files as fallback
-COPY backend/public/ ./public/
+# Create an empty legacy public directory as a runtime fallback.
+# The repository no longer tracks backend/public, but the server still mounts
+# /app/public for placeholder/static compatibility when dist/ is present.
+RUN mkdir -p /app/public
 
 # Config directory will be created by the application and mounted as volume
 VOLUME ["/app/config"]
