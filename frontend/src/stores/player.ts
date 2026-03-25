@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Episode, EpisodeData } from '@/types/episode.types'
+import type { Episode, EpisodeData, RefreshVideoUrlData } from '@/types/episode.types'
 import { episodeService } from '@/services/episode.service'
 
 export const usePlayerStore = defineStore('player', () => {
@@ -53,7 +53,7 @@ export const usePlayerStore = defineStore('player', () => {
    * Refresh the current video URL (handles expired URLs)
    * Returns the refreshed video URL
    */
-  async function refreshVideoUrl(): Promise<string> {
+  async function refreshVideoUrl(): Promise<RefreshVideoUrlData> {
     if (!currentEpisodeData.value) {
       throw new Error('No episode loaded')
     }
@@ -68,9 +68,12 @@ export const usePlayerStore = defineStore('player', () => {
       // Update the episode data with the refreshed URL
       if (currentEpisodeData.value) {
         currentEpisodeData.value.realVideoUrl = result.realVideoUrl
+        currentEpisodeData.value.videoUrlCacheHit = result.videoUrlCacheHit
+        currentEpisodeData.value.videoUrlExpiresAt = result.videoUrlExpiresAt
+        currentEpisodeData.value.videoUrlFetchedAt = result.videoUrlFetchedAt
       }
 
-      return result.realVideoUrl
+      return result
     } catch (err: any) {
       error.value = err.message || 'Failed to refresh video URL'
       throw err

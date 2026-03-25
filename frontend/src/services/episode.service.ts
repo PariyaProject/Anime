@@ -1,5 +1,5 @@
 import api from './api'
-import type { EpisodeData, EpisodeResponse } from '@/types/episode.types'
+import type { EpisodeData, EpisodeResponse, RefreshVideoUrlData } from '@/types/episode.types'
 
 export const episodeService = {
   async getEpisode(
@@ -21,11 +21,11 @@ export const episodeService = {
     animeId: string,
     season: number,
     episode: number
-  ): Promise<{ realVideoUrl: string }> {
-    const response = await api.get<{ success: boolean; data: { realVideoUrl: string; originalEncryptedUrl: string } }>(
+  ): Promise<RefreshVideoUrlData> {
+    const response = await api.get<{ success: boolean; data: RefreshVideoUrlData }>(
       `/api/refresh-video-url/${animeId}/${season}/${episode}`
     )
-    return { realVideoUrl: response.data.data.realVideoUrl }
+    return response.data.data
   },
 
   /**

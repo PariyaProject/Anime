@@ -2,6 +2,13 @@ import { ref, readonly, computed } from 'vue'
 import type { WeeklySchedule, WeeklyAnime } from '@/types/anime.types'
 import { weeklyScheduleService } from '@/services/weeklySchedule.service'
 
+const WEEKLY_SCHEDULE_CACHE_TTL_MS = 30 * 60 * 1000
+const loading = ref(false)
+const error = ref<string | null>(null)
+const schedule = ref<WeeklySchedule | null>(null)
+const fetchedAt = ref(0)
+const pendingRequests = new Map<string, Promise<WeeklySchedule>>()
+
 /**
  * Day keys used in the weekly schedule API
  */
@@ -26,10 +33,6 @@ const DAY_KEY_MAP: Record<number, DayKey> = {
  * Provides loading states, error handling, and schedule data access.
  */
 export function useWeeklySchedule() {
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const schedule = ref<WeeklySchedule | null>(null)
-
   // Computed properties for convenient data access
   const hasSchedule = computed(() => schedule.value !== null)
   const updated = computed(() => schedule.value?.updated ?? null)
@@ -66,17 +69,42 @@ export function useWeeklySchedule() {
    * @param refresh - Force refresh server cache
    */
   async function loadSchedule(day: string = 'all', refresh: boolean = false) {
+    const isFresh = schedule.value &&
+      schedule.value.filter === day &&
+      (Date.now() - fetchedAt.value) < WEEKLY_SCHEDULE_CACHE_TTL_MS
+
+    if (!refresh && isFresh) {
+      error.value = null
+      return schedule.value
+    }
+
+    const pendingKey = `${day}:${refresh ? 'refresh' : 'default'}`
+    const existingRequest = pendingRequests.get(pendingKey)
+    if (existingRequest) {
+      return existingRequest
+    }
+
     loading.value = true
     error.value = null
-    try {
-      schedule.value = await weeklyScheduleService.getWeeklySchedule(day, refresh)
-      return schedule.value
-    } catch (err: any) {
-      error.value = err.message || 'Failed to load weekly schedule'
-      throw err
-    } finally {
-      loading.value = false
-    }
+    const request = weeklyScheduleService.getWeeklySchedule(day, refresh)
+      .then((result) => {
+        schedule.value = result
+        fetchedAt.value = Date.now()
+        return result
+      })
+      .catch((err: any) => {
+        error.value = err.message || 'Failed to load weekly schedule'
+        throw err
+      })
+      .finally(() => {
+        pendingRequests.delete(pendingKey)
+        if (pendingRequests.size === 0) {
+          loading.value = false
+        }
+      })
+
+    pendingRequests.set(pendingKey, request)
+    return request
   }
 
   /**

@@ -5,51 +5,54 @@ const { httpClient, getEnhancedHeaders } = require('../httpClient');
 const axios = require('axios');
 const { browserPool, puppeteer } = require('../puppeteerPool');
 const { requireAuth } = require('../AuthManager');
+const { videoUrlCacheManager } = require('../VideoUrlCacheManager');
 function isValidVideoUrl(url) { return url && url.startsWith('http'); }
 
 // API路由 - 获取剧集信息
 router.get('/api/episode/:bangumiId/:season/:episode', requireAuth, async (req, res) => {
     try {
         const { bangumiId, season, episode } = req.params;
+        const cacheKey = videoUrlCacheManager.buildKey(bangumiId, season, episode);
         const targetUrl = `https://www.cycani.org/watch/${bangumiId}/${season}/${episode}.html`;
 
         console.log(`🔍 获取剧集信息: ${targetUrl}`);
 
-        const response = await httpClient.get(targetUrl, {
-            timeout: 10000
-        });
-
-        const $ = cheerio.load(response.data);
-
-        // 解析页面中的视频信息
-        const episodeData = parseEpisodeData($);
-
-        // Store the original encrypted URL (cycani- ID) for future refresh capability
-        const originalEncryptedUrl = episodeData.decryptedVideoUrl;
-
-        // 尝试通过HTTP+AES解密获取真实的视频URL
-        if (episodeData.decryptedVideoUrl) {
-            console.log('🔍 尝试获取真实视频URL:', episodeData.decryptedVideoUrl);
-            const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl, targetUrl);
-            if (realVideoUrl) {
-                episodeData.realVideoUrl = realVideoUrl;
-                console.log('✅ 成功获取真实视频URL:', realVideoUrl.substring(0, 100) + '...');
-            } else {
-                episodeData.realVideoUrl = null;
-                console.log('⚠️ 真实视频URL解析失败，当前剧集将不会返回可播放源');
-            }
+        const reusableEntry = videoUrlCacheManager.getReusableEntry(cacheKey);
+        if (reusableEntry) {
+            console.log(`♻️ 命中视频链接缓存: ${cacheKey}`);
+            return res.json({
+                success: true,
+                data: serializeEpisodeResponse(reusableEntry, true)
+            });
         }
 
-        res.json({
-            success: true,
-            data: {
+        const { entry, cacheHit } = await videoUrlCacheManager.withInFlight(cacheKey, async () => {
+            const recheckedEntry = videoUrlCacheManager.getReusableEntry(cacheKey);
+            if (recheckedEntry) {
+                return {
+                    entry: recheckedEntry,
+                    cacheHit: true
+                };
+            }
+
+            const refreshedEntry = await resolveAndCacheEpisodeVideo({
                 bangumiId,
                 season,
                 episode,
-                originalUrl: targetUrl,
-                originalEncryptedUrl: originalEncryptedUrl, // Store for refresh capability
-                ...episodeData
-            }
+                targetUrl,
+                preferCachedMetadata: true,
+                allowMissingVideoUrl: true
+            });
+
+            return {
+                entry: refreshedEntry,
+                cacheHit: false
+            };
+        });
+
+        res.json({
+            success: true,
+            data: serializeEpisodeResponse(entry, cacheHit)
         });
 
     } catch (error) {
@@ -66,37 +69,25 @@ router.get('/api/episode/:bangumiId/:season/:episode', requireAuth, async (req, 
 router.get('/api/refresh-video-url/:animeId/:season/:episode', requireAuth, async (req, res) => {
     try {
         const { animeId, season, episode } = req.params;
+        const cacheKey = videoUrlCacheManager.buildKey(animeId, season, episode);
         const targetUrl = `https://www.cycani.org/watch/${animeId}/${season}/${episode}.html`;
 
         console.log(`🔄 刷新视频URL: ${targetUrl}`);
 
-        // Fetch fresh episode data
-        const response = await httpClient.get(targetUrl, {
-            timeout: 10000
-        });
-
-        const $ = cheerio.load(response.data);
-        const episodeData = parseEpisodeData($);
-
-        if (!episodeData.decryptedVideoUrl) {
-            throw new Error('无法找到加密视频URL');
-        }
-
-        // Get fresh real video URL using Puppeteer
-        const realVideoUrl = await parsePlayerPage(episodeData.decryptedVideoUrl, targetUrl);
-
-        if (!realVideoUrl) {
-            throw new Error('无法获取刷新后的视频URL');
-        }
-
-        console.log('✅ 成功刷新视频URL:', realVideoUrl.substring(0, 100) + '...');
+        const refreshedEntry = await videoUrlCacheManager.withInFlight(cacheKey, async () => (
+            resolveAndCacheEpisodeVideo({
+                bangumiId: animeId,
+                season,
+                episode,
+                targetUrl,
+                forceReloadMetadata: true,
+                preferCachedMetadata: true
+            })
+        ));
 
         res.json({
             success: true,
-            data: {
-                realVideoUrl: realVideoUrl,
-                originalEncryptedUrl: episodeData.decryptedVideoUrl
-            }
+            data: serializeRefreshResponse(refreshedEntry)
         });
 
     } catch (error) {
@@ -240,20 +231,138 @@ function parseEpisodeData($) {
 
         return {
             title,
-            videoUrl: videoData?.url || null,
-            decryptedVideoUrl: videoData?.url ? decryptVideoUrl(videoData.url) : null,
-            nextUrl: videoData?.url_next || null,
-            decryptedNextUrl: videoData?.url_next ? decryptVideoUrl(videoData.url_next) : null,
-            videoData: videoData || null
+            originalEncryptedUrl: videoData?.url ? decryptVideoUrl(videoData.url) : null
         };
 
     } catch (error) {
         console.error('解析页面数据失败:', error);
         return {
             title: '解析失败',
-            error: error.message
+            originalEncryptedUrl: null
         };
     }
+}
+
+async function fetchEpisodeMetadata(targetUrl) {
+    const response = await httpClient.get(targetUrl, {
+        timeout: 10000
+    });
+
+    const $ = cheerio.load(response.data);
+    return parseEpisodeData($);
+}
+
+function parseVideoUrlExpiration(videoUrl) {
+    if (!videoUrl) {
+        return null;
+    }
+
+    try {
+        const url = new URL(videoUrl);
+        const expiresParam = url.searchParams.get('x-expires');
+        if (!expiresParam) {
+            return null;
+        }
+
+        const expiresAt = Number.parseInt(expiresParam, 10) * 1000;
+        return Number.isFinite(expiresAt) ? expiresAt : null;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function serializeEpisodeResponse(entry, cacheHit) {
+    return {
+        bangumiId: entry.bangumiId,
+        season: entry.season,
+        episode: entry.episode,
+        title: entry.title,
+        realVideoUrl: entry.realVideoUrl,
+        videoUrlCacheHit: cacheHit,
+        videoUrlExpiresAt: entry.expiresAt,
+        videoUrlFetchedAt: entry.fetchedAt
+    };
+}
+
+function serializeRefreshResponse(entry) {
+    return {
+        realVideoUrl: entry.realVideoUrl,
+        videoUrlCacheHit: false,
+        videoUrlExpiresAt: entry.expiresAt,
+        videoUrlFetchedAt: entry.fetchedAt
+    };
+}
+
+async function resolveAndCacheEpisodeVideo({
+    bangumiId,
+    season,
+    episode,
+    targetUrl,
+    preferCachedMetadata = true,
+    forceReloadMetadata = false,
+    allowMissingVideoUrl = false
+}) {
+    const cacheKey = videoUrlCacheManager.buildKey(bangumiId, season, episode);
+    const cachedEntry = preferCachedMetadata ? videoUrlCacheManager.peek(cacheKey) : null;
+
+    let metadata = forceReloadMetadata ? null : cachedEntry;
+    let originalEncryptedUrl = metadata?.originalEncryptedUrl || null;
+    let resolvedTitle = metadata?.title || null;
+
+    if (!originalEncryptedUrl) {
+        metadata = await fetchEpisodeMetadata(targetUrl);
+        originalEncryptedUrl = metadata.originalEncryptedUrl;
+        resolvedTitle = metadata.title || resolvedTitle;
+    }
+
+    let realVideoUrl = null;
+    if (originalEncryptedUrl) {
+        console.log('🔍 尝试获取真实视频URL:', originalEncryptedUrl);
+        realVideoUrl = await parsePlayerPage(originalEncryptedUrl, targetUrl);
+    }
+
+    if (!realVideoUrl) {
+        if (!forceReloadMetadata && cachedEntry && cachedEntry.originalEncryptedUrl === originalEncryptedUrl) {
+            metadata = await fetchEpisodeMetadata(targetUrl);
+            originalEncryptedUrl = metadata.originalEncryptedUrl;
+            resolvedTitle = metadata.title || resolvedTitle;
+
+            if (originalEncryptedUrl) {
+                console.log('🔄 使用最新剧集页元数据重试真实视频URL解析');
+                realVideoUrl = await parsePlayerPage(originalEncryptedUrl, targetUrl);
+            }
+        }
+    }
+
+    if (!realVideoUrl) {
+        if (allowMissingVideoUrl) {
+            return {
+                bangumiId,
+                season: Number(season),
+                episode: Number(episode),
+                title: resolvedTitle || `第 ${episode} 集`,
+                originalEncryptedUrl,
+                realVideoUrl: null,
+                expiresAt: null,
+                fetchedAt: Date.now()
+            };
+        }
+
+        throw new Error('无法获取可播放的视频链接');
+    }
+
+    console.log('✅ 成功获取真实视频URL:', realVideoUrl.substring(0, 100) + '...');
+
+    return videoUrlCacheManager.setEntry(cacheKey, {
+        bangumiId,
+        season: Number(season),
+        episode: Number(episode),
+        title: resolvedTitle || `第 ${episode} 集`,
+        originalEncryptedUrl,
+        realVideoUrl,
+        expiresAt: parseVideoUrlExpiration(realVideoUrl),
+        fetchedAt: Date.now()
+    });
 }
 
 // 解析播放器页面获取真实视频URL

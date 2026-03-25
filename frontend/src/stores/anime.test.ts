@@ -3,35 +3,35 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAnimeStore } from '@/stores/anime'
 import type { Anime, FilterParams } from '@/types/anime.types'
 
-// Mock the anime service
+const { getAnimeListMock, getAnimeByIdMock } = vi.hoisted(() => ({
+  getAnimeListMock: vi.fn(),
+  getAnimeByIdMock: vi.fn()
+}))
+
 vi.mock('@/services/anime.service', () => ({
   animeService: {
-    getAnimeList: vi.fn(() => Promise.resolve({
-      data: {
-        success: true,
-        data: {
-          animeList: [],
-          totalCount: 0,
-          totalPages: 0,
-          currentPage: 1
-        }
-      }
-    })),
-    getAnimeById: vi.fn(() => Promise.resolve({
-      data: {
-        success: true,
-        data: {
-          id: '1',
-          title: 'Test Anime'
-        }
-      }
-    }))
+    getAnimeList: getAnimeListMock,
+    getAnimeById: getAnimeByIdMock
   }
 }))
 
 describe('Anime Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.useRealTimers()
+
+    getAnimeListMock.mockResolvedValue({
+      animeList: [],
+      totalCount: 0,
+      totalPages: 0,
+      currentPage: 1
+    })
+
+    getAnimeByIdMock.mockResolvedValue({
+      id: '1',
+      title: 'Test Anime'
+    })
   })
 
   it('has correct initial state', () => {
@@ -85,5 +85,23 @@ describe('Anime Store', () => {
 
     store.clearError()
     expect(store.error).toBeNull()
+  })
+
+  it('reuses cached anime list for the same filters', async () => {
+    const store = useAnimeStore()
+    const params: FilterParams = { channel: 'tv', page: 1, limit: 48 }
+
+    getAnimeListMock.mockResolvedValue({
+      animeList: [{ id: '1', title: 'Test Anime', cover: '' }],
+      totalCount: 1,
+      totalPages: 1,
+      currentPage: 1
+    })
+
+    await store.loadAnimeList(params)
+    await store.loadAnimeList(params)
+
+    expect(getAnimeListMock).toHaveBeenCalledTimes(1)
+    expect(store.animeList).toHaveLength(1)
   })
 })

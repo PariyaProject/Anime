@@ -5,16 +5,27 @@ export interface Episode {
   duration?: number
 }
 
+export interface EpisodeVideoUrlMeta {
+  videoUrlCacheHit?: boolean
+  videoUrlExpiresAt?: number | null
+  videoUrlFetchedAt?: number | null
+}
+
 export interface EpisodeData {
   bangumiId: string
   animeId?: string
   title: string
   season: number
   episode: number
-  videoUrl?: string
   realVideoUrl?: string
-  originalUrl?: string
+  videoUrlCacheHit?: boolean
+  videoUrlExpiresAt?: number | null
+  videoUrlFetchedAt?: number | null
   nextEpisode?: Episode
+}
+
+export interface RefreshVideoUrlData extends EpisodeVideoUrlMeta {
+  realVideoUrl: string
 }
 
 export interface EpisodeResponse {

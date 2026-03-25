@@ -100,6 +100,15 @@
             </div>
           </div>
 
+          <div class="panel-section link-status-section">
+            <div class="progress-header">播放链接</div>
+            <div class="link-status-summary">
+              <span class="link-status-badge" :class="videoLinkStatusClass">{{ videoLinkStatusText }}</span>
+              <span class="link-status-expiration">{{ videoLinkExpiresText }}</span>
+            </div>
+            <div class="link-status-meta">{{ videoLinkFetchedText }}</div>
+          </div>
+
           <div class="panel-section progress-section">
             <div class="progress-header">播放进度</div>
             <div class="progress-track">
@@ -212,6 +221,8 @@ const autoPlayNext = ref(true) // Auto-play next episode
 let saveInterval: number | null = null
 let refreshUrlTimeout: number | null = null // Auto-refresh before URL expires
 let isRefreshingUrl = ref(false) // Track if currently refreshing URL
+let statusTickInterval: number | null = null
+const statusNow = ref(Date.now())
 
 const episodeTitle = computed(() => {
   if (!playerStore.currentEpisodeData) return ''
@@ -225,6 +236,45 @@ const displayCoverImage = computed(() => animeCover.value || placeholderImage)
 const progress = computed(() => {
   if (duration.value === 0) return 0
   return (currentTime.value / duration.value) * 100
+})
+
+const videoUrlExpiresAt = computed(() =>
+  playerStore.currentEpisodeData?.videoUrlExpiresAt ?? playerStore.expiresAt ?? null
+)
+
+const videoUrlFetchedAt = computed(() =>
+  playerStore.currentEpisodeData?.videoUrlFetchedAt ?? null
+)
+
+const videoLinkStatusText = computed(() =>
+  playerStore.currentEpisodeData?.videoUrlCacheHit ? '复用后端缓存' : '新解析链接'
+)
+
+const videoLinkStatusClass = computed(() =>
+  playerStore.currentEpisodeData?.videoUrlCacheHit ? 'is-cached' : 'is-fresh'
+)
+
+const videoLinkExpiresText = computed(() => {
+  const expiresAt = videoUrlExpiresAt.value
+  if (!expiresAt) {
+    return '过期时间未知'
+  }
+
+  const remainingMs = expiresAt - statusNow.value
+  if (remainingMs <= 0) {
+    return `已过期 · ${formatDateTime(expiresAt)}`
+  }
+
+  return `${formatRelativeDuration(remainingMs)}后过期`
+})
+
+const videoLinkFetchedText = computed(() => {
+  const fetchedAt = videoUrlFetchedAt.value
+  if (!fetchedAt) {
+    return '尚未记录链接生成时间'
+  }
+
+  return `链接生成于 ${formatDateTime(fetchedAt)}`
 })
 
 const episodeList = computed(() => {
@@ -424,6 +474,31 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+function formatDateTime(timestamp: number): string {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(timestamp)
+}
+
+function formatRelativeDuration(durationMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000))
+  if (totalSeconds < 60) {
+    return `${totalSeconds} 秒`
+  }
+
+  const totalMinutes = Math.floor(totalSeconds / 60)
+  if (totalMinutes < 60) {
+    return `${totalMinutes} 分钟`
+  }
+
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return minutes > 0 ? `${hours} 小时 ${minutes} 分钟` : `${hours} 小时`
 }
 
 function handleImageError() {
@@ -672,7 +747,8 @@ async function refreshVideoUrlSeamlessly() {
 
   try {
     // Fetch fresh URL from backend
-    const freshUrl = await playerStore.refreshVideoUrl()
+    const refreshedData = await playerStore.refreshVideoUrl()
+    const freshUrl = refreshedData.realVideoUrl
 
     if (!freshUrl) {
       throw new Error('Failed to get fresh URL from backend')
@@ -747,6 +823,9 @@ onMounted(async () => {
   window.addEventListener('visibilitychange', handlePageHide)
   window.addEventListener('pagehide', handlePageHide)
   window.addEventListener('beforeunload', handlePageHide)
+  statusTickInterval = window.setInterval(() => {
+    statusNow.value = Date.now()
+  }, 30 * 1000)
 
   try {
     // Note: Plyr will be initialized when videoUrl becomes available
@@ -769,6 +848,9 @@ onUnmounted(() => {
   }
   if (refreshUrlTimeout) {
     clearTimeout(refreshUrlTimeout)
+  }
+  if (statusTickInterval) {
+    clearInterval(statusTickInterval)
   }
   if (player) {
     player.destroy()
@@ -1343,15 +1425,20 @@ function initializePlyr(initialUrl?: string) {
 }
 
 /* Progress */
-.progress-section {
+.link-status-section {
   grid-column: 1;
   grid-row: 2;
+}
+
+.progress-section {
+  grid-column: 1;
+  grid-row: 3;
 }
 
 /* Episode List */
 .episode-list {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
 }
 
 .anime-cover {
@@ -1452,6 +1539,45 @@ function initializePlyr(initialUrl?: string) {
 .progress-time {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.link-status-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.link-status-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.link-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.28rem 0.72rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.link-status-badge.is-cached {
+  background: rgba(76, 175, 80, 0.16);
+  color: #85d693;
+}
+
+.link-status-badge.is-fresh {
+  background: rgba(255, 193, 7, 0.16);
+  color: #ffd36d;
+}
+
+.link-status-expiration,
+.link-status-meta {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
 }
 
 .episode-header {
@@ -1578,6 +1704,7 @@ function initializePlyr(initialUrl?: string) {
   }
 
   .anime-info,
+  .link-status-section,
   .progress-section,
   .episode-list {
     grid-column: 1;

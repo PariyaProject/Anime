@@ -47,7 +47,10 @@
     </section>
 
     <!-- Weekly Schedule Section -->
-    <WeeklySchedule @select-anime="openAnimeDetail" />
+    <WeeklySchedule
+      v-if="showWeeklySchedule"
+      @select-anime="openAnimeDetail"
+    />
 
     <section class="catalog-shell">
       <div class="catalog-header">
@@ -232,6 +235,16 @@ const animeStore = useAnimeStore()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
 
+function resolveChannel(channel?: string): 'tv' | 'movie' {
+  return channel === 'movie' ? 'movie' : 'tv'
+}
+
+const initialChannel = resolveChannel(route.query.channel as string | undefined)
+
+if (uiStore.filters.channel !== initialChannel) {
+  uiStore.updateFilters({ channel: initialChannel })
+}
+
 // Get placeholder image URL as a constant
 const getPlaceholderImage = () => {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
@@ -244,7 +257,7 @@ const filters = ref<FilterParams>({
   genre: '',
   year: '',
   sort: 'time',
-  channel: uiStore.filters.channel,  // Initialize channel from uiStore
+  channel: initialChannel,
   page: 1,
   limit: 48
 })
@@ -270,6 +283,7 @@ const isSearchMode = computed(() => Boolean(filters.value.search && filters.valu
 const channelDisplayName = computed(() => {
   return filters.value.channel === 'movie' ? '剧场番剧' : 'TV番剧'
 })
+const showWeeklySchedule = computed(() => filters.value.channel === 'tv')
 
 const continueWatching = computed(() => historyStore.continueWatching)
 
@@ -424,12 +438,9 @@ onMounted(async () => {
   uiStore.loadDarkModePreference()
 
   // Read channel from URL query parameter on initial load
-  const urlChannel = route.query.channel as string | undefined
-  if (urlChannel === 'tv' || urlChannel === 'movie') {
-    // Update both uiStore and local filters from URL
-    uiStore.updateFilters({ channel: urlChannel })
-    filters.value.channel = urlChannel
-  }
+  const urlChannel = resolveChannel(route.query.channel as string | undefined)
+  uiStore.updateFilters({ channel: urlChannel })
+  filters.value.channel = urlChannel
 
   // Setup keyboard shortcuts for pagination
   useKeyboardShortcuts({

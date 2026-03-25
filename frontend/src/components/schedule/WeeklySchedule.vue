@@ -226,7 +226,7 @@ onMounted(() => {
   canHoverPreview.value = window.matchMedia('(hover: hover) and (pointer: fine)').matches
   window.addEventListener('scroll', hidePreview, true)
   window.addEventListener('resize', hidePreview)
-  loadSchedule('all', true)  // Load all weekly data once, filter client-side
+  loadSchedule('all')  // Load all weekly data once, then reuse cache while it's fresh
 })
 
 onBeforeUnmount(() => {
