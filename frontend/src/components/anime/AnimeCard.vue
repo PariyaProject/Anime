@@ -13,6 +13,9 @@
         :alt="`${anime.title} 封面图`"
         class="cover"
         loading="lazy"
+        decoding="async"
+        width="300"
+        height="260"
         @error="handleImageError"
       />
       <div class="overlay" aria-hidden="true">
@@ -120,10 +123,11 @@ function handleImageError(event: Event) {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   height: 100%;
   display: flex;
   flex-direction: column;
+  contain: layout paint;
 }
 
 .anime-card:hover {
@@ -150,6 +154,7 @@ function handleImageError(event: Event) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  contain: paint;
 }
 
 .badge {
@@ -159,7 +164,7 @@ function handleImageError(event: Event) {
   font-weight: 500;
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
-  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .badge.channel {

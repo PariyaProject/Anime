@@ -118,8 +118,8 @@
       </div>
 
       <div v-else>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-6 g-3">
-          <div v-for="anime in animeList" :key="anime.id" class="col">
+        <div class="anime-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-6 g-3">
+          <div v-for="anime in animeList" :key="anime.id" class="col anime-grid-item">
             <AnimeCard
               :anime="anime"
               @open="openAnimeDetail"
@@ -599,6 +599,16 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.anime-grid-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 420px;
+  contain: layout paint style;
+}
+
+.anime-grid {
+  contain: layout style;
 }
 
 /* Reduced Motion */

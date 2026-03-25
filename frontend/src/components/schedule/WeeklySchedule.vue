@@ -56,7 +56,13 @@
             <div v-for="anime in animeForSelectedDay" :key="anime.id" class="col">
               <div
                 class="card schedule-card cursor-pointer"
+                role="button"
+                tabindex="0"
                 @click="selectAnime(anime)"
+                @keydown.enter.prevent="selectAnime(anime)"
+                @keydown.space.prevent="selectAnime(anime)"
+                @mouseenter="showPreview($event, anime)"
+                @mouseleave="hidePreview"
               >
                 <div class="position-relative">
                   <img
@@ -106,10 +112,32 @@
       </div>
     </div>
   </section>
+
+  <Teleport to="body">
+    <Transition name="schedule-preview">
+      <div
+        v-if="previewAnime"
+        class="schedule-hover-preview"
+        :style="previewStyle"
+        aria-hidden="true"
+      >
+        <div class="schedule-hover-preview-shell">
+          <img
+            :src="previewAnime.cover || placeholderImage"
+            :alt="`${previewAnime.title} 完整封面预览`"
+            class="schedule-hover-preview-image"
+          />
+          <p class="schedule-hover-preview-title">
+            {{ previewAnime.title }}
+          </p>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useWeeklySchedule } from '@/composables/useWeeklySchedule'
 import type { WeeklyAnime } from '@/types/anime.types'
 
@@ -131,6 +159,9 @@ const {
 // Get current day key for auto-selection
 const currentDayKey = getCurrentDayKey()
 const selectedDay = ref<string>(currentDayKey)
+const previewAnime = ref<WeeklyAnime | null>(null)
+const previewPosition = ref({ top: 0, left: 0, placement: 'top' as 'top' | 'bottom' })
+const canHoverPreview = ref(false)
 
 // Placeholder image via Vite proxy
 const placeholderImage = '/placeholder/placeholder-140x140.svg'
@@ -154,12 +185,53 @@ const animeForSelectedDay = computed(() => {
   return getAnimeForDay(selectedDay.value)
 })
 
+const previewStyle = computed(() => ({
+  top: `${previewPosition.value.top}px`,
+  left: `${previewPosition.value.left}px`,
+  transform: previewPosition.value.placement === 'top'
+    ? 'translate(-50%, calc(-100% - 12px))'
+    : 'translate(-50%, 12px)'
+}))
+
 function selectAnime(anime: WeeklyAnime) {
   emit('select-anime', anime.id)
 }
 
+function showPreview(event: MouseEvent, anime: WeeklyAnime) {
+  if (!canHoverPreview.value) return
+
+  const target = event.currentTarget as HTMLElement | null
+  if (!target) return
+
+  const rect = target.getBoundingClientRect()
+  const previewWidth = 264
+  const gutter = 20
+  const halfWidth = previewWidth / 2
+  const centeredLeft = rect.left + rect.width / 2
+  const minLeft = gutter + halfWidth
+  const maxLeft = window.innerWidth - gutter - halfWidth
+  const left = Math.min(maxLeft, Math.max(minLeft, centeredLeft))
+  const placement = rect.top < 280 ? 'bottom' : 'top'
+  const top = placement === 'top' ? rect.top : rect.bottom
+
+  previewPosition.value = { top, left, placement }
+  previewAnime.value = anime
+}
+
+function hidePreview() {
+  previewAnime.value = null
+}
+
 onMounted(() => {
+  canHoverPreview.value = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  window.addEventListener('scroll', hidePreview, true)
+  window.addEventListener('resize', hidePreview)
   loadSchedule('all', true)  // Load all weekly data once, filter client-side
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', hidePreview, true)
+  window.removeEventListener('resize', hidePreview)
 })
 </script>
 
@@ -189,11 +261,18 @@ onMounted(() => {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
   box-shadow: 0 1px 3px var(--shadow);
+  overflow: visible;
+  outline: none;
 }
 
 .schedule-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px var(--shadow-hover);
+}
+
+.schedule-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18), 0 4px 8px var(--shadow-hover);
 }
 
 .schedule-card .card-body {
@@ -240,5 +319,58 @@ onMounted(() => {
 /* Make badges non-interactive so clicks pass through to card */
 .badge-overlay {
   pointer-events: none;
+}
+
+:global(.schedule-hover-preview) {
+  position: fixed;
+  z-index: 1200;
+  pointer-events: none;
+}
+
+:global(.schedule-hover-preview-shell) {
+  width: 264px;
+  padding: 0.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  box-shadow: 0 18px 42px var(--shadow-hover);
+}
+
+:global(.schedule-hover-preview-image) {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  display: block;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+}
+
+:global(.schedule-hover-preview-title) {
+  margin: 0.55rem 0 0;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+:global(.schedule-preview-enter-active),
+:global(.schedule-preview-leave-active) {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+:global(.schedule-preview-enter-from),
+:global(.schedule-preview-leave-to) {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+@media (hover: none), (pointer: coarse) {
+  :global(.schedule-hover-preview) {
+    display: none;
+  }
 }
 </style>
