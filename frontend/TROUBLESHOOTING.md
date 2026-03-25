@@ -410,7 +410,7 @@ CORS policy: No 'Access-Control-Allow-Origin' header
    ```javascript
    // server.js
    app.use(cors({
-     origin: ['http://localhost:3000', 'http://localhost:5173', /* production domains */],
+     origin: ['http://localhost:3000', /* production domains */],
      credentials: true
    }))
    ```

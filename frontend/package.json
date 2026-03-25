@@ -17,7 +17,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install",
-    "lighthouse": "lhci autorun --collect.url=http://localhost:5173 || npx lighthouse http://localhost:5173 --output=html --output-path=./lighthouse/report.html --chrome-flags=\"--headless\" || echo 'Lighthouse CI not installed, run: npm install -g @lhci/cli'",
+    "lighthouse": "lhci autorun --collect.url=http://127.0.0.1:3000 || npx lighthouse http://127.0.0.1:3000 --output=html --output-path=./lighthouse/report.html --chrome-flags=\"--headless\" || echo 'Lighthouse CI not installed, run: npm install -g @lhci/cli'",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "format": "prettier --write src/"
   },

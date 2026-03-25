@@ -100,13 +100,65 @@ const browserPool = puppeteer ? new BrowserPool() : null;
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 3006;
+const HOST = process.env.BACKEND_HOST || '0.0.0.0';
 const FRONTEND_PORT = process.env.FRONTEND_PORT || 3000;
-const allowedOrigins = [
-    `http://localhost:${FRONTEND_PORT}`,
-    `http://127.0.0.1:${FRONTEND_PORT}`,
-    'http://localhost:5173',
-    'http://127.0.0.1:5173'
-];
+
+function isLoopbackHost(hostname) {
+    return hostname === 'localhost'
+        || hostname === '127.0.0.1'
+        || hostname === '[::1]'
+        || hostname === '::1';
+}
+
+function isPrivateIpv4Host(hostname) {
+    return /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
+        || /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)
+        || /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+}
+
+function normalizeOrigin(origin) {
+    return typeof origin === 'string' ? origin.trim() : '';
+}
+
+function getAllowedOriginSet() {
+    const configuredOrigins = String(process.env.CORS_ALLOWED_ORIGINS || '')
+        .split(',')
+        .map(normalizeOrigin)
+        .filter(Boolean);
+
+    return new Set([
+        `http://localhost:${FRONTEND_PORT}`,
+        `http://127.0.0.1:${FRONTEND_PORT}`,
+        ...configuredOrigins
+    ]);
+}
+
+function isAllowedOrigin(origin) {
+    if (!origin) {
+        return true;
+    }
+
+    const normalizedOrigin = normalizeOrigin(origin);
+    const allowedOrigins = getAllowedOriginSet();
+    if (allowedOrigins.has(normalizedOrigin)) {
+        return true;
+    }
+
+    try {
+        const parsedOrigin = new URL(normalizedOrigin);
+        const hostname = parsedOrigin.hostname;
+        const allowedPorts = new Set([String(FRONTEND_PORT)]);
+        const originPort = parsedOrigin.port || (parsedOrigin.protocol === 'https:' ? '443' : '80');
+
+        if (!allowedPorts.has(originPort)) {
+            return false;
+        }
+
+        return isLoopbackHost(hostname) || isPrivateIpv4Host(hostname);
+    } catch (_error) {
+        return false;
+    }
+}
 
 const { WatchHistoryManager, migrateOldDataFile, ensureConfigDirectory } = require('./WatchHistoryManager');
 
@@ -117,7 +169,14 @@ app.use(helmet({
 
 // CORS配置
 app.use(cors({
-    origin: allowedOrigins,
+    origin(origin, callback) {
+        if (isAllowedOrigin(origin)) {
+            callback(null, true);
+            return;
+        }
+
+        callback(null, false);
+    },
     credentials: true
 }));
 
@@ -206,7 +265,7 @@ app.use((req, res) => {
 });
 
 // 启动服务器
-const server = app.listen(PORT, async () => {
+const server = app.listen(PORT, HOST, async () => {
     // ============================================================
     // Data Storage Initialization
     // ============================================================
@@ -269,7 +328,7 @@ const server = app.listen(PORT, async () => {
 
     console.log(`✅ 所有必要的模块已加载`);
     console.log(`🚀 Cycani代理服务器启动成功!`);
-    console.log(`📱 服务地址: http://localhost:${PORT}`);
+    console.log(`📱 服务地址: http://${HOST}:${PORT}`);
     console.log(`🔧 开发模式: ${process.env.NODE_ENV || 'production'}`);
     console.log(`⏰ 启动时间: ${new Date().toLocaleString()}`);
 });

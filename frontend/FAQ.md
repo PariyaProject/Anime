@@ -55,9 +55,9 @@ npm run dev
 ```
 The app will be available at `http://localhost:3000`
 
-### Q: Why is the dev server on port 3000 instead of 5173?
+### Q: Why is the dev server on port 3000?
 
-**A:** Vite's default port is 5173, but we've configured it to use 3000 to match the development conventions of this project. You can change this in `vite.config.ts`.
+**A:** This project standardizes local development on port 3000 instead of Vite's default port so the frontend and backend ports stay predictable across the repo. You can change this in `vite.config.ts` or through the root `.env.local`.
 
 ### Q: How do I run tests?
 

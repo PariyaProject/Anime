@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const frontendPort = Number(env.FRONTEND_PORT || 3000)
   const backendPort = Number(env.BACKEND_PORT || 3006)
+  const frontendHost = env.FRONTEND_HOST || '0.0.0.0'
   const backendTarget =
     env.VITE_DEV_PROXY_TARGET || env.VITE_API_BASE_URL || `http://localhost:${backendPort}`
 
@@ -17,6 +18,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
+      host: frontendHost,
       port: frontendPort,
       proxy: {
         '/api': {
@@ -24,6 +26,10 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true
         }
       }
+    },
+    preview: {
+      host: frontendHost,
+      port: frontendPort
     },
     build: {
       outDir: '../dist',

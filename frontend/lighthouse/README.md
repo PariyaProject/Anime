@@ -19,7 +19,7 @@ npm run lighthouse
 npm install -g @lhci/cli
 
 # Run with custom URL
-lhci autorun --collect.url=http://localhost:5173
+lhci autorun --collect.url=http://127.0.0.1:3000
 ```
 
 ### Option 3: Using Chrome DevTools

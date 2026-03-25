@@ -5,7 +5,7 @@
  * npm run lighthouse
  *
  * Or with custom URL:
- * npm run lighthouse -- http://localhost:5173
+ * npm run lighthouse -- http://127.0.0.1:3000
  *
  * This configuration audits the Vue.js frontend for performance,
  * accessibility, best practices, and SEO.

@@ -126,6 +126,8 @@ async function buildDevEnv() {
 
   const backendPortRequested = normalizePort(cliArgs.backend || env.BACKEND_PORT || env.PORT, 3006);
   const frontendPortRequested = normalizePort(cliArgs.frontend || env.FRONTEND_PORT, 3000);
+  const frontendHost = env.FRONTEND_HOST || '0.0.0.0';
+  const backendHost = env.BACKEND_HOST || '0.0.0.0';
   const reservedPorts = new Set();
   const backendPort = await findAvailablePort(
     backendPortRequested,
@@ -138,13 +140,16 @@ async function buildDevEnv() {
     isFrontendPortAvailable,
     reservedPorts
   );
-  const apiBaseUrl = `http://localhost:${backendPort}`;
+  const apiBaseUrl = '';
+  const devProxyTarget = `http://localhost:${backendPort}`;
 
   env.BACKEND_PORT = String(backendPort);
+  env.BACKEND_HOST = backendHost;
   env.PORT = String(backendPort);
   env.FRONTEND_PORT = String(frontendPort);
+  env.FRONTEND_HOST = frontendHost;
   env.VITE_API_BASE_URL = apiBaseUrl;
-  env.VITE_DEV_PROXY_TARGET = apiBaseUrl;
+  env.VITE_DEV_PROXY_TARGET = devProxyTarget;
   env.RESOLVED_BACKEND_PORT = String(backendPort);
   env.RESOLVED_FRONTEND_PORT = String(frontendPort);
   env.REQUESTED_BACKEND_PORT = String(backendPortRequested);
@@ -165,7 +170,10 @@ async function main() {
   const env = await buildDevEnv();
 
   console.log(`Using frontend port ${env.FRONTEND_PORT} and backend port ${env.BACKEND_PORT}`);
-  console.log(`Frontend API target: ${env.VITE_API_BASE_URL}`);
+  console.log(`Frontend host: ${env.FRONTEND_HOST}`);
+  console.log(`Backend host: ${env.BACKEND_HOST}`);
+  console.log(`Frontend API base: ${env.VITE_API_BASE_URL || '(same-origin /api via Vite proxy)'}`);
+  console.log(`Frontend API target: ${env.VITE_DEV_PROXY_TARGET}`);
 
   if (env.REQUESTED_BACKEND_PORT !== env.RESOLVED_BACKEND_PORT) {
     console.log(
