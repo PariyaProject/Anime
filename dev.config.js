@@ -1,5 +1,5 @@
 /**
- * Development Configuration for cycani-proxy project
+ * Development Configuration for the Anime workspace
  *
  * This file allows you to customize port settings and service configurations
  * for both frontend and backend development servers.
@@ -10,26 +10,26 @@
  */
 
 module.exports = {
-  // Backend server configuration (Express server in cycani-proxy/)
+  // Backend server configuration
   backend: {
     port: parseInt(process.env.BACKEND_PORT, 10) || 3006,
     command: 'dev',
-    directory: './cycani-proxy',
+    directory: './backend',
     name: 'Backend Server'
   },
 
-  // Frontend development server configuration (Vite in cycani-proxy/frontend/)
+  // Frontend development server configuration
   frontend: {
     port: parseInt(process.env.FRONTEND_PORT, 10) || 3000,
     command: 'dev',
-    directory: './cycani-proxy/frontend',
+    directory: './frontend',
     name: 'Frontend Dev Server'
   },
 
   // Build configuration
   build: {
     command: 'build',
-    directory: './cycani-proxy/frontend',
+    directory: './frontend',
     name: 'Frontend Build'
   },
 
@@ -37,7 +37,7 @@ module.exports = {
   production: {
     port: parseInt(process.env.BACKEND_PORT, 10) || 3006,
     command: 'start',
-    directory: './cycani-proxy',
+    directory: './backend',
     name: 'Production Server'
   }
 };

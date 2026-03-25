@@ -4,7 +4,7 @@
  * Stop Script - Gracefully terminate all running development services
  *
  * This script stops any running node processes associated with the
- * cycani-proxy development environment (both frontend and backend).
+ * current Anime workspace development environment.
  *
  * Usage: npm run stop
  */
@@ -18,13 +18,15 @@ function isWindows() {
 
 function stopProcessesWindows() {
   try {
-    // Find all node processes running in the cycani-proxy directories
+    // Find all node processes running in the workspace directories
     const result = execSync(
       'wmic process where "name=\'node.exe\'" get ProcessId,CommandLine /format:csv',
       { encoding: 'utf8' }
     );
 
-    const lines = result.split('\n').filter(line => line.includes('cycani-proxy'));
+    const lines = result.split('\n').filter(line =>
+      line.includes('\\Anime\\backend') || line.includes('\\Anime\\frontend') || line.includes('\\Anime')
+    );
     const pids = lines
       .map(line => {
         const match = line.match(/(\d+),/);
@@ -56,9 +58,9 @@ function stopProcessesWindows() {
 
 function stopProcessesUnix() {
   try {
-    // Find all node processes running in the cycani-proxy directories
+    // Find all node processes running in the workspace directories
     const result = execSync(
-      'ps aux | grep -E "node.*cycani-proxy|npm.*dev" | grep -v grep',
+      'ps aux | grep -E "node.*/Anime/(backend|frontend)|npm.*(--prefix (backend|frontend)|run dev)" | grep -v grep',
       { encoding: 'utf8' }
     );
 

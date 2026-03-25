@@ -1,21 +1,6 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
+# Repository Note
 
-These instructions are for AI assistants working in this project.
-
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
-
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
-
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
+This repository no longer uses OpenSpec. Use `docs/project-overview.md` as the current high-level project reference.
 
 # CLAUDE.md
 
@@ -25,15 +10,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository contains projects for cycani.org (次元城动画网站):
 
-1. **Node.js Proxy Server** (`cycani-proxy/` directory): Web-based proxy service with watch history management
-2. **Vue.js Frontend** (`cycani-proxy/frontend/` directory): Modern Vue 3 web application
+1. **Backend Service** (`backend/`): Express-based scraping, playback, and history APIs
+2. **Vue.js Frontend** (`frontend/`): Modern Vue 3 web application
 3. **Legacy Tampermonkey Userscripts**: Archived userscripts for automatic video playback (see `data/archive/legacy-userscripts/`)
 
-### Proxy Server Project (cycani-proxy/)
+### Backend Service (`backend/`)
 
 This is a Node.js Express server that provides a web interface for browsing and watching anime from cycani.org with enhanced features like watch history, position memory, and multi-user architecture support.
 
-### Vue.js Frontend (cycani-proxy/frontend/)
+### Vue.js Frontend (`frontend/`)
 
 A modern Vue 3 + TypeScript web application with:
 - **Vue 3** with Composition API and `<script setup>` syntax
@@ -51,20 +36,19 @@ A modern Vue 3 + TypeScript web application with:
 ### Proxy Server System
 
 **Core Components:**
-- **Express Server** (`src/server.js`): Main API server with CORS proxy and web scraping
-- **HTTP Client** (`src/httpClient.js`): Enhanced HTTP client with anti-bot protection features:
+- **Express Server** (`backend/src/server.js`): Main API server with CORS proxy and web scraping
+- **HTTP Client** (`backend/src/httpClient.js`): Enhanced HTTP client with anti-bot protection features:
   - User-Agent rotation with modern browser signatures
   - Request rate limiting (configurable via `RATE_LIMIT_DELAY` env var, default 1000ms)
   - Automatic retry with exponential backoff on 403, 429, 503 errors
   - Enhanced browser headers (Sec-Ch-Ua, Sec-Fetch-*, Referer)
-- **WatchHistoryManager**: Class-based system for managing user watch history and position tracking
+- **WatchHistoryManager** (`backend/src/WatchHistoryManager.js`): Class-based system for managing user watch history and position tracking
 - **Vue.js Frontend** (`frontend/`): Modern Vue 3 web application (see Vue Frontend Architecture below)
-- **Legacy Web Interface** (`public/`): Bootstrap-based responsive web application (fallback)
 - **Puppeteer Integration**: Advanced video URL extraction for complex player implementations
 
 **Deployment:**
 - The Express server automatically detects and serves the Vue frontend from `dist/` if available
-- Falls back to the legacy Bootstrap frontend in `public/` if `dist/` doesn't exist
+- Some legacy `public/` fallback references still exist in code, but they should be treated as migration remnants unless the directory is restored
 - Supports Vue Router's history mode with SPA fallback for client-side routing
 
 **Key Features:**
@@ -282,45 +266,23 @@ The project has reached a stable state with:
 
 ## Project Structure
 
-```
-D:\Code\ClaudeCode\
-├── cycani-proxy/                   # Proxy server
-│   ├── src/                        # Server source code
-│   │   ├── server.js               # Main Express server
-│   │   ├── httpClient.js           # Enhanced HTTP client with anti-bot protection
-│   │   └── urlConstructor.js       # URL construction utilities
-│   ├── config/                     # Runtime data storage (auto-created, resilient)
-│   │   ├── watch-history.json      # Main watch history data
-│   │   ├── watch-history.json.backup.*  # Automatic backups (5 most recent)
-│   │   └── watch-history.json.corrupted.* # Preserved corrupted files
-│   ├── frontend/                   # Vue 3 Frontend
-│   │   ├── src/
-│   │   │   ├── components/         # Vue components
-│   │   │   ├── composables/        # Vue composables
-│   │   │   ├── stores/             # Pinia stores
-│   │   │   ├── services/           # API services
-│   │   │   ├── types/              # TypeScript types
-│   │   │   ├── utils/              # Utility functions
-│   │   │   └── views/              # Page views
-│   │   ├── public/                 # Static assets
-│   │   ├── index.html              # Entry HTML
-│   │   ├── vite.config.ts          # Vite config
-│   │   ├── vitest.config.ts        # Vitest config
-│   │   └── package.json            # Frontend dependencies
-│   ├── dist/                       # Built Vue frontend (auto-generated)
-│   ├── public/                     # Legacy Bootstrap web files (fallback)
-│   ├── package.json                # Server dependencies
-│   └── package-lock.json           # Lock file
-├── data/                           # Test and archived data only
-│   ├── testing/                    # Test and debug artifacts
-│   │   ├── snapshots/              # Test snapshots
-│   │   ├── debug/                  # Debug files
-│   │   └── screenshots/            # Screenshots
-│   └── archive/                    # Archived data
-│       └── legacy-userscripts/     # Archived userscripts
-├── openspec/                       # Specifications
-├── docs/                          # Documentation
-├── .gitignore                     # Version control rules
+```text
+Anime/
+├── backend/                       # Express backend service
+│   ├── src/                       # Backend source code
+│   ├── config/                    # Runtime data directory in containerized layouts
+│   ├── package.json               # Backend dependencies
+│   └── README.md                  # Backend notes
+├── frontend/                      # Vue 3 frontend
+│   ├── src/                       # Frontend source code
+│   ├── index.html                 # Vite entry HTML
+│   ├── vite.config.ts             # Vite config
+│   └── package.json               # Frontend dependencies
+├── config/                        # Local runtime data in this repository
+├── data/                          # Test and archived data only
+├── dist/                          # Built Vue frontend
+├── docs/                          # Project documentation
+├── scripts/                       # Utility scripts
 ├── CLAUDE.md                      # Project instructions
 └── README.md                      # Project documentation
 ```
@@ -387,7 +349,7 @@ BACKEND_PORT=3017 FRONTEND_PORT=3001 npm run dev
 **Via configuration file:**
 Edit `dev.config.js` in the project root to customize default ports and service settings.
 
-### Individual Service Commands (Legacy)
+### Individual Service Commands
 
 These commands still work if you prefer to navigate to subdirectories:
 
@@ -395,19 +357,19 @@ These commands still work if you prefer to navigate to subdirectories:
 
 **Start Development Server:**
 ```bash
-cd cycani-proxy/frontend
+cd frontend
 npm run dev  # Vite dev server on http://localhost:3000
 ```
 
 **Build for Production:**
 ```bash
-cd cycani-proxy/frontend
+cd frontend
 npm run build  # Outputs to ../dist/
 ```
 
 **Run Unit Tests:**
 ```bash
-cd cycani-proxy/frontend
+cd frontend
 npm test              # Run tests in watch mode
 npm test -- --run     # Run tests once
 npm test -- --ui      # Run tests with UI
@@ -415,7 +377,7 @@ npm test -- --ui      # Run tests with UI
 
 **Install Dependencies:**
 ```bash
-cd cycani-proxy/frontend
+cd frontend
 npm install
 ```
 
@@ -423,25 +385,25 @@ npm install
 
 **Start Development Server:**
 ```bash
-cd cycani-proxy
+cd backend
 npm run dev  # Uses nodemon for auto-reload
 ```
 
 **Start Production Server:**
 ```bash
-cd cycani-proxy
+cd backend
 npm start
 ```
 
 **Install Dependencies:**
 ```bash
-cd cycani-proxy
+cd backend
 npm install
 ```
 
 **Run on Different Port:**
 ```bash
-cd cycani-proxy
+cd backend
 npx cross-env PORT=3017 npm start  # Or any available port
 ```
 
@@ -487,14 +449,14 @@ curl -s "http://localhost:3017/api/continue-watching"
 
 **Utility:**
 - `GET /api/placeholder-image` - Fallback image service
-- Static file serving from `/dist` (Vue frontend) or `/public` (legacy) directory
+- Static file serving from `/dist` for built frontend output
 
 ## Data Storage
 
 ### Storage Location and Resilience
 
 **New Location (since data storage resilience update):**
-- **Primary**: `cycani-proxy/config/watch-history.json` - Inside application directory
+- **Primary**: `config/watch-history.json` - Runtime data inside this repository
 - **Legacy**: `data/proxy/watch-history.json` - Automatically migrated on first run
 
 **Key Features:**
@@ -541,7 +503,7 @@ curl -s "http://localhost:3017/api/continue-watching"
 
 ### Anime Index Data Structure
 
-**Location:** `cycani-proxy/config/anime-index.json`
+**Location:** `config/anime-index.json`
 
 The anime index is a unified searchable database of all anime from TV and Theater channels:
 
@@ -596,10 +558,11 @@ The anime index is a unified searchable database of all anime from TV and Theate
 ### Data Storage Organization
 
 **Configuration vs. Runtime Data:**
-- `cycani-proxy/config/` - Runtime user data (watch history, anime index, auto-created)
+- `config/` - Runtime user data (watch history, anime index, auto-created)
   - `watch-history.json` - User watch history and positions
   - `anime-index.json` - Unified searchable anime index (TV + Theater)
-- `src/` - Application source code (never mixed with data)
+- `backend/src/` - Backend source code
+- `frontend/src/` - Frontend source code
 - `data/` - Test and archived artifacts only (not used for runtime data)
 
 **Benefits:**
@@ -617,7 +580,7 @@ The anime index is a unified searchable database of all anime from TV and Theate
 - Missing files are automatically created with default structure
 
 **Manually recovering data from backups:**
-1. Navigate to `cycani-proxy/config/`
+1. Navigate to `config/`
 2. Find the most recent backup file: `watch-history.json.backup.*`
 3. Copy it to `watch-history.json`
 4. Restart the server

@@ -3,14 +3,17 @@
   "version": "1.0.0",
   "description": "Unified development experience for cycani-proxy project",
   "private": true,
+  "engines": {
+    "node": ">=24.14.0 <25"
+  },
   "scripts": {
-    "dev": "npm-run-all --parallel dev:backend dev:frontend",
-    "dev:backend": "npm run dev --prefix cycani-proxy",
-    "dev:frontend": "npm run dev --prefix cycani-proxy/frontend",
-    "build": "npm run build --prefix cycani-proxy/frontend",
-    "start": "npm start --prefix cycani-proxy",
+    "dev": "node scripts/dev.js",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm start --prefix backend",
     "stop": "node scripts/stop.js",
-    "install:all": "npm install && npm install --prefix cycani-proxy && npm install --prefix cycani-proxy/frontend",
+    "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
     "test:obfuscation": "node scripts/test-obfuscation.js"
   },
   "devDependencies": {

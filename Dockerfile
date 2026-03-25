@@ -6,11 +6,11 @@ FROM --platform=linux/amd64 node:24-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 # Copy frontend package files and install dependencies
-COPY cycani-proxy/frontend/package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci
 
 # Copy frontend source and build
-COPY cycani-proxy/frontend/ ./
+COPY frontend/ ./
 RUN npm run build
 
 # ============================================
@@ -21,13 +21,13 @@ FROM node:24-alpine AS backend-builder
 WORKDIR /app
 
 # Copy backend package files
-COPY cycani-proxy/package*.json ./
+COPY backend/package*.json ./
 
 # Install javascript-obfuscator for obfuscation stage only
 RUN npm install javascript-obfuscator
 
 # Copy backend source code
-COPY cycani-proxy/src/ ./src/
+COPY backend/src/ ./src/
 
 # Copy the obfuscation script
 COPY scripts/obfuscate.js ./
@@ -79,7 +79,7 @@ COPY --from=backend-builder /app/package.json ./
 COPY --from=frontend-builder /app/dist ./dist/
 
 # Copy legacy public files as fallback
-COPY cycani-proxy/public/ ./public/
+COPY backend/public/ ./public/
 
 # Config directory will be created by the application and mounted as volume
 VOLUME ["/app/config"]

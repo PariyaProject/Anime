@@ -1,18 +1,13 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
+# Repository Notes
 
-These instructions are for AI assistants working in this project.
+This project no longer uses OpenSpec.
 
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
+Before making changes, read [docs/project-overview.md](/Users/wuzhao/Program/Github/Anime/docs/project-overview.md).
 
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
+Key guidance for future assistants:
 
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
+- Treat this repository as a root workspace with `backend/` and `frontend/` as the active app directories.
+- Prefer the current code structure over legacy docs that still mention `cycani-proxy/`.
+- Use Node `24.14.0` from [`.nvmrc`](/Users/wuzhao/Program/Github/Anime/.nvmrc).
+- Watch history and anime index are persisted in `config/`, not in a database.
+- The project is still in a migration state, so verify old fallback paths like `public/` and legacy placeholder assets before relying on them.

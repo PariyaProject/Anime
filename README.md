@@ -1,6 +1,6 @@
-# Cycani Proxy Server
+# Anime
 
-A Node.js Express server that provides a web interface for browsing and watching anime from cycani.org with enhanced features like watch history, position memory, and multi-user architecture support.
+A root workspace for browsing and watching anime content from `cycani.org`, built with an Express backend and a Vue 3 frontend.
 
 ## Features
 
@@ -15,14 +15,17 @@ A Node.js Express server that provides a web interface for browsing and watching
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
+- Node.js `24.14.0`
 - npm
+- Optional: `nvm`
 
 ### Installation
 
 From the project root directory:
 
 ```bash
+nvm use
+
 # Install all dependencies (root + backend + frontend)
 npm run install:all
 ```
@@ -35,8 +38,10 @@ npm run dev
 ```
 
 This will start:
-- Backend server at http://localhost:3006
-- Frontend dev server at http://localhost:3000
+- Backend server at `http://localhost:3006` by default
+- Frontend dev server at `http://localhost:3000` by default
+
+If either port is already occupied, the root dev script will automatically move to the next available port and print the final values in the terminal.
 
 **Stop all services:**
 ```bash
@@ -66,8 +71,19 @@ npm run dev:frontend
 BACKEND_PORT=3017 FRONTEND_PORT=3001 npm run dev
 ```
 
-**Via configuration file:**
-Edit `dev.config.js` in the project root to customize default ports.
+**Via startup arguments:**
+```bash
+npm run dev -- --backend 3017 --frontend 3001
+```
+
+If the requested port is already occupied, the dev script will keep incrementing until it finds an available one.
+
+**Via local-only environment file:**
+```bash
+cp .env.example .env.local
+```
+
+Then edit `.env.local` and keep your preferred ports there. This file is ignored by Git, so it is safe for machine-local development preferences.
 
 ### Access
 
@@ -78,39 +94,25 @@ Open your browser and navigate to:
 
 ## Project Structure
 
-```
-D:\Code\ClaudeCode\
-├── cycani-proxy/                   # Proxy server
-│   ├── src/                        # Server source code
-│   │   ├── server.js               # Main Express server
-│   │   ├── httpClient.js           # Enhanced HTTP client
-│   │   └── urlConstructor.js       # URL utilities
-│   ├── frontend/                   # Vue 3 Frontend
-│   │   ├── src/                    # Vue source code
-│   │   ├── package.json            # Frontend dependencies
-│   │   └── vite.config.ts          # Vite configuration
-│   ├── dist/                       # Built Vue frontend (auto-generated)
-│   ├── public/                     # Legacy Bootstrap web files (fallback)
-│   └── package.json                # Server dependencies
-├── data/                           # Unified data storage
-│   ├── proxy/                      # Proxy server data
-│   │   ├── watch-history.json      # User watch history
-│   │   ├── anime-list-detail.json  # Detailed anime information
-│   │   └── current-anime-list.json # Current anime list
-│   ├── testing/                    # Test and debug artifacts
-│   │   ├── snapshots/              # Test snapshots
-│   │   ├── debug/                  # Debug files
-│   │   └── screenshots/            # Screenshots
-│   └── archive/                    # Archived data
-│       └── legacy-userscripts/     # Archived Tampermonkey scripts
-├── openspec/                       # Project specifications
-├── scripts/                        # Utility scripts
-│   └── stop.js                     # Stop all services
-├── docs/                          # Documentation
-├── .gitignore                     # Version control rules
-├── package.json                   # Root package.json with unified commands
-├── dev.config.js                  # Development configuration
-├── CLAUDE.md                      # Project instructions
+```text
+Anime/
+├── backend/                       # Express backend service
+│   ├── src/                       # Backend source code
+│   ├── package.json               # Backend dependencies
+│   └── README.md                  # Backend notes
+├── frontend/                      # Vue 3 frontend app
+│   ├── src/                       # Frontend source code
+│   ├── package.json               # Frontend dependencies
+│   └── vite.config.ts             # Vite configuration
+├── config/                        # Runtime data (history, anime index)
+├── data/                          # Archived and test artifacts
+├── dist/                          # Built frontend output
+├── docs/                          # Project documentation
+├── scripts/                       # Utility scripts
+├── .nvmrc                         # Recommended Node version
+├── package.json                   # Root workspace scripts
+├── dev.config.js                  # Development configuration reference
+├── CLAUDE.md                      # Assistant guidance
 └── README.md                      # This file
 ```
 
@@ -129,11 +131,11 @@ D:\Code\ClaudeCode\
 
 ### Utility
 - `GET /api/placeholder-image` - Fallback image service
-- Static file serving from `/public` directory
+- Static file serving from `/dist` in production builds
 
 ## Data Storage
 
-Watch history and position data are stored in `data/proxy/watch-history.json`:
+Watch history and position data are stored in `config/watch-history.json`:
 
 ```json
 {
@@ -178,9 +180,9 @@ Watch history and position data are stored in `data/proxy/watch-history.json`:
 
 ### Adding New Features
 
-1. Modify `cycani-proxy/src/server.js` for backend changes
-2. Update `cycani-proxy/public/` files for frontend changes
-3. Test with `npm run dev` for automatic reloading
+1. Modify `backend/src/` for backend changes
+2. Modify `frontend/src/` for frontend changes
+3. Test with `npm run dev`
 
 ### Debugging
 
@@ -199,7 +201,7 @@ The project previously included Tampermonkey userscripts for automatic video pla
 1. Follow the existing code style and structure
 2. Test changes thoroughly before committing
 3. Update documentation for any new features
-4. Use the OpenSpec system for major changes (see `openspec/` directory)
+4. Keep project documentation in `docs/` up to date when major behavior changes
 
 ## License
 
@@ -211,13 +213,20 @@ This project is for educational and personal use only. Please respect the origin
 
 **Port already in use:**
 ```bash
-# Option 1: Use a different port via environment variables
+# Option 1: Let the root dev script auto-pick the next available ports
+npm run dev
+
+# Option 2: Start searching from your preferred ports
 BACKEND_PORT=3017 FRONTEND_PORT=3001 npm run dev
 
-# Option 2: Stop the process using the port
-npm run stop
+# Option 3: Or pass the starting ports as CLI args
+npm run dev -- --backend 3017 --frontend 3001
 
-# Option 3: Edit dev.config.js to change default ports
+# Option 4: Save your preferred ports locally
+cp .env.example .env.local
+
+# Option 5: Stop the process using the port
+npm run stop
 ```
 
 **Dependencies not found:**
@@ -226,12 +235,12 @@ npm run stop
 npm run install:all
 
 # Or install individually
-npm install --prefix cycani-proxy
-npm install --prefix cycani-proxy/frontend
+npm install --prefix backend
+npm install --prefix frontend
 ```
 
 **Services won't start:**
-- Check that Node.js version is 14 or higher: `node --version`
+- Check that Node.js version is `24.14.0`: `node --version`
 - Verify all dependencies are installed
 - Check for port conflicts using `npm run stop`
 - Review console output for specific error messages
