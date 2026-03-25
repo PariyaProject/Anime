@@ -40,27 +40,39 @@ describe('AnimeCard Component', () => {
     expect(wrapper.exists()).toBe(true)
   })
 
-  it('emits select event when select button is clicked', async () => {
+  it('emits play event when play button is clicked', async () => {
     const wrapper = mount(AnimeCard, {
       props: { anime: mockAnime }
     })
 
-    const selectButton = wrapper.findAll('button').find(btn => btn.text() === '播放')
-    if (selectButton) {
-      await selectButton.trigger('click')
-      expect(wrapper.emitted('select')).toBeTruthy()
-      expect(wrapper.emitted('select')?.[0]).toEqual([mockAnime])
-    }
+    const playButton = wrapper.findAll('button').find(btn => btn.text() === '播放')
+    expect(playButton).toBeTruthy()
+    await playButton!.trigger('click')
+    expect(wrapper.emitted('play')).toBeTruthy()
+    expect(wrapper.emitted('play')?.[0]).toEqual([mockAnime])
   })
 
-  it('only shows one button (播放)', () => {
+  it('emits open event when detail button is clicked', async () => {
+    const wrapper = mount(AnimeCard, {
+      props: { anime: mockAnime }
+    })
+
+    const detailButton = wrapper.findAll('button').find(btn => btn.text() === '详情')
+    expect(detailButton).toBeTruthy()
+    await detailButton!.trigger('click')
+    expect(wrapper.emitted('open')).toBeTruthy()
+    expect(wrapper.emitted('open')?.[0]).toEqual([mockAnime])
+  })
+
+  it('shows detail and play buttons', () => {
     const wrapper = mount(AnimeCard, {
       props: { anime: mockAnime }
     })
 
     const buttons = wrapper.findAll('button')
-    expect(buttons.length).toBe(1)
-    expect(buttons[0].text()).toBe('播放')
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].text()).toBe('详情')
+    expect(buttons[1].text()).toBe('播放')
   })
 
   it('handles image error and shows fallback', async () => {

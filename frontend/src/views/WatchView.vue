@@ -103,6 +103,12 @@
               <span class="tag">{{ totalEpisodes || '?' }} 集</span>
             </div>
             <p v-if="animeDescription" class="anime-description" :title="animeDescription">{{ animeDescription }}</p>
+            <router-link
+              :to="{ name: 'AnimeDetail', params: { animeId: currentAnimeId || animeId } }"
+              class="detail-link"
+            >
+              查看作品详情
+            </router-link>
           </div>
         </div>
 
@@ -177,6 +183,7 @@ let player: Plyr | null = null
 // Store saved position for resume after Plyr is initialized
 const savedPositionForResume = ref<number | null>(null)
 const savedPositionEpisode = ref<{ season: number; episode: number } | null>(null)
+let isWaitingForResume = false
 
 // Guard to prevent concurrent episode loading
 let isLoadingEpisode = false
@@ -763,26 +770,6 @@ const handlePageHide = () => {
 onMounted(async () => {
   uiStore.loadDarkModePreference()
 
-  // Setup test functions for manual testing
-  // These functions are attached to window for console access
-  ;(window as any).testForceRefresh = async function() {
-    console.log('🧪 Force refreshing video URL...')
-    await refreshVideoUrlSeamlessly()
-  }
-
-  ;(window as any).testCheckExpiration = function() {
-    const currentUrl = playerStore.currentVideoUrl
-    const expiresAt = playerStore.expiresAt
-    const timeUntilExpiration = playerStore.timeUntilExpiration
-
-    console.log('📍 Current URL:', currentUrl?.substring(0, 100) + '...')
-    console.log('⏰ Expires at:', expiresAt ? new Date(expiresAt).toLocaleString() : 'N/A')
-    console.log('⏳ Time until expiration:', timeUntilExpiration === Infinity ? 'Never' : `${Math.floor(timeUntilExpiration / 1000)}s`)
-    console.log('⏰ Auto-refresh scheduled in:', timeUntilExpiration === Infinity ? 'Never' : `${Math.floor((timeUntilExpiration - 5 * 1000) / 1000)}s (5s before expiration)`)
-  }
-
-  console.log('🧪 Test functions available: testForceRefresh(), testCheckExpiration()')
-
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
     'Space': togglePlayPause,
@@ -997,6 +984,11 @@ function initializePlyr(initialUrl?: string) {
 
     // Event-driven save: play/pause
     player.on('play', () => {
+      if (isWaitingForResume && currentTime.value <= 0) {
+        console.log('⏸️ Skipping initial zero-position save while resume is still pending')
+        return
+      }
+
       // Always save position when video starts playing (including first autoplay)
       historyStore.savePositionImmediate(
         {
@@ -1120,6 +1112,12 @@ function initializePlyr(initialUrl?: string) {
 
       if (savedPos && savedPos > 5 && isCurrentEpisode) {
         console.log('📍 Resuming to saved position:', formatTime(savedPos), 'for episode', savedEp)
+        isWaitingForResume = true
+
+        // Claim the pending resume immediately so duplicate ready events
+        // cannot schedule the same resume notification twice.
+        savedPositionForResume.value = null
+        savedPositionEpisode.value = null
 
         // Wait a bit for duration to be available, then seek
         setTimeout(() => {
@@ -1132,8 +1130,6 @@ function initializePlyr(initialUrl?: string) {
           // Check if saved position is near end (within 30 seconds)
           if (duration && duration > 1 && savedPos >= duration - 30) {
             console.log('⚠️ Episode already completed, starting from beginning')
-            savedPositionForResume.value = null
-            savedPositionEpisode.value = null
   
             // Resume playback after seek
             autoplay()
@@ -1145,14 +1141,17 @@ function initializePlyr(initialUrl?: string) {
             player.currentTime = savedPos
             console.log('✅ Resumed from saved position:', formatTime(savedPos), duration ? `/ ${formatTime(duration)}` : '')
             uiStore.showNotification(`恢复上次播放位置: ${formatTime(savedPos)}`, 'info')
-            savedPositionForResume.value = null
-            savedPositionEpisode.value = null
   
             // Resume playback after seek
             autoplay()
           }
         }, 500)
       } else {
+        if (isWaitingForResume) {
+          console.log('⏳ Resume flow already in progress, skipping fallback autoplay')
+          return
+        }
+
         // Either no saved position, or saved position is for a different episode
         // In both cases, start from beginning and check auto-play
         if (savedPos && !isCurrentEpisode) {
@@ -1430,6 +1429,25 @@ function initializePlyr(initialUrl?: string) {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.detail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.85rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  text-decoration: none;
+  background: var(--bg-secondary);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.detail-link:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--text-tertiary);
 }
 
 /* Progress */

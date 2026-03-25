@@ -23,7 +23,7 @@
     </section>
 
     <!-- Weekly Schedule Section -->
-    <WeeklySchedule @select-anime="handleSelectAnime" />
+    <WeeklySchedule @select-anime="openAnimeDetail" />
 
     <!-- Filters Section -->
     <section class="filters-section mb-4">
@@ -122,7 +122,8 @@
           <div v-for="anime in animeList" :key="anime.id" class="col">
             <AnimeCard
               :anime="anime"
-              @select="handleSelectAnime"
+              @open="openAnimeDetail"
+              @play="quickPlayAnime"
             />
           </div>
         </div>
@@ -306,11 +307,18 @@ function goToPage(page: number) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function handleSelectAnime(anime: Anime | string) {
+function openAnimeDetail(anime: Anime | string) {
   const animeId = typeof anime === 'string' ? anime : anime.id.toString()
   router.push({
-    name: 'Watch',
+    name: 'AnimeDetail',
     params: { animeId }
+  })
+}
+
+function quickPlayAnime(anime: Anime) {
+  router.push({
+    name: 'Watch',
+    params: { animeId: anime.id.toString() }
   })
 }
 

@@ -8,10 +8,15 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '动画列表' }
   },
   {
+    path: '/anime/:animeId',
+    name: 'AnimeDetail',
+    component: () => import('@/views/DetailView.vue'),
+    meta: { title: '动画详情' }
+  },
+  {
     path: '/watch/:animeId',
     name: 'Watch',
     component: () => import('@/views/WatchView.vue'),
-    props: true,
     meta: { title: '播放视频' }
   },
   {

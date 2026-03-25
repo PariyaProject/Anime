@@ -2,11 +2,11 @@
   <article class="anime-card" :aria-label="`${anime.title} - ${anime.episodes || '?'}集`">
     <div
       class="cover-wrapper"
-      @click="handleSelect"
+      @click="handleOpen"
       role="button"
       tabindex="0"
-      :aria-label="`播放 ${anime.title}`"
-      @keydown.enter="handleSelect"
+      :aria-label="`查看 ${anime.title} 详情`"
+      @keydown.enter="handleOpen"
     >
       <img
         :src="resolvedCover"
@@ -31,13 +31,22 @@
       <h3 class="title" :title="anime.title">
         {{ anime.title }}
       </h3>
-      <button
-        class="btn-play"
-        @click.stop="handleSelect"
-        :aria-label="`播放 ${anime.title}`"
-      >
-        播放
-      </button>
+      <div class="card-actions">
+        <button
+          class="btn-secondary"
+          @click.stop="handleOpen"
+          :aria-label="`查看 ${anime.title} 详情`"
+        >
+          详情
+        </button>
+        <button
+          class="btn-play"
+          @click.stop="handlePlay"
+          :aria-label="`播放 ${anime.title}`"
+        >
+          播放
+        </button>
+      </div>
     </div>
   </article>
 </template>
@@ -53,7 +62,8 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  select: [anime: Anime]
+  open: [anime: Anime]
+  play: [anime: Anime]
 }>()
 
 const getPlaceholderImage = () => {
@@ -86,8 +96,12 @@ const resolvedCover = computed(() => {
   return placeholderImage
 })
 
-function handleSelect() {
-  emit('select', props.anime)
+function handleOpen() {
+  emit('open', props.anime)
+}
+
+function handlePlay() {
+  emit('play', props.anime)
 }
 
 function handleImageError(event: Event) {
@@ -180,6 +194,13 @@ function handleImageError(event: Event) {
   gap: 8px;
 }
 
+.card-actions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
 .title {
   font-size: 0.9rem;
   font-weight: 500;
@@ -192,17 +213,30 @@ function handleImageError(event: Event) {
   line-height: 1.4;
 }
 
+.btn-secondary,
 .btn-play {
-  margin-top: auto;
   padding: 8px 16px;
-  background: var(--accent-color);
-  border: none;
   border-radius: 4px;
-  color: var(--bg-primary);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
+  transition: background 0.2s, opacity 0.2s, border-color 0.2s ease;
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-tertiary);
+}
+
+.btn-play {
+  background: var(--accent-color);
+  border: none;
+  color: var(--bg-primary);
 }
 
 .btn-play:hover {
@@ -211,6 +245,7 @@ function handleImageError(event: Event) {
 
 @media (prefers-reduced-motion: reduce) {
   .anime-card,
+  .btn-secondary,
   .btn-play {
     transition: none;
   }
