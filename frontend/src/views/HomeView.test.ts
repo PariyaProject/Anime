@@ -41,10 +41,8 @@ vi.mock('@/stores/history', () => ({
 vi.mock('@/stores/ui', () => ({
   useUiStore: () => ({
     darkMode: false,
-    playerModePreference: 'plyr',
     filters: { channel: 'all' },
     loadDarkModePreference: vi.fn(),
-    loadPlayerModePreference: vi.fn(),
     updateFilters: vi.fn(),
     notifications: []
   })

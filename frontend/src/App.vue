@@ -55,7 +55,6 @@ function getNotificationIcon(type: string): string {
 
 onMounted(() => {
   uiStore.loadDarkModePreference()
-  uiStore.loadPlayerModePreference()
 })
 </script>
 

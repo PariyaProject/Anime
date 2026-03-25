@@ -26,7 +26,6 @@ router.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
         // Store the original encrypted URL (cycani- ID) for future refresh capability
         const originalEncryptedUrl = episodeData.decryptedVideoUrl;
 
-        episodeData.iframeVideoUrl = `https://player.cycanime.com/?url=${episodeData.decryptedVideoUrl}`;
         // 尝试通过HTTP+AES解密获取真实的视频URL
         if (episodeData.decryptedVideoUrl) {
             console.log('🔍 尝试获取真实视频URL:', episodeData.decryptedVideoUrl);
@@ -35,9 +34,8 @@ router.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
                 episodeData.realVideoUrl = realVideoUrl;
                 console.log('✅ 成功获取真实视频URL:', realVideoUrl.substring(0, 100) + '...');
             } else {
-                // 直链解析失败时，保留 iframeVideoUrl 作为前端回退方案
                 episodeData.realVideoUrl = null;
-                console.log('⚠️ 真实视频URL解析失败，将由前端回退到 iframe 播放');
+                console.log('⚠️ 真实视频URL解析失败，当前剧集将不会返回可播放源');
             }
         }
 

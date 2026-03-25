@@ -33,14 +33,8 @@ export const episodeService = {
    * Handles different URL formats and ensures proper video source
    */
   parseVideoUrl(episodeData: EpisodeData): string | null {
-    // Prefer realVideoUrl if available (decrypted URL)
     if (episodeData.realVideoUrl) {
       return episodeData.realVideoUrl
-    }
-
-    // Fall back to iframe player URL when direct media parsing is unavailable
-    if (episodeData.iframeVideoUrl) {
-      return episodeData.iframeVideoUrl
     }
 
     return null
@@ -57,7 +51,6 @@ export const episodeService = {
     // Check for common video URL patterns
     const validPatterns = [
       /^https?:\/\/.+\.(mp4|webm|ogg|m3u8)(\?.*)?$/i,
-      /^https?:\/\/player\./i,
       /^cycani-/i, // Special pattern for cycani proxy URLs
     ]
 

@@ -41,7 +41,7 @@
       <div class="video-container">
         <div class="video-wrapper">
           <!-- Plyr Video Player -->
-          <div v-if="activePlayerMode === 'plyr'" id="plyr-player" ref="playerContainer" class="plyr-wrapper">
+          <div v-if="videoUrl" id="plyr-player" ref="playerContainer" class="plyr-wrapper">
             <video
               ref="videoElement"
               :poster="posterImage"
@@ -51,14 +51,6 @@
               您的浏览器不支持视频播放。
             </video>
           </div>
-          <iframe
-            v-else-if="iframeUrl"
-            class="video-frame"
-            :src="iframeUrl"
-            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-            allowfullscreen
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
           <div v-else class="video-frame video-frame-error">
             暂时无法加载可播放的视频源。
           </div>
@@ -210,24 +202,6 @@ const jumpEpisode = ref<number>(episode.value)
 
 // Direct video URL from the episode data
 const videoUrl = computed(() => playerStore.currentEpisodeData?.realVideoUrl || null)
-const iframeUrl = computed(() => playerStore.currentEpisodeData?.iframeVideoUrl || null)
-const activePlayerMode = computed<'plyr' | 'iframe'>(() => {
-  const preferredMode = uiStore.playerModePreference
-
-  if (preferredMode === 'iframe') {
-    return iframeUrl.value ? 'iframe' : 'plyr'
-  }
-
-  if (preferredMode === 'hybrid') {
-    if (videoUrl.value) return 'plyr'
-    if (iframeUrl.value) return 'iframe'
-    return 'plyr'
-  }
-
-  if (videoUrl.value) return 'plyr'
-  if (iframeUrl.value) return 'iframe'
-  return 'plyr'
-})
 
 const animeTitle = ref('')
 const animeCover = ref('')
@@ -374,16 +348,11 @@ async function loadEpisode() {
       await nextTick()
       await nextTick()
 
-      if (activePlayerMode.value === 'plyr') {
+      if (videoUrl.value) {
         // Initialize or update Plyr only when we have a direct media source
         await setupPlayer()
-      } else if (iframeUrl.value) {
-        if (uiStore.playerModePreference !== 'iframe') {
-          uiStore.showNotification('未能解析直链，已回退到 iframe 播放模式', 'warning')
-        }
-        console.warn('⚠️ Direct video URL unavailable, using iframe fallback')
       } else {
-        error.value = 'Failed to load playable video source'
+        error.value = '当前剧集暂时没有可用的 Plyr 播放源'
       }
     }
   } catch (err: any) {

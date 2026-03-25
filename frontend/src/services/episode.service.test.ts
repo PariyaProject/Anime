@@ -64,20 +64,7 @@ describe('Episode Service', () => {
       expect(result).toBe('https://example.com/real.mp4')
     })
 
-    it('falls back to iframeVideoUrl when realVideoUrl is not available', () => {
-      const episodeData = { ...({} as any), 
-        animeId: '123',
-        season: 1,
-        episode: 1,
-        iframeVideoUrl: 'https://player.example.com/watch?id=123'
-      }
-
-      const result = episodeService.parseVideoUrl(episodeData)
-
-      expect(result).toBe('https://player.example.com/watch?id=123')
-    })
-
-    it('returns null when neither realVideoUrl nor iframeVideoUrl are available', () => {
+    it('returns null when realVideoUrl is not available', () => {
       const episodeData = { ...({} as any), 
         animeId: '123',
         season: 1,
@@ -103,11 +90,6 @@ describe('Episode Service', () => {
 
     it('returns true for valid m3u8 URLs', () => {
       expect(episodeService.isValidVideoUrl('https://example.com/stream.m3u8')).toBe(true)
-    })
-
-    it('returns true for player URLs', () => {
-      expect(episodeService.isValidVideoUrl('https://player.example.com/video')).toBe(true)
-      expect(episodeService.isValidVideoUrl('http://player.cycanime.com/video')).toBe(true)
     })
 
     it('returns true for cycani proxy URLs', () => {
