@@ -4,10 +4,11 @@ const cheerio = require('cheerio');
 const { httpClient, getEnhancedHeaders } = require('../httpClient');
 const axios = require('axios');
 const { browserPool, puppeteer } = require('../puppeteerPool');
+const { requireAuth } = require('../AuthManager');
 function isValidVideoUrl(url) { return url && url.startsWith('http'); }
 
 // API路由 - 获取剧集信息
-router.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
+router.get('/api/episode/:bangumiId/:season/:episode', requireAuth, async (req, res) => {
     try {
         const { bangumiId, season, episode } = req.params;
         const targetUrl = `https://www.cycani.org/watch/${bangumiId}/${season}/${episode}.html`;
@@ -62,7 +63,7 @@ router.get('/api/episode/:bangumiId/:season/:episode', async (req, res) => {
 
 
 // API路由 - 刷新视频URL (处理过期URL)
-router.get('/api/refresh-video-url/:animeId/:season/:episode', async (req, res) => {
+router.get('/api/refresh-video-url/:animeId/:season/:episode', requireAuth, async (req, res) => {
     try {
         const { animeId, season, episode } = req.params;
         const targetUrl = `https://www.cycani.org/watch/${animeId}/${season}/${episode}.html`;
@@ -109,7 +110,7 @@ router.get('/api/refresh-video-url/:animeId/:season/:episode', async (req, res) 
 
 
 // API路由 - 视频代理
-router.get('/api/video-proxy', async (req, res) => {
+router.get('/api/video-proxy', requireAuth, async (req, res) => {
     try {
         const { url } = req.query;
 
@@ -148,7 +149,7 @@ router.get('/api/video-proxy', async (req, res) => {
 
 
 // 视频流代理（如果需要）
-router.get('/api/stream', async (req, res) => {
+router.get('/api/stream', requireAuth, async (req, res) => {
     try {
         const { url } = req.query;
 

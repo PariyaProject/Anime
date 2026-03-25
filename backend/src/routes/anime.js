@@ -4,6 +4,7 @@ const cheerio = require('cheerio');
 const { AnimeListUrlConstructor, ApiParameterValidator } = require('../urlConstructor');
 const { httpClient } = require('../httpClient');
 const { getAnimeIndexManager } = require('../animeIndexManager');
+const { requireAuth } = require('../AuthManager');
 
 // Initialize URL constructor
 const urlConstructor = new AnimeListUrlConstructor();
@@ -80,7 +81,7 @@ async function getAnimeEpisodeCount(animeId) {
 
 
 // API路由 - 获取动画列表
-router.get('/api/anime-list', async (req, res) => {
+router.get('/api/anime-list', requireAuth, async (req, res) => {
     try {
         // Extract and validate parameters
         const {
@@ -449,7 +450,7 @@ router.get('/api/anime-list', async (req, res) => {
 
 
 // API路由 - 每周番剧时间表
-router.get('/api/weekly-schedule', async (req, res) => {
+router.get('/api/weekly-schedule', requireAuth, async (req, res) => {
     try {
         const { day = 'all', refresh } = req.query; // day: 'monday', 'tuesday', ..., 'all', refresh: legacy parameter
 
@@ -687,7 +688,7 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
 
 
 // API路由 - 搜索动画 (Legacy - requires CAPTCHA, kept as fallback)
-router.get('/api/search-anime', async (req, res) => {
+router.get('/api/search-anime', requireAuth, async (req, res) => {
     try {
         const { q } = req.query;
 
@@ -757,7 +758,7 @@ router.get('/api/search-anime', async (req, res) => {
 
 
 // API路由 - 本地搜索 (New - uses local index, no CAPTCHA)
-router.get('/api/search-local', async (req, res) => {
+router.get('/api/search-local', requireAuth, async (req, res) => {
     try {
         const { q } = req.query;
 
@@ -817,7 +818,7 @@ router.get('/api/search-local', async (req, res) => {
 
 
 // API路由 - 索引状态
-router.get('/api/index-status', async (req, res) => {
+router.get('/api/index-status', requireAuth, async (req, res) => {
     try {
         const indexManager = getAnimeIndexManager();
         const stats = indexManager.getIndexStats();
@@ -838,7 +839,7 @@ router.get('/api/index-status', async (req, res) => {
 
 
 // API路由 - 重建索引 (Admin only)
-router.post('/api/index-rebuild', async (req, res) => {
+router.post('/api/index-rebuild', requireAuth, async (req, res) => {
     try {
         const indexManager = getAnimeIndexManager();
 
@@ -874,7 +875,7 @@ router.post('/api/index-rebuild', async (req, res) => {
 
 
 // API路由 - 获取动画详情
-router.get('/api/anime/:animeId', async (req, res) => {
+router.get('/api/anime/:animeId', requireAuth, async (req, res) => {
     try {
         const { animeId } = req.params;
         const detailUrl = `https://www.cycani.org/bangumi/${animeId}.html`;

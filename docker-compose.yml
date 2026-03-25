@@ -4,16 +4,19 @@ services:
     container_name: app-main
     restart: unless-stopped
     ports:
-      - "3006:3006"
+      - "${PORT:-3006}:${PORT:-3006}"
     volumes:
-      # Local directory binding for data persistence
-      - ./config:/app/config
+      # Local directory binding for data persistence, including app-data.sqlite
+      - ${ANIME_DATA_DIR:-./config}:/app/config
     environment:
-      - NODE_ENV=production
-      - PORT=3006
-      - RATE_LIMIT_DELAY=1000
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3006}
+      - RATE_LIMIT_DELAY=${RATE_LIMIT_DELAY:-1000}
+      - SUPERADMIN_USERNAME=${SUPERADMIN_USERNAME:-admin}
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:-anime-admin-2026}
+      - AUTH_COOKIE_INSECURE=${AUTH_COOKIE_INSECURE:-0}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3006/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${PORT:-3006}/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -36,7 +36,21 @@ mkdir -p ~/anime-project/config
 cd ~/anime-project
 ```
 
-### Step 2: Create docker-compose.yml
+### Step 2: Create `.env`
+
+Create a `.env` file in your project directory:
+
+```dotenv
+NODE_ENV=production
+PORT=3006
+RATE_LIMIT_DELAY=1000
+ANIME_DATA_DIR=./config
+SUPERADMIN_USERNAME=admin
+SUPERADMIN_PASSWORD=anime-admin-2026
+AUTH_COOKIE_INSECURE=0
+```
+
+### Step 3: Create docker-compose.yml
 
 Create `docker-compose.yml` in your project directory:
 
@@ -47,15 +61,18 @@ services:
     container_name: app-main
     restart: unless-stopped
     ports:
-      - "3006:3006"
+      - "${PORT:-3006}:${PORT:-3006}"
     volumes:
-      - ./config:/app/config
+      - ${ANIME_DATA_DIR:-./config}:/app/config
     environment:
-      - NODE_ENV=production
-      - PORT=3006
-      - RATE_LIMIT_DELAY=1000
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3006}
+      - RATE_LIMIT_DELAY=${RATE_LIMIT_DELAY:-1000}
+      - SUPERADMIN_USERNAME=${SUPERADMIN_USERNAME:-admin}
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:-anime-admin-2026}
+      - AUTH_COOKIE_INSECURE=${AUTH_COOKIE_INSECURE:-0}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3006/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${PORT:-3006}/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -65,7 +82,7 @@ services:
 
 **Important:** Replace `pariyaproject/anime` with your actual GitHub repository path.
 
-### Step 3: Start Services
+### Step 4: Start Services
 
 ```bash
 # Pull latest images and start services
@@ -78,7 +95,7 @@ docker-compose logs -f app-service
 docker-compose ps
 ```
 
-### Step 4: Access the Application
+### Step 5: Access the Application
 
 - **Local access**: http://localhost:3006
 - **Network access**: http://YOUR_MAC_IP:3006
@@ -103,15 +120,30 @@ docker image prune -f
 
 ## Data Management
 
+SQLite 用户、会话和播放记录数据库文件位于：
+
+```text
+/app/config/app-data.sqlite
+```
+
+因为 `docker-compose.yml` 已经把 `${ANIME_DATA_DIR:-./config}` 映射到容器内的 `/app/config`，所以数据库会直接保存在宿主机本地目录里，而不是只存在容器内部。
+
 ### Directory Structure
 
 ```
 ~/anime-project/
 ├── config/                    # Mounted to /app/config
-│   ├── watch-history.json     # Watch history data
+│   ├── app-data.sqlite        # SQLite database (users / sessions / watch progress)
 │   ├── anime-index.json       # Anime search index
-│   └── *.backup.*             # Automatic backups
+│   ├── backups/               # Download/import related backup snapshots
+│   └── *.backup.*             # Legacy backup files (if any)
 └── docker-compose.yml
+```
+
+如果你想把数据放到别的本地目录，比如外置盘或统一的数据目录，只需要在 `.env` 里改：
+
+```dotenv
+ANIME_DATA_DIR=/Users/yourname/anime-data
 ```
 
 ### Backup Data
@@ -218,6 +250,9 @@ docker-compose up -d
 | NODE_ENV | production | Node.js environment |
 | PORT | 3006 | Server port |
 | RATE_LIMIT_DELAY | 1000 | Request rate limit (ms) |
+| SUPERADMIN_USERNAME | admin | Seeded superadmin username |
+| SUPERADMIN_PASSWORD | anime-admin-2026 | Seeded superadmin password |
+| AUTH_COOKIE_INSECURE | 0 | Allow non-HTTPS auth cookies when explicitly needed |
 
 ## Performance Tips
 

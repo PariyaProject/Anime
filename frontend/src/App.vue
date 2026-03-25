@@ -1,14 +1,19 @@
 <template>
   <div id="app" :class="{ 'dark-mode': uiStore.darkMode }">
-    <AppNavbar />
-    <main class="main-content">
-      <AppContainer>
-        <router-view v-slot="{ Component, route }">
-          <transition name="fade" mode="out-in">
+    <AppNavbar v-if="!hideAppChrome" />
+    <main class="main-content" :class="{ 'main-content-auth': hideAppChrome }">
+      <router-view v-slot="{ Component, route }">
+        <transition name="fade" mode="out-in">
+          <AppContainer v-if="!route.meta.hideAppChrome">
             <component :is="Component" :key="route.name === 'Watch' ? route.path : route.fullPath" />
-          </transition>
-        </router-view>
-      </AppContainer>
+          </AppContainer>
+          <component
+            :is="Component"
+            v-else
+            :key="route.name === 'Watch' ? route.path : route.fullPath"
+          />
+        </transition>
+      </router-view>
     </main>
 
     <!-- Notifications -->
@@ -36,12 +41,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import AppNavbar from '@/components/layout/AppNavbar.vue'
 import AppContainer from '@/components/layout/AppContainer.vue'
 import { useUiStore } from '@/stores/ui'
 
+const route = useRoute()
 const uiStore = useUiStore()
+const hideAppChrome = computed(() => Boolean(route.meta.hideAppChrome))
 
 function getNotificationIcon(type: string): string {
   const icons: Record<string, string> = {
@@ -53,7 +61,7 @@ function getNotificationIcon(type: string): string {
   return icons[type] || icons.info
 }
 
-onMounted(() => {
+onMounted(async () => {
   uiStore.loadDarkModePreference()
 })
 </script>
@@ -67,6 +75,10 @@ onMounted(() => {
 
 .main-content {
   flex: 1;
+}
+
+.main-content-auth {
+  min-height: 100vh;
 }
 
 .notifications-container {

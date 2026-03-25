@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { WatchHistoryManager } = require('../WatchHistoryManager');
+const { requireAuth } = require('../AuthManager');
 
 // 观看历史API路由
-router.post('/api/watch-history', async (req, res) => {
+router.post('/api/watch-history', requireAuth, async (req, res) => {
     try {
-        const { animeInfo, episodeInfo, position = 0 } = req.body;
+        const { animeInfo, episodeInfo, position = 0, sourceDeviceId = '' } = req.body;
 
         if (!animeInfo || !episodeInfo) {
             return res.status(400).json({
@@ -15,9 +16,11 @@ router.post('/api/watch-history', async (req, res) => {
         }
 
         const watchRecord = await WatchHistoryManager.addToWatchHistory(
+            req.authUser.id,
             animeInfo,
             episodeInfo,
-            position
+            position,
+            sourceDeviceId
         );
 
         res.json({
@@ -38,7 +41,14 @@ router.post('/api/watch-history', async (req, res) => {
 router.get('/api/watch-history', async (req, res) => {
     try {
         const { limit = 20 } = req.query;
-        const history = await WatchHistoryManager.getWatchHistory(parseInt(limit));
+        if (!req.authUser) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const history = await WatchHistoryManager.getWatchHistory(req.authUser.id, parseInt(limit));
 
         res.json({
             success: true,
@@ -56,7 +66,14 @@ router.get('/api/watch-history', async (req, res) => {
 
 router.get('/api/continue-watching', async (req, res) => {
     try {
-        const continueWatching = await WatchHistoryManager.getContinueWatching();
+        if (!req.authUser) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const continueWatching = await WatchHistoryManager.getContinueWatching(req.authUser.id);
 
         res.json({
             success: true,
@@ -74,8 +91,16 @@ router.get('/api/continue-watching', async (req, res) => {
 
 router.get('/api/last-position/:animeId/:season/:episode', async (req, res) => {
     try {
+        if (!req.authUser) {
+            return res.status(401).json({
+                success: false,
+                error: '请先登录'
+            });
+        }
+
         const { animeId, season, episode } = req.params;
         const position = await WatchHistoryManager.getLastPosition(
+            req.authUser.id,
             animeId,
             parseInt(season),
             parseInt(episode)

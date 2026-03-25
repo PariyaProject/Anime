@@ -85,6 +85,8 @@ cp .env.example .env.local
 
 Then edit `.env.local` and keep your preferred ports there. This file is ignored by Git, so it is safe for machine-local development preferences.
 
+For Docker deployment, use `.env` instead. `docker compose` reads `.env`, while the local dev script reads `.env.local`.
+
 ### Access
 
 Open your browser and navigate to:

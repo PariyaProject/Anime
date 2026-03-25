@@ -1,8 +1,32 @@
 <template>
-  <div class="home-view py-4">
+  <div class="home-view">
+    <div class="home-layout">
+    <section class="home-stage">
+      <div class="stage-copy">
+        <p class="stage-kicker">{{ channelDisplayName }}</p>
+        <h1 class="stage-title">ANIME</h1>
+        <div class="stage-meta">
+          <span class="stage-chip">{{ totalAnimeLabel }}</span>
+          <span class="stage-chip">{{ hasContinueWatching ? `继续观看 ${groupedAnime.length}` : '持续更新' }}</span>
+        </div>
+      </div>
+
+      <div class="stage-posters" aria-hidden="true">
+        <button
+          v-for="anime in featuredShelf"
+          :key="`stage-${anime.id}`"
+          type="button"
+          class="stage-poster"
+          @click="openAnimeDetail(anime)"
+        >
+          <img :src="getCoverImage(anime.cover)" :alt="anime.title" />
+        </button>
+      </div>
+    </section>
+
     <!-- Continue Watching Section -->
-    <section v-if="hasContinueWatching" class="continue-watching-section mb-3">
-      <h2 class="section-header mb-4">
+    <section v-if="hasContinueWatching" class="continue-watching-section">
+      <h2 class="section-header section-header-spaced">
         继续观看
       </h2>
       <div class="continue-watching-container">
@@ -25,73 +49,82 @@
     <!-- Weekly Schedule Section -->
     <WeeklySchedule @select-anime="openAnimeDetail" />
 
-    <!-- Filters Section -->
-    <section class="filters-section mb-4">
-      <div class="filters-card">
-        <div class="filters-body">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <input
-                v-model="filters.search"
-                type="text"
-                class="form-input"
-                placeholder="搜索动画..."
-                @input="debouncedSearch"
-              />
-            </div>
-            <div class="col-md-2">
-              <select
-                v-model="filters.genre"
-                class="form-select"
-                @change="applyFilters"
-                :disabled="isSearchMode"
-                :title="isSearchMode ? '文本搜索时不可用' : ''"
-              >
-                <option value="">全部类型</option>
-                <option value="TV">TV版</option>
-                <option value="电影">电影</option>
-                <option value="OVA">OVA</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <select
-                v-model="filters.year"
-                class="form-select"
-                @change="applyFilters"
-                :disabled="isSearchMode"
-                :title="isSearchMode ? '文本搜索时不可用' : ''"
-              >
-                <option value="">全部年份</option>
-                <option v-for="year in recentYears" :key="year" :value="year.toString()">
-                  {{ year }}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <select
-                v-model="filters.sort"
-                class="form-select"
-                @change="applyFilters"
-                :disabled="isSearchMode"
-                :title="isSearchMode ? '文本搜索时不可用' : ''"
-              >
-                <option value="time">最新</option>
-                <option value="hits">热门</option>
-                <option value="score">评分</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <button class="btn-reset w-100" @click="resetFilters">
-                重置筛选
-              </button>
+    <section class="catalog-shell">
+      <div class="catalog-header">
+        <div>
+          <p class="catalog-kicker">{{ channelDisplayName }}</p>
+          <h2 class="catalog-title">片单</h2>
+        </div>
+        <span class="catalog-meta">{{ totalAnimeLabel }}</span>
+      </div>
+
+      <!-- Filters Section -->
+      <section class="filters-section">
+        <div class="filters-card">
+          <div class="filters-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <input
+                  v-model="filters.search"
+                  type="text"
+                  class="form-input"
+                  placeholder="搜索动画..."
+                  @input="debouncedSearch"
+                />
+              </div>
+              <div class="col-md-2">
+                <select
+                  v-model="filters.genre"
+                  class="form-select"
+                  @change="applyFilters"
+                  :disabled="isSearchMode"
+                  :title="isSearchMode ? '文本搜索时不可用' : ''"
+                >
+                  <option value="">全部类型</option>
+                  <option value="TV">TV版</option>
+                  <option value="电影">电影</option>
+                  <option value="OVA">OVA</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <select
+                  v-model="filters.year"
+                  class="form-select"
+                  @change="applyFilters"
+                  :disabled="isSearchMode"
+                  :title="isSearchMode ? '文本搜索时不可用' : ''"
+                >
+                  <option value="">全部年份</option>
+                  <option v-for="year in recentYears" :key="year" :value="year.toString()">
+                    {{ year }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <select
+                  v-model="filters.sort"
+                  class="form-select"
+                  @change="applyFilters"
+                  :disabled="isSearchMode"
+                  :title="isSearchMode ? '文本搜索时不可用' : ''"
+                >
+                  <option value="time">最新</option>
+                  <option value="hits">热门</option>
+                  <option value="score">评分</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <button class="btn-reset w-100" @click="resetFilters">
+                  重置筛选
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Anime Grid Section -->
-    <section class="anime-grid-section">
+      <!-- Anime Grid Section -->
+      <section class="anime-grid-section">
       <div v-if="loading" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-6 g-3">
         <div v-for="i in 12" :key="i" class="col">
           <el-skeleton animated style="height: 100%">
@@ -170,7 +203,9 @@
           </p>
         </div>
       </div>
+      </section>
     </section>
+    </div>
   </div>
 </template>
 
@@ -225,6 +260,8 @@ const totalPages = computed(() => animeStore.totalPages)
 const totalCount = computed(() => animeStore.totalCount)
 const hasNextPage = computed(() => animeStore.hasNextPage)
 const hasPrevPage = computed(() => animeStore.hasPrevPage)
+const featuredShelf = computed(() => animeList.value.slice(0, 5))
+const totalAnimeLabel = computed(() => `${totalCount.value || animeList.value.length || 0} 部`)
 
 // Search mode: true when user has entered text in search box
 const isSearchMode = computed(() => Boolean(filters.value.search && filters.value.search.trim().length >= 2))
@@ -235,10 +272,10 @@ const channelDisplayName = computed(() => {
 })
 
 const continueWatching = computed(() => historyStore.continueWatching)
-const hasContinueWatching = computed(() => historyStore.hasContinueWatching)
 
 // Use grouped history for better UX
 const { groupedAnime } = useGroupedHistory(continueWatching)
+const hasContinueWatching = computed(() => groupedAnime.value.length > 0)
 
 const recentYears = computed(() => {
   const currentYear = new Date().getFullYear()
@@ -322,6 +359,23 @@ function quickPlayAnime(anime: Anime) {
   })
 }
 
+function getCoverImage(cover?: string): string {
+  if (!cover) {
+    return placeholderImage
+  }
+
+  if (cover.startsWith('http://') || cover.startsWith('https://')) {
+    return cover
+  }
+
+  if (cover.startsWith('/api/') || cover.startsWith('/placeholder/')) {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+    return `${apiBaseUrl}${cover}`
+  }
+
+  return placeholderImage
+}
+
 function resumeWatching(anime: GroupedAnime) {
   router.push({
     name: 'Watch',
@@ -401,6 +455,164 @@ onMounted(async () => {
 <style scoped>
 .home-view {
   min-height: 100vh;
+  position: relative;
+  padding-inline: clamp(0.5rem, 1.4vw, 1.1rem);
+}
+
+.home-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(100%, 1500px);
+  margin: 0 auto;
+  padding-block: 0.7rem 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .home-view {
+    padding-inline: 0.65rem;
+  }
+}
+
+.home-view::before,
+.home-view::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.home-view::before {
+  background:
+    radial-gradient(circle at top left, rgba(255, 179, 71, 0.16), transparent 24%),
+    radial-gradient(circle at top right, rgba(78, 156, 255, 0.12), transparent 22%);
+  opacity: 0.95;
+}
+
+.home-view::after {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.26), transparent 80%);
+}
+
+.home-stage,
+.continue-watching-section,
+.catalog-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.home-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.95fr);
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.6rem 1.5rem;
+  border-radius: 1.9rem;
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  background:
+    radial-gradient(circle at top right, rgba(255, 182, 77, 0.18), transparent 28%),
+    linear-gradient(145deg, color-mix(in srgb, var(--bg-primary) 88%, #ffffff 12%), var(--bg-secondary));
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--shadow) 70%, transparent);
+  overflow: hidden;
+}
+
+.home-stage::after {
+  content: '';
+  position: absolute;
+  inset: auto -10% -40% 30%;
+  height: 220px;
+  background: radial-gradient(circle, rgba(87, 154, 255, 0.18), transparent 70%);
+  pointer-events: none;
+}
+
+.stage-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.stage-kicker,
+.catalog-kicker {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.24rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.stage-title {
+  margin: 0;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+  font-size: clamp(3rem, 7vw, 5.3rem);
+  line-height: 0.92;
+  color: var(--text-primary);
+}
+
+.stage-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.stage-chip,
+.catalog-meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.15rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
+  color: var(--text-primary);
+  backdrop-filter: blur(14px);
+}
+
+.stage-posters {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 290px;
+  padding-right: 0.5rem;
+}
+
+.stage-poster {
+  width: 150px;
+  aspect-ratio: 3 / 4;
+  border: 0;
+  border-radius: 1.4rem;
+  overflow: hidden;
+  padding: 0;
+  background: var(--bg-secondary);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22);
+  transform-origin: center bottom;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.stage-poster + .stage-poster {
+  margin-left: -1.9rem;
+}
+
+.stage-poster:nth-child(1) { transform: translateY(18px) rotate(-10deg); }
+.stage-poster:nth-child(2) { transform: translateY(-8px) rotate(-4deg); }
+.stage-poster:nth-child(3) { transform: translateY(12px) rotate(3deg); }
+.stage-poster:nth-child(4) { transform: translateY(-14px) rotate(8deg); }
+.stage-poster:nth-child(5) { transform: translateY(6px) rotate(13deg); }
+
+.stage-poster:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.28);
+}
+
+.stage-poster img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 /* Section Headers */
@@ -411,6 +623,39 @@ onMounted(async () => {
   margin: 0;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--border-color);
+}
+
+.section-header-spaced {
+  margin-bottom: 1rem;
+}
+
+.continue-watching-section,
+.catalog-shell {
+  padding: 1.35rem 1.25rem;
+  border-radius: 1.7rem;
+  border: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--shadow) 62%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.filters-section {
+  margin-bottom: 1rem;
+}
+
+.catalog-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.catalog-title {
+  margin: 0.2rem 0 0;
+  color: var(--text-primary);
+  font-size: clamp(1.4rem, 2.2vw, 2rem);
+  font-weight: 600;
 }
 
 /* Continue Watching Container - Horizontal Scroll */
@@ -466,14 +711,14 @@ onMounted(async () => {
 
 /* Filters Card */
 .filters-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px var(--shadow);
+  background: color-mix(in srgb, var(--bg-primary) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  border-radius: 1.1rem;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--shadow) 42%, transparent);
 }
 
 .filters-body {
-  padding: 1rem;
+  padding: 1.05rem;
 }
 
 /* Form Input */
@@ -485,12 +730,13 @@ onMounted(async () => {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 0.9rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .form-input:focus {
   outline: none;
   border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 16%, transparent);
 }
 
 .form-input::placeholder {
@@ -507,12 +753,13 @@ onMounted(async () => {
   color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .form-select:focus {
   outline: none;
   border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 16%, transparent);
 }
 
 .form-select:disabled {
@@ -524,17 +771,18 @@ onMounted(async () => {
 /* Reset Button */
 .btn-reset {
   padding: 0.6rem 1rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--bg-secondary) 82%, transparent), var(--bg-tertiary));
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  border-radius: 0.85rem;
   color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.18s ease;
 }
 
 .btn-reset:hover {
   background: var(--bg-tertiary);
+  transform: translateY(-1px);
 }
 
 /* Pagination */
@@ -623,8 +871,39 @@ onMounted(async () => {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  .home-layout {
+    gap: 0.85rem;
+    padding-block: 0.45rem 1rem;
+  }
+
+  .home-stage {
+    grid-template-columns: 1fr;
+    padding: 1.2rem 1rem;
+  }
+
+  .stage-posters {
+    justify-content: flex-start;
+    min-height: 210px;
+    overflow-x: auto;
+    padding-bottom: 0.6rem;
+  }
+
+  .stage-poster {
+    width: 118px;
+    flex: 0 0 auto;
+  }
+
+  .stage-poster + .stage-poster {
+    margin-left: -1.1rem;
+  }
+
   .section-header {
     font-size: 1.25rem;
+  }
+
+  .catalog-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .filters-body {

@@ -1,137 +1,132 @@
 <template>
   <div class="watch-view">
-    <!-- Loading State with Skeleton -->
-    <div v-if="loading" class="theater-mode" style="opacity: 0.7; pointer-events: none;">
-      <div class="video-container">
-        <el-skeleton style="width: 100%; height: 100%" animated>
-          <template #template>
-            <el-skeleton-item variant="image" style="width: 100%; height: 60vh; border-radius: 8px;" />
-          </template>
-        </el-skeleton>
+    <div class="watch-layout">
+      <!-- Loading State with Skeleton -->
+      <div v-if="loading" class="theater-mode" style="opacity: 0.7; pointer-events: none;">
+        <div class="video-container">
+          <el-skeleton style="width: 100%; height: 100%" animated>
+            <template #template>
+              <el-skeleton-item variant="image" style="width: 100%; height: 60vh; border-radius: 8px;" />
+            </template>
+          </el-skeleton>
+        </div>
+        <div class="side-panel">
+          <el-skeleton style="width: 100%" animated>
+            <template #template>
+              <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                <el-skeleton-item variant="image" style="width: 100px; height: 140px; border-radius: 4px;" />
+                <div style="flex: 1">
+                  <el-skeleton-item variant="text" style="width: 80%; height: 24px; margin-bottom: 10px;" />
+                  <el-skeleton-item variant="text" style="width: 40%; margin-bottom: 10px;" />
+                  <el-skeleton-item variant="text" style="width: 100%" />
+                  <el-skeleton-item variant="text" style="width: 90%" />
+                </div>
+              </div>
+              <div style="margin-top: 2rem;">
+                <el-skeleton-item variant="h3" style="width: 30%; margin-bottom: 10px;" />
+                <el-skeleton-item variant="p" style="width: 100%; height: 20px; margin-bottom: 5px;" v-for="i in 5" :key="i" />
+              </div>
+            </template>
+          </el-skeleton>
+        </div>
       </div>
-      <div class="side-panel">
-        <el-skeleton style="width: 100%" animated>
-          <template #template>
-            <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-              <el-skeleton-item variant="image" style="width: 100px; height: 140px; border-radius: 4px;" />
-              <div style="flex: 1">
-                <el-skeleton-item variant="text" style="width: 80%; height: 24px; margin-bottom: 10px;" />
-                <el-skeleton-item variant="text" style="width: 40%; margin-bottom: 10px;" />
-                <el-skeleton-item variant="text" style="width: 100%" />
-                <el-skeleton-item variant="text" style="width: 90%" />
+
+      <!-- Error State -->
+      <div v-else-if="error" class="text-center py-5">
+        <ErrorMessage :message="error" @retry="loadEpisode" />
+      </div>
+
+      <!-- Theater Mode Layout - True Center -->
+      <div v-else class="theater-mode">
+        <!-- Centered Video Player -->
+        <div class="video-container">
+          <div class="video-wrapper">
+            <div v-if="videoUrl" id="plyr-player" ref="playerContainer" class="plyr-wrapper">
+              <video
+                ref="videoElement"
+                :poster="posterImage"
+                class="video-element"
+                playsinline
+              >
+                您的浏览器不支持视频播放。
+              </video>
+            </div>
+            <div v-else class="video-frame video-frame-error">
+              暂时无法加载可播放的视频源。
+            </div>
+          </div>
+
+          <div class="video-title-overlay">
+            <h1 class="video-title">{{ episodeTitle }}</h1>
+            <p class="video-meta">
+              <span v-if="animeTitle">{{ animeTitle }}</span>
+              <span v-if="season > 0"> · 第 {{ season }} 季</span>
+              <span> · 第 {{ episode }} 集</span>
+            </p>
+          </div>
+
+          <div class="control-bar">
+            <button class="btn-control" @click="playPrevious" :disabled="!hasPrevious" title="上一集">
+              ← 上一集
+            </button>
+            <label class="autoplay-toggle">
+              <input type="checkbox" :checked="autoPlayEnabled" @change="toggleAutoplay" />
+              <span>自动播放</span>
+            </label>
+            <button class="btn-control" @click="playNext" :disabled="!hasNext" title="下一集">
+              下一集 →
+            </button>
+            <router-link to="/" class="btn-back">返回列表</router-link>
+          </div>
+        </div>
+
+        <div class="side-panel">
+          <div class="panel-section anime-info">
+            <img :src="displayCoverImage" :alt="animeTitle" class="anime-cover" @error="handleImageError" />
+            <div class="anime-details">
+              <h3 class="anime-title">{{ animeTitle || '加载中...' }}</h3>
+              <div class="anime-tags">
+                <span class="tag">{{ animeType || 'TV' }}</span>
+                <span class="tag">{{ animeYear || '未知' }}</span>
+                <span class="tag">{{ totalEpisodes || '?' }} 集</span>
+              </div>
+              <p v-if="animeDescription" class="anime-description" :title="animeDescription">{{ animeDescription }}</p>
+              <router-link
+                :to="{ name: 'AnimeDetail', params: { animeId: currentAnimeId || animeId } }"
+                class="detail-link"
+              >
+                查看作品详情
+              </router-link>
+            </div>
+          </div>
+
+          <div class="panel-section progress-section">
+            <div class="progress-header">播放进度</div>
+            <div class="progress-track">
+              <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
+            </div>
+            <div class="progress-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</div>
+          </div>
+
+          <div class="panel-section episode-list">
+            <div class="episode-header">
+              <span>选集</span>
+              <div class="jump-box">
+                <input v-model.number="jumpEpisode" type="number" placeholder="集数" :min="1" class="jump-input" />
+                <button class="jump-btn" @click="jumpToEpisode">跳转</button>
               </div>
             </div>
-            <div style="margin-top: 2rem;">
-              <el-skeleton-item variant="h3" style="width: 30%; margin-bottom: 10px;" />
-              <el-skeleton-item variant="p" style="width: 100%; height: 20px; margin-bottom: 5px;" v-for="i in 5" :key="i" />
+            <div class="episode-grid">
+              <button
+                v-for="ep in episodeList"
+                :key="ep"
+                class="episode-item"
+                :class="{ active: ep === episode && season === currentSeason }"
+                @click="selectEpisode(ep)"
+              >
+                {{ ep }}
+              </button>
             </div>
-          </template>
-        </el-skeleton>
-      </div>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="text-center py-5">
-      <ErrorMessage :message="error" @retry="loadEpisode" />
-    </div>
-
-    <!-- Theater Mode Layout - True Center -->
-    <div v-else class="theater-mode">
-      <!-- Centered Video Player -->
-      <div class="video-container">
-        <div class="video-wrapper">
-          <!-- Plyr Video Player -->
-          <div v-if="videoUrl" id="plyr-player" ref="playerContainer" class="plyr-wrapper">
-            <video
-              ref="videoElement"
-              :poster="posterImage"
-              class="video-element"
-              playsinline
-            >
-              您的浏览器不支持视频播放。
-            </video>
-          </div>
-          <div v-else class="video-frame video-frame-error">
-            暂时无法加载可播放的视频源。
-          </div>
-        </div>
-
-        <!-- Video Title Overlay -->
-        <div class="video-title-overlay">
-          <h1 class="video-title">{{ episodeTitle }}</h1>
-          <p class="video-meta">
-            <span v-if="animeTitle">{{ animeTitle }}</span>
-            <span v-if="season > 0"> · 第 {{ season }} 季</span>
-            <span> · 第 {{ episode }} 集</span>
-          </p>
-        </div>
-
-        <!-- Control Bar -->
-        <div class="control-bar">
-          <button class="btn-control" @click="playPrevious" :disabled="!hasPrevious" title="上一集">
-            ← 上一集
-          </button>
-          <label class="autoplay-toggle">
-            <input type="checkbox" :checked="autoPlayEnabled" @change="toggleAutoplay" />
-            <span>自动播放</span>
-          </label>
-          <button class="btn-control" @click="playNext" :disabled="!hasNext" title="下一集">
-            下一集 →
-          </button>
-          <router-link to="/" class="btn-back">返回列表</router-link>
-        </div>
-      </div>
-
-      <!-- Side Panel -->
-      <div class="side-panel">
-        <!-- Anime Info -->
-        <div class="panel-section anime-info">
-          <img :src="displayCoverImage" :alt="animeTitle" class="anime-cover" @error="handleImageError" />
-          <div class="anime-details">
-            <h3 class="anime-title">{{ animeTitle || '加载中...' }}</h3>
-            <div class="anime-tags">
-              <span class="tag">{{ animeType || 'TV' }}</span>
-              <span class="tag">{{ animeYear || '未知' }}</span>
-              <span class="tag">{{ totalEpisodes || '?' }} 集</span>
-            </div>
-            <p v-if="animeDescription" class="anime-description" :title="animeDescription">{{ animeDescription }}</p>
-            <router-link
-              :to="{ name: 'AnimeDetail', params: { animeId: currentAnimeId || animeId } }"
-              class="detail-link"
-            >
-              查看作品详情
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Progress -->
-        <div class="panel-section progress-section">
-          <div class="progress-header">播放进度</div>
-          <div class="progress-track">
-            <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
-          </div>
-          <div class="progress-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</div>
-        </div>
-
-        <!-- Episode List -->
-        <div class="panel-section episode-list">
-          <div class="episode-header">
-            <span>选集</span>
-            <div class="jump-box">
-              <input v-model.number="jumpEpisode" type="number" placeholder="集数" :min="1" class="jump-input" />
-              <button class="jump-btn" @click="jumpToEpisode">跳转</button>
-            </div>
-          </div>
-          <div class="episode-grid">
-            <button
-              v-for="ep in episodeList"
-              :key="ep"
-              class="episode-item"
-              :class="{ active: ep === episode && season === currentSeason }"
-              @click="selectEpisode(ep)"
-            >
-              {{ ep }}
-            </button>
           </div>
         </div>
       </div>
@@ -1173,7 +1168,14 @@ function initializePlyr(initialUrl?: string) {
 .watch-view {
   min-height: 100vh;
   background: var(--bg-primary);
-  padding-top: 10px; /* Reduced navbar spacing */
+  padding-top: 10px;
+  padding-inline: clamp(0.5rem, 1.4vw, 1.1rem);
+}
+
+.watch-layout {
+  width: min(100%, 1720px);
+  margin: 0 auto;
+  padding-block: 0.65rem 1.5rem;
 }
 
 .theater-mode {
@@ -1190,7 +1192,7 @@ function initializePlyr(initialUrl?: string) {
   justify-content: center;
   width: 100%;
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 1rem 0;
   box-sizing: border-box;
 }
 
@@ -1548,11 +1550,16 @@ function initializePlyr(initialUrl?: string) {
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .watch-view {
-    padding-top: 10px; /* Keep consistent navbar spacing */
+    padding-top: 10px;
+    padding-inline: 0.65rem;
+  }
+
+  .watch-layout {
+    padding-block: 0.55rem 1rem;
   }
 
   .video-container {
-    padding: 1rem;
+    padding: 0.9rem 0;
   }
 
   .video-title {

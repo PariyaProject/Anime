@@ -1,115 +1,115 @@
 <template>
-  <div class="history-view py-4">
-    <h4 class="history-header mb-4">
-      <i class="bi bi-clock-history me-2"></i>
-      观看历史
-    </h4>
+  <div class="history-view">
+    <div class="history-layout">
+      <h4 class="history-header mb-4">
+        <i class="bi bi-clock-history me-2"></i>
+        观看历史
+      </h4>
 
-    <div v-if="loading" class="text-center py-5">
-      <LoadingSpinner />
-      <p class="mt-3 text-muted">加载中...</p>
-    </div>
+      <div v-if="loading" class="text-center py-5">
+        <LoadingSpinner />
+        <p class="mt-3 text-muted">加载中...</p>
+      </div>
 
-    <div v-else-if="error" class="text-center py-5">
-      <ErrorMessage :message="error" @retry="loadHistory" />
-    </div>
+      <div v-else-if="error" class="text-center py-5">
+        <ErrorMessage :message="error" @retry="loadHistory" />
+      </div>
 
-    <div v-else-if="!hasHistory" class="text-center py-5">
-      <EmptyState
-        icon="bi bi-clock-history"
-        title="暂无观看历史"
-        description="开始观看动画后，历史记录会显示在这里"
-      />
-    </div>
-
-    <div v-else>
-      <!-- Search and Filter Section -->
-      <section class="filters-section mb-4">
-        <div class="filters-card">
-          <div class="filters-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  class="form-input"
-                  placeholder="搜索动画..."
-                />
-              </div>
-              <div class="col-md-3">
-                <select v-model="filterStatus" class="form-select">
-                  <option value="">全部状态</option>
-                  <option value="completed">已看完</option>
-                  <option value="watching">观看中</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <select v-model="sortBy" class="form-select">
-                  <option value="date">按时间排序</option>
-                  <option value="name">按名称排序</option>
-                  <option value="progress">按进度排序</option>
-                </select>
-              </div>
-            </div>
-            <div v-if="hasActiveFilters" class="mt-2 filter-actions">
-              <button class="btn-clear" @click="resetFilters">
-                <i class="bi bi-x-circle me-1"></i>
-                清除筛选
-              </button>
-              <span class="result-count">
-                找到 {{ filteredHistory.length }} 条记录
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- History Grid -->
-      <div v-if="filteredHistory.length === 0" class="text-center py-5">
+      <div v-else-if="!hasHistory" class="text-center py-5">
         <EmptyState
-          icon="bi bi-search"
-          title="没有找到匹配的记录"
-          description="尝试调整搜索条件或清除筛选"
+          icon="bi bi-clock-history"
+          title="暂无观看历史"
+          description="开始观看动画后，历史记录会显示在这里"
         />
       </div>
 
-      <div v-else class="history-grid">
-        <div
-          v-for="item in filteredHistory"
-          :key="`${item.animeId}-${item.season}-${item.episode}`"
-          class="history-item"
-        >
-          <div
-            class="history-card cursor-pointer"
-            :class="{ 'local-only': (item as any).isLocalOnly }"
-            @click="resumeWatching(item)"
-          >
-            <img
-              :src="item.animeCover || placeholderImage"
-              :alt="item.animeTitle"
-              class="history-card-image"
-            />
-
-            <!-- 本地角标 - 放在图片后面 -->
-            <div v-if="(item as any).isLocalOnly" class="corner-badge" title="仅本地存储">
-              <span class="corner-text">本地</span>
-            </div>
-            <div class="history-card-body">
-              <h6 class="history-card-title">{{ item.animeTitle }}</h6>
-              <p class="history-card-meta">
-                第 {{ item.season }} 季 · 第 {{ item.episode }} 集
-              </p>
-              <div class="progress-bar-container">
-                <div
-                  class="progress-bar-fill"
-                  :style="{ width: `${getProgress(item)}%` }"
-                ></div>
+      <div v-else>
+        <section class="filters-section mb-4">
+          <div class="filters-card">
+            <div class="filters-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <input
+                    v-model="searchQuery"
+                    type="text"
+                    class="form-input"
+                    placeholder="搜索动画..."
+                  />
+                </div>
+                <div class="col-md-3">
+                  <select v-model="filterStatus" class="form-select">
+                    <option value="">全部状态</option>
+                    <option value="completed">已看完</option>
+                    <option value="watching">观看中</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <select v-model="sortBy" class="form-select">
+                    <option value="date">按时间排序</option>
+                    <option value="name">按名称排序</option>
+                    <option value="progress">按进度排序</option>
+                  </select>
+                </div>
               </div>
-              <div class="history-card-footer">
-                <span class="time-text">
-                  {{ formatTime(item.position) }} / {{ formatTime(item.duration) }}
+              <div v-if="hasActiveFilters" class="mt-2 filter-actions">
+                <button class="btn-clear" @click="resetFilters">
+                  <i class="bi bi-x-circle me-1"></i>
+                  清除筛选
+                </button>
+                <span class="result-count">
+                  找到 {{ filteredHistory.length }} 条记录
                 </span>
-                <span v-if="item.completed" class="badge-completed">已看完</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div v-if="filteredHistory.length === 0" class="text-center py-5">
+          <EmptyState
+            icon="bi bi-search"
+            title="没有找到匹配的记录"
+            description="尝试调整搜索条件或清除筛选"
+          />
+        </div>
+
+        <div v-else class="history-grid">
+          <div
+            v-for="item in filteredHistory"
+            :key="`${item.animeId}-${item.season}-${item.episode}`"
+            class="history-item"
+          >
+            <div
+              class="history-card cursor-pointer"
+              :class="{ 'local-only': (item as any).isLocalOnly }"
+              @click="resumeWatching(item)"
+            >
+              <img
+                :src="item.animeCover || placeholderImage"
+                :alt="item.animeTitle"
+                class="history-card-image"
+              />
+
+              <div v-if="(item as any).isLocalOnly" class="corner-badge" title="仅本地存储">
+                <span class="corner-text">本地</span>
+              </div>
+              <div class="history-card-body">
+                <h6 class="history-card-title">{{ item.animeTitle }}</h6>
+                <p class="history-card-meta">
+                  第 {{ item.season }} 季 · 第 {{ item.episode }} 集
+                </p>
+                <div class="progress-bar-container">
+                  <div
+                    class="progress-bar-fill"
+                    :class="{ 'estimated-progress': isEstimatedProgress(item) }"
+                    :style="{ width: `${getDisplayProgress(item)}%` }"
+                  ></div>
+                </div>
+                <div class="history-card-footer">
+                  <span class="time-text">
+                    {{ formatProgressLabel(item) }}
+                  </span>
+                  <span v-if="item.completed" class="badge-completed">已看完</span>
+                </div>
               </div>
             </div>
           </div>
@@ -248,8 +248,42 @@ function resetFilters() {
 }
 
 function getProgress(item: WatchRecord): number {
+  if (item.completed) return 100
   if (item.duration === 0) return 0
   return Math.min(100, (item.position / item.duration) * 100)
+}
+
+function getDisplayProgress(item: WatchRecord): number {
+  const progress = getProgress(item)
+  if (progress > 0) {
+    return progress
+  }
+
+  if (item.position > 0) {
+    return estimateProgressWidth(item.position)
+  }
+
+  return 0
+}
+
+function isEstimatedProgress(item: WatchRecord): boolean {
+  return !item.completed && item.duration <= 0 && item.position > 0
+}
+
+function estimateProgressWidth(position: number): number {
+  return Math.min(45, Math.max(14, Math.round(position / 30)))
+}
+
+function formatProgressLabel(item: WatchRecord): string {
+  if (item.completed) {
+    return '已看完'
+  }
+
+  if (item.position > 0) {
+    return formatTime(item.position)
+  }
+
+  return '0:00'
 }
 
 function formatTime(seconds: number): string {
@@ -268,6 +302,13 @@ onMounted(async () => {
 <style scoped>
 .history-view {
   min-height: 100vh;
+  padding-inline: clamp(0.5rem, 1.4vw, 1.1rem);
+}
+
+.history-layout {
+  width: min(100%, 1720px);
+  margin: 0 auto;
+  padding-block: 1rem 2rem;
 }
 
 /* Section Header */
@@ -366,6 +407,16 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .history-view {
+    padding-inline: 0.65rem;
+  }
+
+  .history-layout {
+    padding-block: 0.85rem 1.25rem;
+  }
 }
 
 /* History Card */
@@ -474,6 +525,15 @@ onMounted(async () => {
   background: var(--accent-color);
   border-radius: 3px;
   transition: width 0.3s ease;
+}
+
+.progress-bar-fill.estimated-progress {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(74, 158, 255, 0.95) 0 10px,
+      rgba(45, 125, 210, 0.85) 10px 20px
+    );
 }
 
 /* History Card Footer */

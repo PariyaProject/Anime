@@ -26,12 +26,49 @@ export interface EpisodeInfo {
  */
 interface LocalPositionRecord {
   position: number
+  duration?: number
   lastUpdated: string  // ISO timestamp
   animeId: string
   animeTitle: string
   animeCover: string  // Cover image URL
   season: number
   episode: number
+}
+
+function readAllLocalPositions(): LocalPositionRecord[] {
+  const result: LocalPositionRecord[] = []
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key || !key.startsWith(LS_KEY_PREFIX)) {
+        continue
+      }
+
+      const raw = localStorage.getItem(key)
+      if (!raw) {
+        continue
+      }
+
+      try {
+        const parsed: LocalPositionRecord = JSON.parse(raw)
+        const age = Date.now() - new Date(parsed.lastUpdated).getTime()
+
+        if (age > LS_MAX_AGE) {
+          localStorage.removeItem(key)
+          continue
+        }
+
+        result.push(parsed)
+      } catch {
+        localStorage.removeItem(key)
+      }
+    }
+  } catch (err) {
+    console.error('❌ Failed to enumerate localStorage positions:', err)
+  }
+
+  return result
 }
 
 // LocalStorage key constants
@@ -92,6 +129,7 @@ function saveToLocal(
   season: number,
   episode: number,
   position: number,
+  duration: number,
   animeTitle: string,
   animeCover: string
 ): boolean {
@@ -99,6 +137,7 @@ function saveToLocal(
     const key = getLocalKey(animeId, season, episode)
     const data: LocalPositionRecord = {
       position,
+      duration,
       lastUpdated: new Date().toISOString(),
       animeId,
       animeTitle,
@@ -117,6 +156,7 @@ function saveToLocal(
         const key = getLocalKey(animeId, season, episode)
         const data: LocalPositionRecord = {
           position,
+          duration,
           lastUpdated: new Date().toISOString(),
           animeId,
           animeTitle,
@@ -191,7 +231,20 @@ export const historyService = {
   },
 
   async saveHistoryRecord(record: WatchRecord): Promise<void> {
-    await api.post('/api/watch-history', record)
+    await api.post('/api/watch-history', {
+      animeInfo: {
+        id: record.animeId,
+        title: record.animeTitle,
+        cover: record.animeCover
+      },
+      episodeInfo: {
+        season: record.season,
+        episode: record.episode,
+        title: record.episodeTitle,
+        duration: record.duration
+      },
+      position: record.position
+    })
   },
 
   /**
@@ -205,12 +258,14 @@ export const historyService = {
   async saveWatchPosition(
     animeInfo: AnimeInfo,
     episodeInfo: EpisodeInfo,
-    position: number
+    position: number,
+    sourceDeviceId?: string
   ): Promise<void> {
     await api.post<BackendResponse<WatchRecord>>('/api/watch-history', {
       animeInfo,
       episodeInfo,
-      position
+      position,
+      sourceDeviceId
     })
   },
 
@@ -228,7 +283,15 @@ export const historyService = {
     episodeInfo: EpisodeInfo,
     position: number
   ): boolean {
-    return saveToLocal(animeInfo.id, episodeInfo.season, episodeInfo.episode, position, animeInfo.title, animeInfo.cover)
+    return saveToLocal(
+      animeInfo.id,
+      episodeInfo.season,
+      episodeInfo.episode,
+      position,
+      Number(episodeInfo.duration || 0),
+      animeInfo.title,
+      animeInfo.cover
+    )
   },
 
   /**
@@ -247,6 +310,8 @@ export const historyService = {
     season: number,
     episode: number
   ): Promise<PositionRecord | null> {
+    let backendData: PositionRecord | null = null
+
     // Priority 1: Try backend first (for cross-device sync)
     try {
       const response = await api.get<BackendResponse<PositionRecord | null>>(
@@ -254,7 +319,7 @@ export const historyService = {
       )
       if (response.data.data?.position !== undefined) {
         console.log('📥 Loaded position from backend')
-        return response.data.data
+        backendData = response.data.data
       }
     } catch (err) {
       console.log('📥 Backend unavailable, trying localStorage...')
@@ -262,6 +327,26 @@ export const historyService = {
 
     // Priority 2: Fall back to localStorage
     const localData = getFromLocal(animeId, season, episode)
+    if (backendData && localData) {
+      const backendTime = new Date(backendData.lastUpdated || 0).getTime()
+      const localTime = new Date(localData.lastUpdated).getTime()
+
+      if (!backendData.position || localTime > backendTime) {
+        console.log('📥 Local position is newer than backend')
+        return { position: localData.position, lastUpdated: localData.lastUpdated }
+      }
+
+      return backendData
+    }
+
+    if (backendData) {
+      if (backendData.position === 0 && localData) {
+        return { position: localData.position, lastUpdated: localData.lastUpdated }
+      }
+
+      return backendData
+    }
+
     if (localData) {
       console.log('📥 Loaded position from localStorage')
       return { position: localData.position, lastUpdated: localData.lastUpdated }
@@ -277,5 +362,32 @@ export const historyService = {
    */
   clearLocalPosition(animeId: string, season: number, episode: number): void {
     clearFromLocal(animeId, season, episode)
+  },
+
+  async syncLocalPositionsToBackend(sourceDeviceId = 'browser'): Promise<number> {
+    const localPositions = readAllLocalPositions()
+      .sort((a, b) => new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime())
+
+    let syncedCount = 0
+
+    for (const entry of localPositions) {
+      await this.saveWatchPosition(
+        {
+          id: entry.animeId,
+          title: entry.animeTitle,
+          cover: entry.animeCover
+        },
+        {
+          season: entry.season,
+          episode: entry.episode,
+          duration: entry.duration
+        },
+        entry.position,
+        sourceDeviceId
+      )
+      syncedCount += 1
+    }
+
+    return syncedCount
   }
 }

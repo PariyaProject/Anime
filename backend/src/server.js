@@ -13,6 +13,8 @@ const { AnimeListUrlConstructor, ApiParameterValidator } = require('./urlConstru
 const { httpClient, getEnhancedHeaders } = require('./httpClient');
 // Import anime index manager for local search
 const { getAnimeIndexManager } = require('./animeIndexManager');
+const { attachAuthUser, AuthManager } = require('./AuthManager');
+const { AdminManager } = require('./AdminManager');
 
 // 尝试引入Puppeteer
 let puppeteer;
@@ -96,6 +98,7 @@ class BrowserPool {
 const browserPool = puppeteer ? new BrowserPool() : null;
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 3006;
 const FRONTEND_PORT = process.env.FRONTEND_PORT || 3000;
 const allowedOrigins = [
@@ -121,6 +124,7 @@ app.use(cors({
 // 解析JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(attachAuthUser);
 
 // 静态文件服务
 // 优先使用新的Vue前端 (dist/)，如果不存在则使用旧的Bootstrap前端 (public/)
@@ -159,9 +163,13 @@ app.get('/', (req, res) => {
 const systemRoutes = require('./routes/system');
 const animeRoutes = require('./routes/anime');
 const videoRoutes = require('./routes/video');
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 app.use('/', systemRoutes);
 app.use('/', animeRoutes);
 app.use('/', videoRoutes);
+app.use('/', authRoutes);
+app.use('/', adminRoutes);
 const historyRoutes = require('./routes/history');
 app.use('/', historyRoutes);
 
@@ -213,6 +221,9 @@ const server = app.listen(PORT, async () => {
     // Validate and initialize data files
     console.log(`🔍 Validating watch history data file...`);
     await WatchHistoryManager.loadHistory();
+    AdminManager.ensureDefaultSettings();
+    await AuthManager.ensureSuperAdminFromEnv();
+    AuthManager.clearExpiredSessions();
     console.log(`✅ Data storage initialization complete`);
 
     // ============================================================

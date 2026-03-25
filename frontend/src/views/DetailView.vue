@@ -1,152 +1,158 @@
 <template>
-  <div class="detail-view py-4">
-    <div v-if="loading" class="detail-skeleton">
-      <el-skeleton animated>
-        <template #template>
-          <div class="hero-grid">
-            <el-skeleton-item variant="image" class="skeleton-cover" />
-            <div class="skeleton-copy">
-              <el-skeleton-item variant="h1" style="width: 68%; height: 34px; margin-bottom: 12px;" />
-              <el-skeleton-item variant="text" style="width: 42%; margin-bottom: 10px;" />
-              <el-skeleton-item variant="text" style="width: 88%; margin-bottom: 8px;" />
-              <el-skeleton-item variant="text" style="width: 94%; margin-bottom: 8px;" />
-              <el-skeleton-item variant="text" style="width: 74%; margin-bottom: 20px;" />
-              <div class="skeleton-actions">
-                <el-skeleton-item variant="button" style="width: 150px; height: 44px;" />
-                <el-skeleton-item variant="button" style="width: 140px; height: 44px;" />
+  <div class="detail-view">
+    <div class="detail-layout">
+      <div v-if="loading" class="detail-skeleton">
+        <el-skeleton animated>
+          <template #template>
+            <div class="hero-grid">
+              <el-skeleton-item variant="image" class="skeleton-cover" />
+              <div class="skeleton-copy">
+                <el-skeleton-item variant="h1" style="width: 68%; height: 34px; margin-bottom: 12px;" />
+                <el-skeleton-item variant="text" style="width: 42%; margin-bottom: 10px;" />
+                <el-skeleton-item variant="text" style="width: 88%; margin-bottom: 8px;" />
+                <el-skeleton-item variant="text" style="width: 94%; margin-bottom: 8px;" />
+                <el-skeleton-item variant="text" style="width: 74%; margin-bottom: 20px;" />
+                <div class="skeleton-actions">
+                  <el-skeleton-item variant="button" style="width: 150px; height: 44px;" />
+                  <el-skeleton-item variant="button" style="width: 140px; height: 44px;" />
+                </div>
+              </div>
+            </div>
+          </template>
+        </el-skeleton>
+      </div>
+
+      <div v-else-if="error" class="text-center py-5">
+        <ErrorMessage :message="error" @retry="initializePage" />
+      </div>
+
+      <div v-else-if="anime" class="detail-content">
+        <nav class="detail-breadcrumb" aria-label="面包屑导航">
+          <router-link to="/" class="breadcrumb-link">动画列表</router-link>
+          <span class="breadcrumb-separator">/</span>
+          <span class="breadcrumb-current">{{ anime.title }}</span>
+        </nav>
+
+        <section class="detail-hero">
+          <div class="detail-cover-shell">
+            <img
+              :src="displayCoverImage"
+              :alt="`${anime.title} 封面`"
+              class="detail-cover"
+              @error="handleImageError"
+            />
+          </div>
+
+          <div class="detail-summary">
+            <div class="detail-meta-row">
+              <span class="detail-chip detail-chip-type">{{ anime.type || 'TV' }}</span>
+              <span v-if="anime.year" class="detail-chip">{{ anime.year }}</span>
+              <span class="detail-chip">{{ anime.totalEpisodes || sortedEpisodes.length || 0 }} 集</span>
+              <span v-if="anime.totalSeasons > 1" class="detail-chip">{{ anime.totalSeasons }} 季</span>
+            </div>
+
+            <h1 class="detail-title">{{ anime.title }}</h1>
+
+            <p v-if="anime.description" class="detail-description">
+              {{ anime.description }}
+            </p>
+            <p v-else class="detail-description detail-description-muted">
+              暂时还没有抓取到这部作品的完整简介，你也可以直接从下方选集开始观看。
+            </p>
+
+            <div v-if="hasProgress && resumeGroup" class="progress-panel">
+              <div class="progress-copy">
+                <span class="progress-kicker">继续观看</span>
+                <strong class="progress-title">{{ progressHeadline }}</strong>
+                <span class="progress-subtitle">
+                  {{ progressSubtitle }}
+                </span>
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  :class="{ 'estimated-progress': hasEstimatedResumeProgress }"
+                  :style="{ width: `${resumeProgressWidth}%` }"
+                ></div>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <button class="btn-primary-action" @click="playPrimaryEpisode" :disabled="!primaryEpisode">
+                {{ primaryActionLabel }}
+              </button>
+              <button class="btn-secondary-action" @click="playFirstEpisode" :disabled="!firstEpisode">
+                从第一集开始
+              </button>
+              <router-link to="/history" class="btn-ghost-action">
+                查看历史
+              </router-link>
+            </div>
+
+            <div class="detail-facts">
+              <div class="fact-card">
+                <span class="fact-label">当前状态</span>
+                <strong class="fact-value">{{ anime.status && anime.status !== '未知' ? anime.status : '持续更新中' }}</strong>
+              </div>
+              <div class="fact-card">
+                <span class="fact-label">推荐入口</span>
+                <strong class="fact-value">{{ hasProgress ? '继续观看' : '从首集开始' }}</strong>
+              </div>
+              <div class="fact-card">
+                <span class="fact-label">可用选集</span>
+                <strong class="fact-value">{{ sortedEpisodes.length }}</strong>
               </div>
             </div>
           </div>
-        </template>
-      </el-skeleton>
-    </div>
+        </section>
 
-    <div v-else-if="error" class="text-center py-5">
-      <ErrorMessage :message="error" @retry="initializePage" />
-    </div>
-
-    <div v-else-if="anime" class="detail-content">
-      <nav class="detail-breadcrumb" aria-label="面包屑导航">
-        <router-link to="/" class="breadcrumb-link">动画列表</router-link>
-        <span class="breadcrumb-separator">/</span>
-        <span class="breadcrumb-current">{{ anime.title }}</span>
-      </nav>
-
-      <section class="detail-hero">
-        <div class="detail-cover-shell">
-          <img
-            :src="displayCoverImage"
-            :alt="`${anime.title} 封面`"
-            class="detail-cover"
-            @error="handleImageError"
-          />
-        </div>
-
-        <div class="detail-summary">
-          <div class="detail-meta-row">
-            <span class="detail-chip detail-chip-type">{{ anime.type || 'TV' }}</span>
-            <span v-if="anime.year" class="detail-chip">{{ anime.year }}</span>
-            <span class="detail-chip">{{ anime.totalEpisodes || sortedEpisodes.length || 0 }} 集</span>
-            <span v-if="anime.totalSeasons > 1" class="detail-chip">{{ anime.totalSeasons }} 季</span>
+        <section class="episodes-section">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">选集列表</h2>
+              <p class="section-subtitle">
+                {{ hasProgress ? '可以继续上次进度，也可以从任意一集重新开始。' : '从第一集开始，或者直接跳到你想看的集数。' }}
+              </p>
+            </div>
+            <button
+              v-if="sortedEpisodes.length > initialEpisodeCount"
+              class="btn-ghost-inline"
+              @click="showAllEpisodes = !showAllEpisodes"
+            >
+              {{ showAllEpisodes ? '收起部分选集' : `展开全部 ${sortedEpisodes.length} 集` }}
+            </button>
           </div>
 
-          <h1 class="detail-title">{{ anime.title }}</h1>
-
-          <p v-if="anime.description" class="detail-description">
-            {{ anime.description }}
-          </p>
-          <p v-else class="detail-description detail-description-muted">
-            暂时还没有抓取到这部作品的完整简介，你也可以直接从下方选集开始观看。
-          </p>
-
-          <div v-if="hasProgress && resumeGroup" class="progress-panel">
-            <div class="progress-copy">
-              <span class="progress-kicker">继续观看</span>
-              <strong class="progress-title">{{ progressHeadline }}</strong>
-              <span class="progress-subtitle">
-                最近记录：第 {{ resumeGroup.latestEpisode.episode }} 集，{{ Math.round(resumeGroup.overallProgress) }}% 已观看
+          <div v-if="visibleEpisodes.length > 0" class="episodes-grid">
+            <button
+              v-for="entry in visibleEpisodes"
+              :key="`${entry.season}-${entry.episode}`"
+              class="episode-card"
+              :class="{
+                active: activeEpisode?.season === entry.season && activeEpisode?.episode === entry.episode,
+                resumed: resumeGroup?.latestEpisode.episode === entry.episode && resumeGroup?.season === entry.season
+              }"
+              @click="playEpisode(entry.season, entry.episode)"
+            >
+              <span class="episode-badge">第 {{ entry.episode }} 集</span>
+              <strong class="episode-name">{{ entry.title || `第 ${entry.episode} 集` }}</strong>
+              <span class="episode-hint">
+                {{
+                  resumeGroup?.latestEpisode.episode === entry.episode && resumeGroup?.season === entry.season
+                    ? '上次看到这里'
+                    : '点击播放'
+                }}
               </span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: `${resumeGroup.overallProgress}%` }"></div>
-            </div>
-          </div>
-
-          <div class="detail-actions">
-            <button class="btn-primary-action" @click="playPrimaryEpisode" :disabled="!primaryEpisode">
-              {{ primaryActionLabel }}
             </button>
-            <button class="btn-secondary-action" @click="playFirstEpisode" :disabled="!firstEpisode">
-              从第一集开始
-            </button>
-            <router-link to="/history" class="btn-ghost-action">
-              查看历史
-            </router-link>
           </div>
-
-          <div class="detail-facts">
-            <div class="fact-card">
-              <span class="fact-label">当前状态</span>
-              <strong class="fact-value">{{ anime.status && anime.status !== '未知' ? anime.status : '持续更新中' }}</strong>
-            </div>
-            <div class="fact-card">
-              <span class="fact-label">推荐入口</span>
-              <strong class="fact-value">{{ hasProgress ? '继续观看' : '从首集开始' }}</strong>
-            </div>
-            <div class="fact-card">
-              <span class="fact-label">可用选集</span>
-              <strong class="fact-value">{{ sortedEpisodes.length }}</strong>
-            </div>
+          <div v-else class="empty-episodes">
+            <EmptyState
+              title="暂时没有可播放的选集"
+              description="这部作品的详情已抓取成功，但选集数据还没有准备好。"
+            />
           </div>
-        </div>
-      </section>
-
-      <section class="episodes-section">
-        <div class="section-head">
-          <div>
-            <h2 class="section-title">选集列表</h2>
-            <p class="section-subtitle">
-              {{ hasProgress ? '可以继续上次进度，也可以从任意一集重新开始。' : '从第一集开始，或者直接跳到你想看的集数。' }}
-            </p>
-          </div>
-          <button
-            v-if="sortedEpisodes.length > initialEpisodeCount"
-            class="btn-ghost-inline"
-            @click="showAllEpisodes = !showAllEpisodes"
-          >
-            {{ showAllEpisodes ? '收起部分选集' : `展开全部 ${sortedEpisodes.length} 集` }}
-          </button>
-        </div>
-
-        <div v-if="visibleEpisodes.length > 0" class="episodes-grid">
-          <button
-            v-for="entry in visibleEpisodes"
-            :key="`${entry.season}-${entry.episode}`"
-            class="episode-card"
-            :class="{
-              active: activeEpisode?.season === entry.season && activeEpisode?.episode === entry.episode,
-              resumed: resumeGroup?.latestEpisode.episode === entry.episode && resumeGroup?.season === entry.season
-            }"
-            @click="playEpisode(entry.season, entry.episode)"
-          >
-            <span class="episode-badge">第 {{ entry.episode }} 集</span>
-            <strong class="episode-name">{{ entry.title || `第 ${entry.episode} 集` }}</strong>
-            <span class="episode-hint">
-              {{
-                resumeGroup?.latestEpisode.episode === entry.episode && resumeGroup?.season === entry.season
-                  ? '上次看到这里'
-                  : '点击播放'
-              }}
-            </span>
-          </button>
-        </div>
-        <div v-else class="empty-episodes">
-          <EmptyState
-            title="暂时没有可播放的选集"
-            description="这部作品的详情已抓取成功，但选集数据还没有准备好。"
-          />
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   </div>
 </template>
@@ -273,6 +279,50 @@ const progressHeadline = computed(() => {
   return `推荐继续第 ${primaryEpisode.value.episode} 集`
 })
 
+const progressSubtitle = computed(() => {
+  if (!resumeGroup.value) {
+    return ''
+  }
+
+  const latestEpisode = resumeGroup.value.latestEpisode
+  if (latestEpisode.completed) {
+    return `最近记录：第 ${latestEpisode.episode} 集`
+  }
+
+  if (latestEpisode.position > 0) {
+    return `最近记录：第 ${latestEpisode.episode} 集，${formatTime(latestEpisode.position)}`
+  }
+
+  return `最近记录：第 ${latestEpisode.episode} 集`
+})
+
+const hasEstimatedResumeProgress = computed(() => {
+  const latestEpisode = resumeGroup.value?.latestEpisode
+  return Boolean(
+    latestEpisode &&
+    !latestEpisode.completed &&
+    latestEpisode.duration <= 0 &&
+    latestEpisode.position > 0
+  )
+})
+
+const resumeProgressWidth = computed(() => {
+  if (!resumeGroup.value) {
+    return 0
+  }
+
+  if (resumeGroup.value.overallProgress > 0) {
+    return resumeGroup.value.overallProgress
+  }
+
+  const latestEpisode = resumeGroup.value.latestEpisode
+  if (latestEpisode.position > 0) {
+    return estimateProgressWidth(latestEpisode.position)
+  }
+
+  return 0
+})
+
 const displayCoverImage = computed(() => {
   const cover = anime.value?.cover
   const resolved = animeService.getImageProxyUrl(cover)
@@ -319,6 +369,17 @@ function playEpisode(season: number, episode: number) {
   })
 }
 
+function formatTime(seconds: number): string {
+  if (!seconds || Number.isNaN(seconds)) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+function estimateProgressWidth(position: number): number {
+  return Math.min(45, Math.max(14, Math.round(position / 30)))
+}
+
 function playFirstEpisode() {
   if (firstEpisode.value) {
     playEpisode(firstEpisode.value.season, firstEpisode.value.episode)
@@ -348,6 +409,13 @@ watch(animeId, () => {
 <style scoped>
 .detail-view {
   min-height: 100vh;
+  padding-inline: clamp(0.5rem, 1.4vw, 1.1rem);
+}
+
+.detail-layout {
+  width: min(100%, 1720px);
+  margin: 0 auto;
+  padding-block: 1rem 2rem;
 }
 
 .detail-breadcrumb {
@@ -491,6 +559,15 @@ watch(animeId, () => {
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #2d66d6, #49a3ff);
+}
+
+.progress-fill.estimated-progress {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(73, 163, 255, 0.95) 0 10px,
+      rgba(45, 102, 214, 0.85) 10px 20px
+    );
 }
 
 .detail-actions,
@@ -681,6 +758,14 @@ watch(animeId, () => {
 }
 
 @media (max-width: 640px) {
+  .detail-view {
+    padding-inline: 0.65rem;
+  }
+
+  .detail-layout {
+    padding-block: 0.85rem 1.25rem;
+  }
+
   .detail-hero,
   .episodes-section {
     padding: 1rem;

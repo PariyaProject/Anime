@@ -25,12 +25,13 @@
             <div class="progress flex-grow-1" style="height: 4px">
               <div
                 class="progress-bar"
+                :class="{ 'estimated-progress': isEstimatedAnimeProgress(anime) }"
                 role="progressbar"
-                :style="{ width: `${anime.overallProgress}%` }"
+                :style="{ width: `${getAnimeProgressWidth(anime)}%` }"
               ></div>
             </div>
             <span class="small text-muted">
-              {{ formatProgress(anime.overallProgress) }}
+              {{ getAnimeProgressLabel(anime) }}
             </span>
           </div>
           <div class="d-flex gap-2">
@@ -76,14 +77,17 @@
                 <div class="progress" style="height: 3px">
                   <div
                     class="progress-bar"
-                    :class="{ 'bg-success': episode.completed }"
+                    :class="{
+                      'bg-success': episode.completed,
+                      'estimated-progress': isEstimatedEpisodeProgress(episode)
+                    }"
                     role="progressbar"
-                    :style="{ width: `${getEpisodeProgress(episode)}%` }"
+                    :style="{ width: `${getEpisodeProgressWidth(episode)}%` }"
                   ></div>
                 </div>
               </div>
               <span class="episode-status small text-muted">
-                {{ episode.completed ? '已看完' : formatProgress(getEpisodeProgress(episode)) }}
+                {{ getEpisodeStatusLabel(episode) }}
               </span>
             </div>
             <p v-if="episode.episodeTitle" class="small text-muted mb-0 mt-1 text-truncate" :title="episode.episodeTitle">
@@ -135,12 +139,79 @@ function handleSelectEpisode(episode: WatchedEpisode) {
 }
 
 function getEpisodeProgress(episode: WatchedEpisode): number {
+  if (episode.completed) return 100
   if (episode.duration === 0) return 0
   return Math.min(100, (episode.position / episode.duration) * 100)
 }
 
-function formatProgress(progress: number): string {
-  return `${Math.round(progress)}%`
+function getEpisodeProgressWidth(episode: WatchedEpisode): number {
+  const progress = getEpisodeProgress(episode)
+  if (progress > 0) {
+    return progress
+  }
+
+  if (episode.position > 0) {
+    return estimateProgressWidth(episode.position)
+  }
+
+  return 0
+}
+
+function getAnimeProgressWidth(anime: GroupedAnime): number {
+  if (anime.overallProgress > 0) {
+    return anime.overallProgress
+  }
+
+  if (anime.latestEpisode.position > 0) {
+    return estimateProgressWidth(anime.latestEpisode.position)
+  }
+
+  return 0
+}
+
+function isEstimatedEpisodeProgress(episode: WatchedEpisode): boolean {
+  return !episode.completed && episode.duration <= 0 && episode.position > 0
+}
+
+function isEstimatedAnimeProgress(anime: GroupedAnime): boolean {
+  const latestEpisode = anime.latestEpisode
+  return !latestEpisode.completed && latestEpisode.duration <= 0 && latestEpisode.position > 0
+}
+
+function getAnimeProgressLabel(anime: GroupedAnime): string {
+  const latestEpisode = anime.latestEpisode
+  if (latestEpisode.completed) {
+    return '已看完'
+  }
+
+  if (latestEpisode.position > 0) {
+    return formatTime(latestEpisode.position)
+  }
+
+  return '未开始'
+}
+
+function getEpisodeStatusLabel(episode: WatchedEpisode): string {
+  if (episode.completed) {
+    return '已看完'
+  }
+
+  if (episode.position > 0) {
+    return formatTime(episode.position)
+  }
+
+  return '未开始'
+}
+
+function formatTime(seconds: number): string {
+  if (!seconds || Number.isNaN(seconds)) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+function estimateProgressWidth(position: number): number {
+  return Math.min(45, Math.max(14, Math.round(position / 30)))
 }
 </script>
 
@@ -217,6 +288,15 @@ function formatProgress(progress: number): string {
 
 .grouped-history-card .text-muted {
   color: var(--text-secondary) !important;
+}
+
+.grouped-history-card .progress-bar.estimated-progress {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(74, 158, 255, 0.95) 0 10px,
+      rgba(45, 125, 210, 0.85) 10px 20px
+    ) !important;
 }
 
 .episode-list {

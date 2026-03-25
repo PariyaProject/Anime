@@ -39,6 +39,7 @@ interface LocalPositionRecord {
   season: number
   episode: number
   position: number
+  duration?: number
   lastUpdated: string
 }
 
@@ -108,6 +109,7 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
    * Calculate overall progress based on the latest watched episode
    */
   function calculateOverallProgress(latestEpisode: WatchedEpisode): number {
+    if (latestEpisode.completed) return 100
     if (latestEpisode.duration === 0) return 0
     return Math.min(100, (latestEpisode.position / latestEpisode.duration) * 100)
   }
@@ -119,41 +121,49 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
     const records = Array.isArray(watchRecords) ? watchRecords : watchRecords.value
 
     // Create a map of backend records by compound key
-    const backendMap = new Map<string, WatchRecord>()
+    const mergedMap = new Map<string, WatchRecord>()
     for (const record of records) {
       const key = `${record.animeId}_${record.season}_${record.episode}`
-      backendMap.set(key, record)
+      mergedMap.set(key, record)
     }
 
     // Read localStorage entries
     const localStorageEntries = readLocalStorageWatchPositions()
 
-    // Start with backend records
-    const merged: WatchRecord[] = [...records]
-
-    // Add localStorage-only entries (not in backend)
+    // Merge localStorage entries. If the local entry is newer, prefer its
+    // position/watch date while keeping server-side metadata when available.
     for (const [key, entry] of localStorageEntries) {
-      if (!backendMap.has(key)) {
-        // Create a WatchRecord from localStorage entry
-        // Note: isLocalOnly flag is added to the record for display purposes
-        const localRecord = {
-          animeId: entry.animeId,
-          animeTitle: entry.animeTitle,
-          animeCover: entry.animeCover,  // Use cover from localStorage
-          season: entry.season,
-          episode: entry.episode,
-          episodeTitle: '',  // localStorage doesn't store episode title
-          position: entry.position,
-          duration: 0,  // localStorage doesn't store duration
-          watchDate: entry.lastUpdated,
-          completed: false,  // localStorage doesn't track completion
-          isLocalOnly: true  // Mark as localStorage-only
-        } as WatchRecord & { isLocalOnly: boolean }
-        merged.push(localRecord)
+      const existing = mergedMap.get(key)
+      const localRecord = {
+        animeId: entry.animeId,
+        animeTitle: existing?.animeTitle || entry.animeTitle,
+        animeCover: existing?.animeCover || entry.animeCover,
+        season: entry.season,
+        episode: entry.episode,
+        episodeTitle: existing?.episodeTitle || '',
+        position: entry.position,
+        duration: existing?.duration || entry.duration || 0,
+        watchDate: entry.lastUpdated,
+        completed: (existing?.duration || entry.duration)
+          ? Math.min(1, entry.position / Number(existing?.duration || entry.duration || 0)) > 0.9
+          : false,
+        isLocalOnly: !existing
+      } as WatchRecord & { isLocalOnly: boolean }
+
+      if (!existing) {
+        mergedMap.set(key, localRecord)
+        continue
+      }
+
+      const existingTime = new Date(existing.watchDate).getTime()
+      const localTime = new Date(entry.lastUpdated).getTime()
+
+      if (localTime > existingTime) {
+        mergedMap.set(key, localRecord)
       }
     }
 
-    return merged
+    return Array.from(mergedMap.values())
   })
 
   /**

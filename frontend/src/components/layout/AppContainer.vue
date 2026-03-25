@@ -9,9 +9,9 @@
 
 <style scoped>
 .app-container {
-  max-width: 152vh;
-  margin: 0 auto;
-  padding: 0 1rem;
+  width: 100%;
   min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0;
 }
 </style>

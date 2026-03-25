@@ -61,6 +61,45 @@
           </div>
         </div>
 
+        <div class="dropdown" v-if="authStore.isAuthenticated">
+          <button
+            class="dropdown-btn"
+            type="button"
+            @click="toggleAccountDropdown"
+            :aria-expanded="accountDropdownOpen"
+          >
+            {{ authStore.user?.username }}
+            <span class="arrow" :class="{ open: accountDropdownOpen }">▼</span>
+          </button>
+
+          <div
+            class="navbar-dropdown-menu settings-menu"
+            v-show="accountDropdownOpen"
+          >
+            <router-link
+              v-if="authStore.user?.isAdmin"
+              to="/admin"
+              class="dropdown-item settings-item"
+              @click="accountDropdownOpen = false"
+            >
+              <span class="settings-icon">⌘</span>
+              <span class="settings-text">管理后台</span>
+            </router-link>
+
+            <router-link to="/history" class="dropdown-item settings-item" @click="accountDropdownOpen = false">
+              <span class="settings-icon">🕘</span>
+              <span class="settings-text">观看历史</span>
+            </router-link>
+
+            <div class="dropdown-divider"></div>
+
+            <button class="dropdown-item settings-item logout-btn" @click="handleLogout">
+              <span class="settings-icon">↩</span>
+              <span class="settings-text">退出登录</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Settings Dropdown -->
         <div class="dropdown">
           <button
@@ -102,18 +141,21 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { useHistoryStore } from '@/stores/history'
 import { useServerStatus } from '@/composables/useServerStatus'
 import { useGroupedHistory, type GroupedAnime } from '@/composables/useGroupedHistory'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const uiStore = useUiStore()
 const historyStore = useHistoryStore()
 const serverStatus = useServerStatus(30000, false)
 
 const historyDropdownOpen = ref(false)
 const settingsDropdownOpen = ref(false)
+const accountDropdownOpen = ref(false)
 
 // Placeholder image via Vite proxy
 const placeholderImage = computed(() => '/placeholder/placeholder-40x40.svg')
@@ -121,11 +163,11 @@ const placeholderImage = computed(() => '/placeholder/placeholder-40x40.svg')
 const darkMode = computed(() => uiStore.darkMode)
 const currentChannel = computed(() => uiStore.filters.channel)
 const continueWatching = computed(() => historyStore.continueWatching)
-const hasContinueWatching = computed(() => continueWatching.value.length > 0)
 
 const { status, loading, enabled: serverCheckEnabled, toggle: toggleServerCheck } = serverStatus
 
 const { groupedAnime } = useGroupedHistory(continueWatching)
+const hasContinueWatching = computed(() => groupedAnime.value.length > 0)
 
 const serverStatusIcon = computed(() => {
   if (loading.value) return '⟳'
@@ -150,11 +192,30 @@ const serverStatusClass = computed(() => {
 function toggleHistoryDropdown() {
   historyDropdownOpen.value = !historyDropdownOpen.value
   settingsDropdownOpen.value = false
+  accountDropdownOpen.value = false
 }
 
 function toggleSettingsDropdown() {
   settingsDropdownOpen.value = !settingsDropdownOpen.value
   historyDropdownOpen.value = false
+  accountDropdownOpen.value = false
+}
+
+function toggleAccountDropdown() {
+  accountDropdownOpen.value = !accountDropdownOpen.value
+  historyDropdownOpen.value = false
+  settingsDropdownOpen.value = false
+}
+
+async function handleLogout() {
+  accountDropdownOpen.value = false
+  try {
+    await authStore.logout()
+    uiStore.showNotification('已退出登录', 'success')
+    await router.push({ name: 'Login' })
+  } catch (err: any) {
+    uiStore.showNotification(err.message || '退出登录失败', 'error')
+  }
 }
 
 function resumeWatching(anime: GroupedAnime) {
@@ -181,6 +242,7 @@ function handleClickOutside(event: Event) {
   if (navbar && !navbar.contains(target)) {
     historyDropdownOpen.value = false
     settingsDropdownOpen.value = false
+    accountDropdownOpen.value = false
   }
 }
 
@@ -320,6 +382,7 @@ onUnmounted(() => {
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;
+  text-decoration: none;
 }
 
 .dropdown-item:hover {
@@ -466,6 +529,13 @@ onUnmounted(() => {
 
 .icon-btn:hover {
   background: var(--bg-tertiary);
+}
+
+.logout-btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
 }
 
 /* Mobile Responsive */

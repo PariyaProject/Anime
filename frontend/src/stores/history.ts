@@ -45,6 +45,17 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
+  async function syncLocalPositionsToBackend() {
+    try {
+      await historyService.syncLocalPositionsToBackend()
+    } catch (err: any) {
+      if (err?.status === 401) {
+        return
+      }
+      throw err
+    }
+  }
+
   async function addToHistory(record: WatchRecord) {
     try {
       await historyService.saveHistoryRecord(record)
@@ -131,6 +142,24 @@ export const useHistoryStore = defineStore('history', () => {
 
     // Check if position changed significantly (avoid duplicate saves)
     const lastSaved = lastSavedPositions.value[key]
+    const knownPosition = Math.max(
+      Number(lastPositions.value[key]?.position || 0),
+      Number(lastSaved ?? 0)
+    )
+    const incomingDuration = Number(episodeInfo.duration || 0)
+    const suspiciousEarlyOverwrite = incomingDuration <= 0 && position <= 5 && knownPosition > 5
+
+    // Ignore suspicious near-zero regressions when we already know a valid resume point.
+    if ((position <= 1 && knownPosition > 5) || suspiciousEarlyOverwrite) {
+      console.warn('⏭️ Skipping suspicious near-zero position overwrite', {
+        key,
+        incoming: position,
+        knownPosition,
+        incomingDuration
+      })
+      return
+    }
+
     if (lastSaved !== undefined && Math.abs(position - lastSaved) < skipThreshold) {
       return // Skip save if position hasn't changed much
     }
@@ -152,6 +181,9 @@ export const useHistoryStore = defineStore('history', () => {
     historyService.saveWatchPosition(animeInfo, episodeInfo, position).then(() => {
       console.log('✅ Synced position to backend')
     }).catch((err) => {
+      if (err?.status === 401) {
+        return
+      }
       console.warn('⚠️ Backend sync failed (data safe in localStorage):', err)
     })
   }
@@ -218,6 +250,15 @@ export const useHistoryStore = defineStore('history', () => {
     error.value = null
   }
 
+  function resetState() {
+    watchHistory.value = []
+    continueWatching.value = []
+    lastPositions.value = {}
+    lastSavedPositions.value = {}
+    loading.value = false
+    error.value = null
+  }
+
   return {
     // State
     watchHistory,
@@ -231,6 +272,7 @@ export const useHistoryStore = defineStore('history', () => {
     // Actions
     loadWatchHistory,
     loadContinueWatching,
+    syncLocalPositionsToBackend,
     addToHistory,
     savePosition,
     savePositionImmediate,
@@ -238,6 +280,7 @@ export const useHistoryStore = defineStore('history', () => {
     loadLastPosition,
     getLastPosition,
     getPosition,
-    clearError
+    clearError,
+    resetState
   }
 })
