@@ -110,8 +110,17 @@ function serializeCookie(name, value, options = {}) {
     return segments.join('; ');
 }
 
-function shouldUseSecureCookies() {
-    return process.env.NODE_ENV === 'production' && process.env.AUTH_COOKIE_INSECURE !== '1';
+function shouldUseSecureCookies(req) {
+    if (process.env.AUTH_COOKIE_INSECURE === '1') {
+        return false;
+    }
+
+    const forwardedProto = String(req?.headers?.['x-forwarded-proto'] || '')
+        .split(',')[0]
+        .trim()
+        .toLowerCase();
+
+    return Boolean(req?.secure || forwardedProto === 'https');
 }
 
 async function hashPassword(password) {
@@ -539,25 +548,25 @@ class AuthManager {
     }
 }
 
-function setSessionCookie(res, token, expiresAt) {
+function setSessionCookie(req, res, token, expiresAt) {
     res.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE_NAME, token, {
         expires: expiresAt,
         maxAge: Math.floor(SESSION_TTL_MS / 1000),
         httpOnly: true,
         path: '/',
         sameSite: 'Lax',
-        secure: shouldUseSecureCookies()
+        secure: shouldUseSecureCookies(req)
     }));
 }
 
-function clearSessionCookie(res) {
+function clearSessionCookie(req, res) {
     res.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE_NAME, '', {
         expires: new Date(0).toISOString(),
         maxAge: 0,
         httpOnly: true,
         path: '/',
         sameSite: 'Lax',
-        secure: shouldUseSecureCookies()
+        secure: shouldUseSecureCookies(req)
     }));
 }
 
@@ -571,7 +580,7 @@ function attachAuthUser(req, res, next) {
         req.authUser = authSession?.user || null;
 
         if (token && authSession?.shouldRefreshCookie) {
-            setSessionCookie(res, token, authSession.refreshedExpiresAt);
+            setSessionCookie(req, res, token, authSession.refreshedExpiresAt);
         }
 
         next();

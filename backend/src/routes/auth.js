@@ -24,7 +24,7 @@ router.post('/api/auth/login', async (req, res) => {
             ip: getClientIp(req)
         });
 
-        setSessionCookie(res, sessionToken, expiresAt);
+        setSessionCookie(req, res, sessionToken, expiresAt);
 
         res.json({
             success: true,
@@ -65,7 +65,7 @@ router.post('/api/auth/accept-invite', async (req, res) => {
             ip: getClientIp(req)
         });
 
-        setSessionCookie(res, sessionToken, expiresAt);
+        setSessionCookie(req, res, sessionToken, expiresAt);
 
         res.status(201).json({
             success: true,
@@ -84,7 +84,7 @@ router.post('/api/auth/accept-invite', async (req, res) => {
 
 router.post('/api/auth/logout', (req, res) => {
     AuthManager.invalidateSession(req.sessionToken);
-    clearSessionCookie(res);
+    clearSessionCookie(req, res);
 
     res.json({
         success: true,
