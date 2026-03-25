@@ -1,9 +1,0 @@
-FROM alpine:latest
-
-RUN apk add --no-cache docker-cli jq bash curl
-
-COPY scripts/update-agent.sh /usr/local/bin/update-agent.sh
-
-RUN chmod +x /usr/local/bin/update-agent.sh
-
-CMD ["/usr/local/bin/update-agent.sh"]

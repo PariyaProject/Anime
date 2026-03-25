@@ -2,6 +2,8 @@
 
 This guide explains how to deploy the app-service project using Docker containers on a local Mac Mini.
 
+The deployment uses a single application container. Updates are pulled manually when you choose to upgrade.
+
 ## Prerequisites
 
 ### Software Requirements
@@ -30,7 +32,7 @@ docker ps
 
 ```bash
 # Create project directory
-mkdir -p ~/anime-project/config ~/anime-project/scripts
+mkdir -p ~/anime-project/config
 cd ~/anime-project
 ```
 
@@ -39,8 +41,6 @@ cd ~/anime-project
 Create `docker-compose.yml` in your project directory:
 
 ```yaml
-version: '3.8'
-
 services:
   app-service:
     image: ghcr.io/pariyaproject/anime:latest
@@ -61,16 +61,6 @@ services:
       retries: 3
       start_period: 40s
 
-  app-watchdog:
-    image: ghcr.io/pariyaproject/anime:watchdog
-    container_name: app-monitor
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - CHECK_INTERVAL=86400
-      - IMAGE_NAME=ghcr.io/pariyaproject/anime:latest
-      - COMPOSE_FILE=docker-compose.yml
 ```
 
 **Important:** Replace `pariyaproject/anime` with your actual GitHub repository path.
@@ -100,34 +90,15 @@ ipconfig getifaddr en0  # Wi-Fi
 ipconfig getifaddr en1  # Ethernet
 ```
 
-## Watchdog Service
+## Manual Updates
 
-The app-watchdog container automatically checks for new images daily (86400 seconds).
-
-### How It Works
-
-1. **Polling**: Daily, the agent checks the GitHub Container Registry for a new image digest
-2. **Comparison**: It compares the remote digest with the local image digest
-3. **Update**: If they differ, it automatically:
-   - Pulls the new image
-   - Restarts containers with `docker-compose up -d`
-   - Cleans up old images with `docker image prune -f`
-
-### Manual Update
-
-To manually trigger an update:
+To manually update the service:
 
 ```bash
 cd ~/anime-project
 docker-compose pull
 docker-compose up -d
 docker image prune -f
-```
-
-### Check Update Agent Logs
-
-```bash
-docker-compose logs -f app-watchdog
 ```
 
 ## Data Management
@@ -140,9 +111,7 @@ docker-compose logs -f app-watchdog
 │   ├── watch-history.json     # Watch history data
 │   ├── anime-index.json       # Anime search index
 │   └── *.backup.*             # Automatic backups
-├── docker-compose.yml
-└── scripts/
-    └── update-agent.sh
+└── docker-compose.yml
 ```
 
 ### Backup Data
@@ -174,9 +143,6 @@ docker-compose up -d
 ```bash
 # View Docker logs (application uses console.log)
 docker-compose logs -f app-service
-
-# View update agent logs
-docker-compose logs -f app-watchdog
 ```
 
 ## Troubleshooting
@@ -215,28 +181,14 @@ sudo chown -R $USER:$USER ~/anime-project/logs
 mkdir -p ~/anime-project/config ~/anime-project/logs
 ```
 
-### Update Agent Not Working
-
-```bash
-# Check update agent is running
-docker-compose ps app-watchdog
-
-# View update agent logs
-docker-compose logs app-watchdog
-
-# Manually trigger update check
-docker exec app-monitor /usr/local/bin/update-agent.sh
-```
-
 ### Image Pull Errors
 
 ```bash
 # Login to GitHub Container Registry (if using private images)
 echo $GITHUB_TOKEN | docker login ghcr.io -u pariyaproject --password-stdin
 
-# Pull images manually
+# Pull image manually
 docker pull ghcr.io/pariyaproject/anime:latest
-docker pull ghcr.io/pariyaproject/anime:watchdog
 ```
 
 ### Full Reset
@@ -250,9 +202,8 @@ docker-compose down
 # Remove volumes (WARNING: This deletes all data)
 docker-compose down -v
 
-# Remove images
+# Remove image
 docker rmi ghcr.io/pariyaproject/anime:latest
-docker rmi ghcr.io/pariyaproject/anime:watchdog
 
 # Start fresh
 docker-compose up -d
@@ -267,14 +218,6 @@ docker-compose up -d
 | NODE_ENV | production | Node.js environment |
 | PORT | 3006 | Server port |
 | RATE_LIMIT_DELAY | 1000 | Request rate limit (ms) |
-
-### app-watchdog Service
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| CHECK_INTERVAL | 86400 | Update check interval (seconds, default: daily) |
-| IMAGE_NAME | - | Full image name with registry |
-| COMPOSE_FILE | docker-compose.yml | Compose file path |
 
 ## Performance Tips
 
