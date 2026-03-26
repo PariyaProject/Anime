@@ -1,14 +1,16 @@
 <template>
-  <div class="watch-view">
+  <div ref="watchViewRoot" class="watch-view">
     <div class="watch-layout">
       <!-- Loading State with Skeleton -->
       <div v-if="loading" class="theater-mode" style="opacity: 0.7; pointer-events: none;">
-        <div class="video-container">
-          <el-skeleton style="width: 100%; height: 100%" animated>
-            <template #template>
-              <el-skeleton-item variant="image" style="width: 100%; height: 60vh; border-radius: 8px;" />
-            </template>
-          </el-skeleton>
+        <div ref="videoContainer" class="video-container">
+          <div ref="videoWrapper" class="video-wrapper">
+            <el-skeleton class="video-skeleton" animated>
+              <template #template>
+                <el-skeleton-item variant="image" class="video-skeleton-item" />
+              </template>
+            </el-skeleton>
+          </div>
         </div>
         <div class="side-panel">
           <el-skeleton style="width: 100%" animated>
@@ -39,8 +41,8 @@
       <!-- Theater Mode Layout - True Center -->
       <div v-else class="theater-mode">
         <!-- Centered Video Player -->
-        <div class="video-container">
-          <div class="video-wrapper">
+        <div ref="videoContainer" class="video-container">
+          <div ref="videoWrapper" class="video-wrapper">
             <div v-if="videoUrl" id="plyr-player" ref="playerContainer" class="plyr-wrapper">
               <video
                 ref="videoElement"
@@ -56,7 +58,7 @@
             </div>
           </div>
 
-          <div class="video-title-overlay">
+          <div ref="videoMetaBlock" class="video-title-overlay">
             <h1 class="video-title">{{ episodeTitle }}</h1>
             <p class="video-meta">
               <span v-if="animeTitle">{{ animeTitle }}</span>
@@ -65,7 +67,7 @@
             </p>
           </div>
 
-          <div class="control-bar">
+          <div ref="controlBar" class="control-bar">
             <button class="btn-control" @click="playPrevious" :disabled="!hasPrevious" title="上一集">
               ← 上一集
             </button>
@@ -172,6 +174,11 @@ const getPlaceholderImage = () => {
 }
 const placeholderImage = getPlaceholderImage()
 
+const watchViewRoot = ref<HTMLElement | null>(null)
+const videoContainer = ref<HTMLElement | null>(null)
+const videoWrapper = ref<HTMLElement | null>(null)
+const videoMetaBlock = ref<HTMLElement | null>(null)
+const controlBar = ref<HTMLElement | null>(null)
 const playerContainer = ref<HTMLElement | null>(null)
 const videoElement = ref<HTMLVideoElement | null>(null)
 let player: Plyr | null = null
@@ -222,6 +229,8 @@ let saveInterval: number | null = null
 let refreshUrlTimeout: number | null = null // Auto-refresh before URL expires
 let isRefreshingUrl = ref(false) // Track if currently refreshing URL
 let statusTickInterval: number | null = null
+let responsiveLayoutFrame: number | null = null
+let responsiveLayoutObserver: ResizeObserver | null = null
 const statusNow = ref(Date.now())
 
 const episodeTitle = computed(() => {
@@ -507,6 +516,123 @@ function handleImageError() {
     console.warn('⚠️ Cover image failed to load, using placeholder')
     animeCover.value = ''
   }
+}
+
+function getViewportMetrics() {
+  const viewport = window.visualViewport
+  return {
+    height: viewport?.height || window.innerHeight,
+    width: viewport?.width || window.innerWidth
+  }
+}
+
+function getVerticalMargin(element: HTMLElement | null, side: 'top' | 'bottom') {
+  if (!element) {
+    return 0
+  }
+
+  const styles = window.getComputedStyle(element)
+  const rawValue = side === 'top' ? styles.marginTop : styles.marginBottom
+  const parsed = Number.parseFloat(rawValue)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function refreshResponsiveLayoutObserver() {
+  if (typeof window === 'undefined' || typeof ResizeObserver === 'undefined') {
+    return
+  }
+
+  if (!responsiveLayoutObserver) {
+    responsiveLayoutObserver = new ResizeObserver(() => {
+      scheduleResponsiveLayoutUpdate()
+    })
+  } else {
+    responsiveLayoutObserver.disconnect()
+  }
+
+  const targets = [
+    watchViewRoot.value,
+    videoContainer.value,
+    videoWrapper.value,
+    videoMetaBlock.value,
+    controlBar.value,
+    playerContainer.value
+  ]
+
+  for (const target of targets) {
+    if (target) {
+      responsiveLayoutObserver.observe(target)
+    }
+  }
+}
+
+function updateResponsiveLayout() {
+  const root = watchViewRoot.value
+  const wrapper = videoWrapper.value
+  const container = videoContainer.value
+
+  if (!root) {
+    return
+  }
+
+  const { height: viewportHeight, width: viewportWidth } = getViewportMetrics()
+  root.style.setProperty('--watch-viewport-height', `${Math.round(viewportHeight)}px`)
+
+  if (!wrapper || !container) {
+    return
+  }
+
+  const wrapperTop = Math.max(wrapper.getBoundingClientRect().top, 0)
+  const titleHeight = videoMetaBlock.value?.offsetHeight || 0
+  const containerWidth = container.clientWidth || wrapper.clientWidth || viewportWidth
+  const sidePadding = viewportWidth <= 768 ? 16 : 32
+  const titleMarginTop = getVerticalMargin(videoMetaBlock.value, 'top')
+  const titleBoundaryBuffer = viewportWidth <= 768 ? 10 : 14
+  const widthPreference = viewportWidth >= 2200
+    ? viewportWidth * 0.86
+    : viewportWidth >= 1600
+      ? viewportWidth * 0.82
+      : viewportWidth >= 1200
+        ? viewportWidth * 0.78
+        : viewportWidth - sidePadding
+  const availableHeight = viewportHeight
+    - wrapperTop
+    - titleMarginTop
+    - titleHeight
+    - titleBoundaryBuffer
+
+  const safeMaxHeight = Math.max(180, Math.floor(availableHeight))
+  const safeMaxWidth = Math.max(
+    280,
+    Math.floor(
+      Math.min(
+        containerWidth,
+        viewportWidth - sidePadding,
+        widthPreference,
+        safeMaxHeight * (16 / 9)
+      )
+    )
+  )
+  const safeHeight = Math.max(158, Math.floor(safeMaxWidth * 9 / 16))
+
+  root.style.setProperty('--player-width', `${safeMaxWidth}px`)
+  root.style.setProperty('--player-height', `${safeHeight}px`)
+  root.style.setProperty('--player-max-height', `${safeMaxHeight}px`)
+}
+
+function scheduleResponsiveLayoutUpdate() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (responsiveLayoutFrame !== null) {
+    window.cancelAnimationFrame(responsiveLayoutFrame)
+  }
+
+  responsiveLayoutFrame = window.requestAnimationFrame(() => {
+    responsiveLayoutFrame = null
+    updateResponsiveLayout()
+  })
 }
 
 async function savePosition() {
@@ -823,9 +949,18 @@ onMounted(async () => {
   window.addEventListener('visibilitychange', handlePageHide)
   window.addEventListener('pagehide', handlePageHide)
   window.addEventListener('beforeunload', handlePageHide)
+  window.addEventListener('resize', scheduleResponsiveLayoutUpdate)
+  window.addEventListener('orientationchange', scheduleResponsiveLayoutUpdate)
+  window.addEventListener('scroll', scheduleResponsiveLayoutUpdate, { passive: true })
+  window.visualViewport?.addEventListener('resize', scheduleResponsiveLayoutUpdate)
+  window.visualViewport?.addEventListener('scroll', scheduleResponsiveLayoutUpdate)
   statusTickInterval = window.setInterval(() => {
     statusNow.value = Date.now()
   }, 30 * 1000)
+
+  await nextTick()
+  refreshResponsiveLayoutObserver()
+  scheduleResponsiveLayoutUpdate()
 
   try {
     // Note: Plyr will be initialized when videoUrl becomes available
@@ -852,6 +987,14 @@ onUnmounted(() => {
   if (statusTickInterval) {
     clearInterval(statusTickInterval)
   }
+  if (responsiveLayoutFrame !== null) {
+    cancelAnimationFrame(responsiveLayoutFrame)
+    responsiveLayoutFrame = null
+  }
+  if (responsiveLayoutObserver) {
+    responsiveLayoutObserver.disconnect()
+    responsiveLayoutObserver = null
+  }
   if (player) {
     player.destroy()
     player = null  // Clear the reference to allow re-initialization
@@ -861,6 +1004,11 @@ onUnmounted(() => {
   window.removeEventListener('visibilitychange', handlePageHide)
   window.removeEventListener('pagehide', handlePageHide)
   window.removeEventListener('beforeunload', handlePageHide)
+  window.removeEventListener('resize', scheduleResponsiveLayoutUpdate)
+  window.removeEventListener('orientationchange', scheduleResponsiveLayoutUpdate)
+  window.removeEventListener('scroll', scheduleResponsiveLayoutUpdate)
+  window.visualViewport?.removeEventListener('resize', scheduleResponsiveLayoutUpdate)
+  window.visualViewport?.removeEventListener('scroll', scheduleResponsiveLayoutUpdate)
 })
 
 // Router navigation guard - save position before navigating away
@@ -894,6 +1042,16 @@ watch(() => route.query, () => {
     loadEpisode()
   }
 }, { deep: true })
+
+watch(
+  [loading, error, videoUrl, animeTitle, episodeTitle],
+  async () => {
+    await nextTick()
+    refreshResponsiveLayoutObserver()
+    scheduleResponsiveLayoutUpdate()
+  },
+  { flush: 'post' }
+)
 
 // Note: Plyr initialization is triggered directly from loadEpisode()
 // after loading=false and nextTick, guaranteeing the <video> element exists in DOM.
@@ -1248,14 +1406,20 @@ function initializePlyr(initialUrl?: string) {
 <style scoped>
 /* Minimalist Theater Mode */
 .watch-view {
-  min-height: 100vh;
+  --watch-viewport-height: 100dvh;
+  --player-width: min(100%, 1560px);
+  --player-height: min(72dvh, calc((100vw - 1.25rem) * 9 / 16));
+  --player-max-height: min(72dvh, calc((100vw - 1.25rem) * 9 / 16));
+  min-height: var(--watch-viewport-height);
   background: var(--bg-primary);
-  padding-top: 10px;
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
   padding-inline: clamp(0.5rem, 1.4vw, 1.1rem);
+  box-sizing: border-box;
 }
 
 .watch-layout {
-  width: min(100%, 1720px);
+  width: min(100%, 2200px);
   margin: 0 auto;
   padding-block: 0.65rem 1.5rem;
 }
@@ -1274,16 +1438,17 @@ function initializePlyr(initialUrl?: string) {
   justify-content: center;
   width: 100%;
   margin: 0 auto;
-  padding: 1rem 0;
+  padding: clamp(0.55rem, 1.2vh, 1rem) 0;
   box-sizing: border-box;
 }
 
 /* True Center - Video Wrapper */
 .video-wrapper {
-  width: 100%;
+  width: min(100%, var(--player-width));
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0 auto;
 }
 
 .video-frame,
@@ -1292,6 +1457,10 @@ function initializePlyr(initialUrl?: string) {
   aspect-ratio: 16/9;
   display: block;
   background: #000;
+  max-height: var(--player-max-height);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 44px color-mix(in srgb, #000 18%, transparent);
 }
 
 .video-frame {
@@ -1312,12 +1481,13 @@ function initializePlyr(initialUrl?: string) {
   object-fit: contain;
   /* Ensure empty video element has proper background */
   background: #000;
-  min-height: 300px;
+  min-height: 0;
 }
 
 /* Video Title Overlay - Minimal */
 .video-title-overlay {
-  margin-top: 1.5rem;
+  width: min(100%, var(--player-width));
+  margin: 1rem auto 0;
   text-align: center;
 }
 
@@ -1336,13 +1506,17 @@ function initializePlyr(initialUrl?: string) {
 
 /* Control Bar - Minimal */
 .control-bar {
-  margin-top: 1.5rem;
+  width: min(100%, var(--player-width));
+  margin: 1rem auto 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   padding: 0.75rem 1.25rem;
   background: var(--bg-tertiary);
   border-radius: 50px;
+  box-sizing: border-box;
+  flex-wrap: wrap;
 }
 
 .btn-control {
@@ -1398,7 +1572,7 @@ function initializePlyr(initialUrl?: string) {
 /* Side Panel - Minimal */
 .side-panel {
   width: 100%;
-  max-width: 1200px;
+  max-width: min(1600px, 100%);
   margin: 0 auto;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
@@ -1652,6 +1826,17 @@ function initializePlyr(initialUrl?: string) {
   color: #fff;
 }
 
+.video-skeleton-item {
+  width: min(100%, var(--player-width));
+  height: var(--player-height);
+  border-radius: 14px;
+}
+
+.video-skeleton {
+  width: min(100%, var(--player-width));
+  margin: 0 auto;
+}
+
 /* Plyr customization */
 #plyr-player {
   background: #000;
@@ -1676,7 +1861,8 @@ function initializePlyr(initialUrl?: string) {
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .watch-view {
-    padding-top: 10px;
+    min-height: var(--watch-viewport-height);
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
     padding-inline: 0.65rem;
   }
 
@@ -1685,20 +1871,21 @@ function initializePlyr(initialUrl?: string) {
   }
 
   .video-container {
-    padding: 0.9rem 0;
+    padding: 0.45rem 0 0.8rem;
   }
 
   .video-title {
-    font-size: 1.2rem;
+    font-size: clamp(1.02rem, 4.2vw, 1.2rem);
   }
 
   .control-bar {
-    flex-wrap: wrap;
-    justify-content: center;
+    gap: 0.65rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 20px;
   }
 
   .side-panel {
-    padding: 1rem;
+    padding: 1rem 0.9rem;
     max-width: 100%;
     grid-template-columns: 1fr;
   }
@@ -1713,6 +1900,40 @@ function initializePlyr(initialUrl?: string) {
 
   .episode-list {
     grid-row: auto;
+  }
+
+  .btn-control,
+  .btn-back {
+    flex: 1 1 132px;
+    text-align: center;
+  }
+
+  .autoplay-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .watch-view {
+    --player-height: min(62dvh, calc((100vw - 1.3rem) * 9 / 16));
+  }
+
+  .video-title-overlay {
+    margin-top: 0.8rem;
+  }
+
+  .video-meta {
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .control-bar {
+    margin-top: 0.85rem;
+  }
+
+  .anime-info {
+    align-items: flex-start;
   }
 }
 </style>
