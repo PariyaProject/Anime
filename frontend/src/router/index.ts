@@ -40,6 +40,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '观看历史', requiresAuth: true }
   },
   {
+    path: '/account/security',
+    name: 'AccountSecurity',
+    component: () => import('@/views/AccountSecurityView.vue'),
+    meta: { title: '账号安全', requiresAuth: true }
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/AdminView.vue'),

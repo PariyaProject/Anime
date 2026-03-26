@@ -91,6 +91,15 @@
               <span class="settings-text">观看历史</span>
             </router-link>
 
+            <router-link
+              to="/account/security"
+              class="dropdown-item settings-item"
+              @click="accountDropdownOpen = false"
+            >
+              <span class="settings-icon">🔐</span>
+              <span class="settings-text">修改密码</span>
+            </router-link>
+
             <div class="dropdown-divider"></div>
 
             <button class="dropdown-item settings-item logout-btn" @click="handleLogout">

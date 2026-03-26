@@ -298,6 +298,54 @@
             当前禁用原因：{{ selectedUserDetails.user.disabledReason }}
           </div>
 
+          <div class="access-card">
+            <div>
+              <p class="access-title">密码重置</p>
+              <p class="access-text">
+                管理员可以直接为该账号设置一个新密码。重置后，该账号所有已登录设备都会失效，需要使用新密码重新登录。
+              </p>
+            </div>
+
+            <div v-if="selectedUserDetails.user.id === authStore.user?.id" class="access-actions">
+              <div class="notice-banner">
+                当前选中的是你自己，请使用
+                <router-link to="/account/security">账号安全</router-link>
+                页面修改密码。
+              </div>
+            </div>
+
+            <div v-else class="access-actions">
+              <div class="password-reset-grid">
+                <label class="field">
+                  <span>新密码</span>
+                  <input
+                    v-model="resetPasswordForm.password"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="至少 8 位"
+                  />
+                </label>
+                <label class="field">
+                  <span>确认新密码</span>
+                  <input
+                    v-model="resetPasswordForm.confirmPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="再次输入新密码"
+                  />
+                </label>
+              </div>
+              <button
+                class="secondary-button"
+                type="button"
+                :disabled="resettingPassword"
+                @click="resetUserPassword"
+              >
+                {{ resettingPassword ? '处理中...' : '重置密码' }}
+              </button>
+            </div>
+          </div>
+
           <div class="detail-columns">
             <section class="detail-panel">
               <div class="detail-panel-header">
@@ -564,6 +612,7 @@ import { adminService } from '@/services/admin.service'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { useRoute } from 'vue-router'
+import { copyTextToClipboard } from '@/utils/clipboard'
 import type {
   AdminInvite,
   AdminManagedUser,
@@ -583,6 +632,7 @@ const savingSettings = ref(false)
 const creatingInvite = ref(false)
 const savingAccess = ref(false)
 const updatingRole = ref(false)
+const resettingPassword = ref(false)
 const downloadingBackup = ref(false)
 const restoringBackup = ref(false)
 const invites = ref<AdminInvite[]>([])
@@ -634,6 +684,11 @@ const newInvite = reactive({
   expiresInDays: 30
 })
 
+const resetPasswordForm = reactive({
+  password: '',
+  confirmPassword: ''
+})
+
 const activeInvitesCount = computed(() => invites.value.filter(invite => invite.status === 'active').length)
 const disabledUsersCount = computed(() => users.value.filter(user => user.status === 'disabled').length)
 
@@ -677,6 +732,11 @@ function buildInviteUrl(code: string) {
   return `${window.location.origin}/invite/${code}`
 }
 
+function resetPasswordInputs() {
+  resetPasswordForm.password = ''
+  resetPasswordForm.confirmPassword = ''
+}
+
 async function loadUserDetails(userId: string) {
   selectedUserDetails.value = await adminService.getUserDetails(userId, {
     loginPage: loginPage.value,
@@ -686,6 +746,7 @@ async function loadUserDetails(userId: string) {
   })
   selectedUserId.value = userId
   accessReason.value = selectedUserDetails.value.user.disabledReason || ''
+  resetPasswordInputs()
 }
 
 async function selectUser(userId: string) {
@@ -781,16 +842,25 @@ async function revokeInvite(inviteId: string) {
 }
 
 async function copyInvite(code: string) {
-  await navigator.clipboard.writeText(buildInviteUrl(code))
-  uiStore.showNotification('邀请链接已复制', 'success')
+  try {
+    await copyTextToClipboard(buildInviteUrl(code))
+    uiStore.showNotification('邀请链接已复制', 'success')
+  } catch (err: any) {
+    uiStore.showNotification(err.message || '复制邀请链接失败', 'error')
+  }
 }
 
 async function copyInviteUrl() {
   if (!latestInviteUrl.value) {
     return
   }
-  await navigator.clipboard.writeText(latestInviteUrl.value)
-  uiStore.showNotification('邀请链接已复制', 'success')
+
+  try {
+    await copyTextToClipboard(latestInviteUrl.value)
+    uiStore.showNotification('邀请链接已复制', 'success')
+  } catch (err: any) {
+    uiStore.showNotification(err.message || '复制邀请链接失败', 'error')
+  }
 }
 
 async function updateUserAccess(disabled: boolean) {
@@ -829,6 +899,45 @@ async function updateUserRole(isAdmin: boolean) {
     uiStore.showNotification(err.message || '更新账号角色失败', 'error')
   } finally {
     updatingRole.value = false
+  }
+}
+
+async function resetUserPassword() {
+  if (!selectedUserDetails.value) {
+    return
+  }
+
+  if (selectedUserDetails.value.user.id === authStore.user?.id) {
+    uiStore.showNotification('请前往账号安全页面修改当前登录账号的密码', 'error')
+    return
+  }
+
+  if (resetPasswordForm.password !== resetPasswordForm.confirmPassword) {
+    uiStore.showNotification('两次输入的新密码不一致', 'error')
+    return
+  }
+
+  const confirmed = window.confirm(
+    `确认重置用户 ${selectedUserDetails.value.user.username} 的密码吗？该用户所有登录会话都会失效。`
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  resettingPassword.value = true
+
+  try {
+    await adminService.resetUserPassword(selectedUserDetails.value.user.id, {
+      password: resetPasswordForm.password
+    })
+    resetPasswordInputs()
+    await loadOverview()
+    uiStore.showNotification('密码已重置，旧会话已失效', 'success')
+  } catch (err: any) {
+    uiStore.showNotification(err.message || '重置密码失败', 'error')
+  } finally {
+    resettingPassword.value = false
   }
 }
 
@@ -1379,6 +1488,11 @@ onMounted(async () => {
   gap: 0.8rem;
 }
 
+.password-reset-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
 .reason-input,
 .field input,
 .field textarea {
@@ -1404,6 +1518,11 @@ onMounted(async () => {
   padding: 0.95rem 1rem;
   background: rgba(186, 72, 58, 0.1);
   color: #9e4133;
+}
+
+.notice-banner a {
+  color: inherit;
+  font-weight: 700;
 }
 
 .empty-tip {

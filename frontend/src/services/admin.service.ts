@@ -6,6 +6,7 @@ import type {
   AdminManagedUser,
   AdminOverview,
   AdminPaginatedUsers,
+  AdminResetPasswordPayload,
   AdminUserDetails,
   InviteValidationResponse,
   PublicSiteBootstrap,
@@ -86,6 +87,10 @@ export const adminService = {
       payload
     )
     return response.data.data
+  },
+
+  async resetUserPassword(userId: string, payload: AdminResetPasswordPayload): Promise<void> {
+    await api.post<BackendResponse<boolean>>(`/api/admin/users/${userId}/reset-password`, payload)
   },
 
   async downloadDatabaseBackup(): Promise<Blob> {

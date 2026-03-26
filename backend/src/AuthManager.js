@@ -142,6 +142,10 @@ async function verifyPassword(password, storedHash) {
     );
 }
 
+function isSamePassword(password, storedHash) {
+    return verifyPassword(password, storedHash);
+}
+
 function mapUserRow(row) {
     if (!row) {
         return null;
@@ -184,6 +188,65 @@ function recordLoginEvent({ userId = null, attemptedUsername = '', success = fal
 }
 
 class AuthManager {
+    static getUserPasswordRow(userId) {
+        const database = getDatabase();
+        return database.prepare(`
+            SELECT
+                id,
+                username,
+                password_hash,
+                is_admin,
+                invited_by,
+                invite_accepted_at,
+                last_login_at,
+                disabled_at,
+                disabled_reason,
+                created_at
+            FROM users
+            WHERE id = ?
+        `).get(Number(userId));
+    }
+
+    static async setPasswordForUser(userId, password, options = {}) {
+        const database = getDatabase();
+        const targetUser = this.getUserPasswordRow(userId);
+
+        if (!targetUser) {
+            throw new Error('用户不存在');
+        }
+
+        validatePassword(password);
+
+        const samePassword = await isSamePassword(password, targetUser.password_hash);
+        if (samePassword) {
+            throw new Error('新密码不能与当前密码相同');
+        }
+
+        const passwordHash = await hashPassword(password);
+        const updatedAt = nowIso();
+
+        database.prepare(`
+            UPDATE users
+            SET password_hash = ?, updated_at = ?
+            WHERE id = ?
+        `).run(passwordHash, updatedAt, Number(userId));
+
+        const preserveSessionHash = options.preserveSessionToken
+            ? hashSessionToken(options.preserveSessionToken)
+            : null;
+
+        if (preserveSessionHash) {
+            database.prepare(`
+                DELETE FROM sessions
+                WHERE user_id = ? AND token_hash != ?
+            `).run(Number(userId), preserveSessionHash);
+        } else if (options.clearAllSessions !== false) {
+            database.prepare('DELETE FROM sessions WHERE user_id = ?').run(Number(userId));
+        }
+
+        return mapUserRow(this.getUserPasswordRow(userId));
+    }
+
     static async createUser({
         username,
         password,
@@ -369,6 +432,30 @@ class AuthManager {
 
             throw error;
         }
+    }
+
+    static async changePassword(userId, currentPassword, nextPassword, currentSessionToken = null) {
+        const targetUser = this.getUserPasswordRow(userId);
+
+        if (!targetUser) {
+            throw new Error('用户不存在');
+        }
+
+        if (targetUser.disabled_at) {
+            throw new Error('该账号已被管理员禁用');
+        }
+
+        validatePassword(currentPassword);
+        validatePassword(nextPassword);
+
+        const passwordMatches = await verifyPassword(currentPassword, targetUser.password_hash);
+        if (!passwordMatches) {
+            throw new Error('当前密码不正确');
+        }
+
+        return this.setPasswordForUser(userId, nextPassword, {
+            preserveSessionToken: currentSessionToken
+        });
     }
 
     static createSession(userId, metadata = {}) {

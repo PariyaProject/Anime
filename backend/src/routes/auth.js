@@ -3,6 +3,7 @@ const {
     AuthManager,
     clearSessionCookie,
     getClientIp,
+    requireAuth,
     setSessionCookie
 } = require('../AuthManager');
 const { AdminManager } = require('../AdminManager');
@@ -98,6 +99,32 @@ router.get('/api/auth/me', (req, res) => {
         success: true,
         data: req.authUser || null
     });
+});
+
+router.post('/api/auth/change-password', requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, nextPassword } = req.body || {};
+
+        await AuthManager.changePassword(
+            req.authUser.id,
+            currentPassword,
+            nextPassword,
+            req.sessionToken
+        );
+
+        res.json({
+            success: true,
+            data: true,
+            message: '密码已更新'
+        });
+    } catch (error) {
+        const message = error.message || '修改密码失败';
+        const statusCode = message.includes('不存在') ? 404 : 400;
+        res.status(statusCode).json({
+            success: false,
+            error: message
+        });
+    }
 });
 
 module.exports = router;

@@ -15,6 +15,15 @@ export interface AuthCredentials {
   password: string
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string
+  nextPassword: string
+}
+
+export interface AdminResetPasswordPayload {
+  password: string
+}
+
 export interface PublicSiteBootstrap {
   siteName: string
   loginTitle: string

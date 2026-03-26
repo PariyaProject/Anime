@@ -199,4 +199,28 @@ router.patch('/api/admin/users/:userId/role', (req, res) => {
     }
 });
 
+router.post('/api/admin/users/:userId/reset-password', async (req, res) => {
+    try {
+        if (Number(req.params.userId) === Number(req.authUser.id)) {
+            throw new Error('请前往账号安全页面修改当前登录账号的密码');
+        }
+
+        await AuthManager.setPasswordForUser(req.params.userId, req.body?.password, {
+            clearAllSessions: true
+        });
+
+        res.json({
+            success: true,
+            data: true,
+            message: '密码已重置，原有会话已失效'
+        });
+    } catch (error) {
+        const statusCode = error.message?.includes('不存在') ? 404 : 400;
+        res.status(statusCode).json({
+            success: false,
+            error: error.message || '重置密码失败'
+        });
+    }
+});
+
 module.exports = router;

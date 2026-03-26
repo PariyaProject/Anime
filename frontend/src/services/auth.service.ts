@@ -1,6 +1,6 @@
 import api from './api'
 import type { BackendResponse } from '@/types/api.types'
-import type { AuthCredentials, AuthUser } from '@/types/auth.types'
+import type { AuthCredentials, AuthUser, ChangePasswordPayload } from '@/types/auth.types'
 
 export const authService = {
   async getCurrentUser(): Promise<AuthUser | null> {
@@ -23,5 +23,9 @@ export const authService = {
 
   async logout(): Promise<void> {
     await api.post('/api/auth/logout')
+  },
+
+  async changePassword(payload: ChangePasswordPayload): Promise<void> {
+    await api.post<BackendResponse<boolean>>('/api/auth/change-password', payload)
   }
 }
