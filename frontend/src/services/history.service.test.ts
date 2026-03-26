@@ -105,12 +105,15 @@ describe('History Service', () => {
 
   describe('saveHistoryRecord', () => {
     it('saves history record', async () => {
-      const record = { ...({} as any), 
+      const record = { ...({} as any),
         animeId: '789',
         animeTitle: 'New Anime',
+        animeCover: 'https://example.com/new-cover.jpg',
         season: 1,
         episode: 1,
+        episodeTitle: 'Episode 1',
         position: 0,
+        duration: 1440,
         watchDate: new Date().toISOString(),
         completed: false
       }
@@ -119,16 +122,32 @@ describe('History Service', () => {
 
       await historyService.saveHistoryRecord(record)
 
-      expect(mockApiPost).toHaveBeenCalledWith('/api/watch-history', record)
+      expect(mockApiPost).toHaveBeenCalledWith('/api/watch-history', {
+        animeInfo: {
+          id: record.animeId,
+          title: record.animeTitle,
+          cover: record.animeCover
+        },
+        episodeInfo: {
+          season: record.season,
+          episode: record.episode,
+          title: record.episodeTitle,
+          duration: record.duration
+        },
+        position: record.position
+      })
     })
 
     it('propagates API errors', async () => {
-      const record = { ...({} as any), 
+      const record = { ...({} as any),
         animeId: '789',
         animeTitle: 'New Anime',
+        animeCover: 'https://example.com/new-cover.jpg',
         season: 1,
         episode: 1,
+        episodeTitle: 'Episode 1',
         position: 0,
+        duration: 1440,
         watchDate: new Date().toISOString(),
         completed: false
       }
@@ -137,6 +156,56 @@ describe('History Service', () => {
       mockApiPost.mockRejectedValueOnce(error)
 
       await expect(historyService.saveHistoryRecord(record)).rejects.toThrow('Failed to save history')
+    })
+  })
+
+  describe('watch history transfer', () => {
+    it('exports watch history as a blob and filename', async () => {
+      const blob = new Blob(['{}'], { type: 'application/json' })
+      mockApiGet.mockResolvedValueOnce({
+        data: blob,
+        headers: {
+          'content-disposition': 'attachment; filename="watch-history-test.json"'
+        }
+      } as any)
+
+      const result = await historyService.exportWatchHistory()
+
+      expect(mockApiGet).toHaveBeenCalledWith('/api/watch-history/export', {
+        responseType: 'blob'
+      })
+      expect(result.blob).toBe(blob)
+      expect(result.filename).toBe('watch-history-test.json')
+    })
+
+    it('imports watch history with a selected mode', async () => {
+      mockApiPost.mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            importedCount: 4,
+            totalCount: 12,
+            mode: 'replace'
+          }
+        }
+      } as any)
+
+      const payload = {
+        format: 'anime-watch-history',
+        records: []
+      }
+
+      const result = await historyService.importWatchHistory(payload, 'replace')
+
+      expect(mockApiPost).toHaveBeenCalledWith('/api/watch-history/import', {
+        payload,
+        mode: 'replace'
+      })
+      expect(result).toEqual({
+        importedCount: 4,
+        totalCount: 12,
+        mode: 'replace'
+      })
     })
   })
 

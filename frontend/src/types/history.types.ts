@@ -25,3 +25,19 @@ export interface ContinueWatchingResponse {
   success: boolean
   data: WatchRecord[]
 }
+
+export type HistoryImportMode = 'merge' | 'replace'
+
+export interface HistoryExportPayload {
+  format: 'anime-watch-history'
+  version: 1
+  exportedAt: string
+  recordCount: number
+  records: WatchRecord[]
+}
+
+export interface HistoryImportResult {
+  importedCount: number
+  totalCount: number
+  mode: HistoryImportMode
+}

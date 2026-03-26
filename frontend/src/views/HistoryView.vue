@@ -1,10 +1,71 @@
 <template>
   <div class="history-view">
     <div class="history-layout">
-      <h4 class="history-header mb-4">
-        <i class="bi bi-clock-history me-2"></i>
-        观看历史
-      </h4>
+      <section class="history-hero mb-4">
+        <div>
+          <p class="history-eyebrow">Personal Archive</p>
+          <h4 class="history-header">
+            <i class="bi bi-clock-history me-2"></i>
+            观看历史
+          </h4>
+          <p class="history-subtitle">
+            每个账号都可以单独导入或导出自己的观看历史，迁移设备和备份都会更方便。
+          </p>
+        </div>
+        <div class="history-stat-chip">
+          <span class="history-stat-label">云端记录</span>
+          <strong>{{ serverHistoryCount }}</strong>
+        </div>
+      </section>
+
+      <section class="transfer-section mb-4">
+        <div class="transfer-card">
+          <div class="transfer-copy">
+            <h5>导入 / 导出</h5>
+            <p>
+              导出会下载当前账号的历史 JSON；导入支持本项目导出的文件，也兼容旧历史文件结构。
+            </p>
+          </div>
+          <div class="transfer-controls">
+            <button
+              class="btn-transfer btn-transfer-export"
+              type="button"
+              :disabled="transferBusy"
+              @click="handleExport"
+            >
+              <i class="bi bi-download me-2"></i>
+              {{ transferBusy ? '处理中...' : '导出历史' }}
+            </button>
+
+            <label class="btn-transfer btn-transfer-import" :class="{ disabled: transferBusy }">
+              <input
+                ref="fileInput"
+                type="file"
+                accept="application/json,.json"
+                class="visually-hidden"
+                :disabled="transferBusy"
+                @change="handleImportFile"
+              />
+              <i class="bi bi-upload me-2"></i>
+              导入 JSON
+            </label>
+          </div>
+          <div class="transfer-footer">
+            <label class="replace-toggle">
+              <input v-model="replaceOnImport" type="checkbox" :disabled="transferBusy" />
+              <span>导入时覆盖当前账号已有历史</span>
+            </label>
+            <span class="transfer-mode">{{ replaceOnImport ? '覆盖导入' : '合并导入' }}</span>
+          </div>
+          <p
+            v-if="transferMessage"
+            class="transfer-message"
+            :class="transferMessageTone === 'error' ? 'is-error' : 'is-success'"
+          >
+            {{ transferMessage }}
+          </p>
+        </div>
+      </section>
 
       <div v-if="loading" class="text-center py-5">
         <LoadingSpinner />
@@ -139,6 +200,11 @@ const placeholderImage = '/placeholder/placeholder-300x180.svg'
 
 const loading = ref(false)
 const error = ref<string | null>(null)
+const transferBusy = ref(false)
+const replaceOnImport = ref(false)
+const transferMessage = ref('')
+const transferMessageTone = ref<'success' | 'error'>('success')
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const searchQuery = ref('')
 const filterStatus = ref('')
@@ -146,6 +212,7 @@ const sortBy = ref('date')
 
 // Get backend history data
 const backendHistory = computed(() => historyStore.watchHistory)
+const serverHistoryCount = computed(() => historyStore.watchHistory.length)
 
 // Merge with localStorage data using useGroupedHistory
 const { groupedAnime } = useGroupedHistory(backendHistory)
@@ -224,6 +291,73 @@ async function loadHistory() {
     error.value = err.message || 'Failed to load history'
   } finally {
     loading.value = false
+  }
+}
+
+function setTransferMessage(message: string, tone: 'success' | 'error' = 'success') {
+  transferMessage.value = message
+  transferMessageTone.value = tone
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
+async function handleExport() {
+  transferBusy.value = true
+  setTransferMessage('')
+
+  try {
+    const { blob, filename } = await historyStore.exportWatchHistory()
+    downloadBlob(blob, filename)
+    setTransferMessage(`已导出 ${serverHistoryCount.value} 条云端观看记录。`)
+  } catch (err: any) {
+    setTransferMessage(err.message || '导出观看历史失败', 'error')
+  } finally {
+    transferBusy.value = false
+  }
+}
+
+async function handleImportFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  transferBusy.value = true
+  setTransferMessage('')
+
+  try {
+    const rawText = await file.text()
+    let payload: unknown
+
+    try {
+      payload = JSON.parse(rawText)
+    } catch {
+      throw new Error('导入文件不是有效的 JSON 格式')
+    }
+
+    const mode = replaceOnImport.value ? 'replace' : 'merge'
+    const result = await historyStore.importWatchHistory(payload, mode)
+    setTransferMessage(
+      mode === 'replace'
+        ? `已覆盖导入 ${result.importedCount} 条记录，当前账号共有 ${result.totalCount} 条历史。`
+        : `已合并导入 ${result.importedCount} 条记录，当前账号共有 ${result.totalCount} 条历史。`
+    )
+  } catch (err: any) {
+    setTransferMessage(err.message || '导入观看历史失败', 'error')
+  } finally {
+    transferBusy.value = false
+    input.value = ''
   }
 }
 
@@ -311,14 +445,183 @@ onMounted(async () => {
   padding-block: 1rem 2rem;
 }
 
-/* Section Header */
+.history-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.4rem 1.5rem;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-color) 16%, transparent), transparent 42%),
+    linear-gradient(135deg, color-mix(in srgb, var(--bg-primary) 88%, #0f172a 12%), color-mix(in srgb, var(--bg-secondary) 92%, #102a43 8%));
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+
+.history-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent-color) 74%, var(--text-secondary) 26%);
+}
+
 .history-header {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-weight: 700;
   color: var(--text-primary);
   margin: 0;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid var(--border-color);
+}
+
+.history-subtitle {
+  margin: 0.7rem 0 0;
+  max-width: 52rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.history-stat-chip {
+  min-width: 120px;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-primary) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  text-align: right;
+  backdrop-filter: blur(12px);
+}
+
+.history-stat-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.history-stat-chip strong {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.transfer-card {
+  padding: 1.1rem 1.2rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 75%, transparent);
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--bg-primary) 96%, #ffffff 4%), color-mix(in srgb, var(--bg-secondary) 94%, #0f172a 6%));
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow) 24%, transparent);
+}
+
+.transfer-copy h5 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.transfer-copy p {
+  margin: 0.4rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.transfer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btn-transfer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-transfer:hover:not(:disabled):not(.disabled) {
+  transform: translateY(-1px);
+}
+
+.btn-transfer:disabled,
+.btn-transfer.disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.btn-transfer-export {
+  color: #fff;
+  background: linear-gradient(135deg, #0f4c81, #2563eb);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.26);
+}
+
+.btn-transfer-import {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-primary) 92%, #f8fafc 8%);
+  border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+.transfer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.replace-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.replace-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent-color);
+}
+
+.transfer-mode {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+  color: color-mix(in srgb, var(--accent-color) 76%, var(--text-primary) 24%);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.transfer-message {
+  margin: 0.9rem 0 0;
+  padding: 0.8rem 0.95rem;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.transfer-message.is-success {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+
+.transfer-message.is-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
 }
 
 /* Filters Card */
@@ -416,6 +719,31 @@ onMounted(async () => {
 
   .history-layout {
     padding-block: 0.85rem 1.25rem;
+  }
+
+  .history-hero {
+    padding: 1.1rem 1rem;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-stat-chip {
+    width: 100%;
+    text-align: left;
+  }
+
+  .transfer-card {
+    padding: 1rem;
+  }
+
+  .transfer-controls,
+  .transfer-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-transfer {
+    width: 100%;
   }
 }
 
@@ -568,6 +896,7 @@ onMounted(async () => {
 @media (prefers-reduced-motion: reduce) {
   .form-input,
   .form-select,
+  .btn-transfer,
   .btn-clear,
   .history-card,
   .progress-bar-fill {

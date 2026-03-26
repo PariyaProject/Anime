@@ -1,5 +1,11 @@
 import api from './api'
-import type { WatchRecord, HistoryResponse, PositionRecord } from '@/types/history.types'
+import type {
+  WatchRecord,
+  HistoryResponse,
+  PositionRecord,
+  HistoryImportMode,
+  HistoryImportResult
+} from '@/types/history.types'
 import type { BackendResponse } from '@/types/api.types'
 
 /**
@@ -219,6 +225,24 @@ function clearFromLocal(animeId: string, season: number, episode: number): void 
   }
 }
 
+function parseDownloadFilename(contentDisposition?: string): string {
+  if (!contentDisposition) {
+    return `watch-history-${new Date().toISOString().slice(0, 10)}.json`
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1])
+  }
+
+  const asciiMatch = contentDisposition.match(/filename\s*=\s*"([^"]+)"/i) || contentDisposition.match(/filename\s*=\s*([^;]+)/i)
+  if (asciiMatch?.[1]) {
+    return asciiMatch[1].trim()
+  }
+
+  return `watch-history-${new Date().toISOString().slice(0, 10)}.json`
+}
+
 export const historyService = {
   async getWatchHistory(): Promise<WatchRecord[]> {
     const response = await api.get<HistoryResponse>('/api/watch-history')
@@ -227,6 +251,26 @@ export const historyService = {
 
   async getContinueWatching(): Promise<WatchRecord[]> {
     const response = await api.get<HistoryResponse>('/api/continue-watching')
+    return response.data.data
+  },
+
+  async exportWatchHistory(): Promise<{ blob: Blob, filename: string }> {
+    const response = await api.get<Blob>('/api/watch-history/export', {
+      responseType: 'blob'
+    })
+
+    return {
+      blob: response.data,
+      filename: parseDownloadFilename(response.headers?.['content-disposition'])
+    }
+  },
+
+  async importWatchHistory(payload: unknown, mode: HistoryImportMode = 'merge'): Promise<HistoryImportResult> {
+    const response = await api.post<BackendResponse<HistoryImportResult>>('/api/watch-history/import', {
+      payload,
+      mode
+    })
+
     return response.data.data
   },
 

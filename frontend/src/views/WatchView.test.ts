@@ -63,7 +63,7 @@ const mockPlayerStore = reactive({
 })
 
 const mockHistoryStore = {
-  getLastPosition: vi.fn(async () => null),
+  getLastPosition: vi.fn<(animeId: string, season: number, episode: number) => Promise<number | null>>(async () => null),
   savePosition: vi.fn(async () => undefined),
   savePositionImmediate: vi.fn(async () => undefined)
 }

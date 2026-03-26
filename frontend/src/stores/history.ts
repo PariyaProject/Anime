@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { WatchRecord, PositionRecord } from '@/types/history.types'
+import type { WatchRecord, PositionRecord, HistoryImportMode } from '@/types/history.types'
 import { historyService, type AnimeInfo, type EpisodeInfo } from '@/services/history.service'
 
 export const useHistoryStore = defineStore('history', () => {
@@ -43,6 +43,19 @@ export const useHistoryStore = defineStore('history', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  async function exportWatchHistory() {
+    return historyService.exportWatchHistory()
+  }
+
+  async function importWatchHistory(payload: unknown, mode: HistoryImportMode = 'merge') {
+    const result = await historyService.importWatchHistory(payload, mode)
+    await Promise.allSettled([
+      loadWatchHistory(),
+      loadContinueWatching()
+    ])
+    return result
   }
 
   async function syncLocalPositionsToBackend() {
@@ -272,6 +285,8 @@ export const useHistoryStore = defineStore('history', () => {
     // Actions
     loadWatchHistory,
     loadContinueWatching,
+    exportWatchHistory,
+    importWatchHistory,
     syncLocalPositionsToBackend,
     addToHistory,
     savePosition,
