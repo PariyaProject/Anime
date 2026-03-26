@@ -1,14 +1,30 @@
+<p align="center">
+  <img src="docs/images/project-logo.png" alt="Anime project logo" width="160" />
+</p>
+
 # Anime
 
-A root workspace for browsing and watching anime content from `cycani.org`, built with an Express backend and a Vue 3 frontend.
+A self-hosted anime browsing and streaming workspace for `cycani.org`, built with an Express backend and a Vue 3 frontend.
+
+It focuses on a practical local setup: scrape the latest catalog, browse from a dedicated UI, keep watch history in sync, and resume playback with saved progress.
+
+## Preview
+
+### Login Screen
+
+The current login view ships with a dedicated landing layout, invite-ready auth flow, and site branding that can be customized from the admin side.
+
+![Anime login preview](docs/images/login-screen.png)
 
 ## Features
 
 - **Cross-origin proxy**: Access cycani.org content through a local proxy
 - **Real-time anime scraping**: Up-to-date anime list with proper episode counts
+- **Private site access**: Login, invite-based registration, and admin-managed access control
 - **Watch history management**: Track your viewing progress and resume from where you left off
 - **Modern Vue 3 frontend**: Responsive SPA with dark mode, keyboard shortcuts, and virtual scrolling
 - **Position memory**: Automatic saving of playback position every 30 seconds
+- **Project branding ready**: README logo, browser tab icons, Apple touch icon, and web app manifest
 - **Unified development experience**: Single commands to manage frontend and backend services
 
 ## Quick Start
@@ -103,6 +119,7 @@ Anime/
 │   ├── package.json               # Backend dependencies
 │   └── README.md                  # Backend notes
 ├── frontend/                      # Vue 3 frontend app
+│   ├── public/                    # Web icons and static app metadata
 │   ├── src/                       # Frontend source code
 │   ├── package.json               # Frontend dependencies
 │   └── vite.config.ts             # Vite configuration
@@ -110,6 +127,7 @@ Anime/
 ├── data/                          # Archived and test artifacts
 ├── dist/                          # Built frontend output
 ├── docs/                          # Project documentation
+│   └── images/                    # README assets and project branding previews
 ├── scripts/                       # Utility scripts
 ├── .nvmrc                         # Recommended Node version
 ├── package.json                   # Root workspace scripts
