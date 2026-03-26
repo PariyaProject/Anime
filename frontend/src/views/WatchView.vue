@@ -1,5 +1,5 @@
 <template>
-  <div ref="watchViewRoot" class="watch-view">
+  <div ref="watchViewRoot" class="watch-view" :class="{ 'player-locked': playerInteractionLocked }">
     <div class="watch-layout">
       <!-- Loading State with Skeleton -->
       <div v-if="loading" class="theater-mode" style="opacity: 0.7; pointer-events: none;">
@@ -43,7 +43,15 @@
         <!-- Centered Video Player -->
         <div ref="videoContainer" class="video-container">
           <div ref="videoWrapper" class="video-wrapper">
-            <div v-if="videoUrl" id="plyr-player" ref="playerContainer" class="plyr-wrapper">
+            <div
+              v-if="videoUrl"
+              id="plyr-player"
+              ref="playerContainer"
+              class="plyr-wrapper"
+              @click.capture="handleLockedPlayerInteraction"
+              @pointerdown.capture="handleLockedPlayerInteraction"
+              @touchstart.capture="handleLockedPlayerInteraction"
+            >
               <video
                 ref="videoElement"
                 :poster="posterImage"
@@ -58,7 +66,7 @@
             </div>
           </div>
 
-          <div ref="videoMetaBlock" class="video-title-overlay">
+          <div ref="videoMetaBlock" class="video-title-overlay" :class="{ 'is-interaction-locked': playerInteractionLocked }">
             <h1 class="video-title">{{ episodeTitle }}</h1>
             <p class="video-meta">
               <span v-if="animeTitle">{{ animeTitle }}</span>
@@ -67,7 +75,7 @@
             </p>
           </div>
 
-          <div ref="controlBar" class="control-bar">
+          <div ref="controlBar" class="control-bar" :class="{ 'is-interaction-locked': playerInteractionLocked }">
             <button class="btn-control" @click="playPrevious" :disabled="!hasPrevious" title="上一集">
               ← 上一集
             </button>
@@ -82,7 +90,7 @@
           </div>
         </div>
 
-        <div class="side-panel">
+        <div class="side-panel" :class="{ 'is-interaction-locked': playerInteractionLocked }">
           <div class="panel-section anime-info">
             <img :src="displayCoverImage" :alt="animeTitle" class="anime-cover" @error="handleImageError" />
             <div class="anime-details">
@@ -224,6 +232,7 @@ const animeDescription = ref('')
 const currentTime = ref(0)
 const duration = ref(0)
 const autoPlayNext = ref(true) // Auto-play next episode
+const playerInteractionLocked = ref(false)
 
 let saveInterval: number | null = null
 let refreshUrlTimeout: number | null = null // Auto-refresh before URL expires
@@ -231,7 +240,13 @@ let isRefreshingUrl = ref(false) // Track if currently refreshing URL
 let statusTickInterval: number | null = null
 let responsiveLayoutFrame: number | null = null
 let responsiveLayoutObserver: ResizeObserver | null = null
+let touchGestureSurface: HTMLElement | null = null
+let playerLockControlButton: HTMLButtonElement | null = null
+let lastTouchGestureAt = 0
+let lastTouchGesturePoint: { x: number; y: number } | null = null
 const statusNow = ref(Date.now())
+const DOUBLE_TAP_DELAY_MS = 280
+const DOUBLE_TAP_MAX_DISTANCE_PX = 36
 
 const episodeTitle = computed(() => {
   if (!playerStore.currentEpisodeData) return ''
@@ -338,6 +353,8 @@ async function loadEpisode() {
   // CRITICAL: Destroy old Plyr instance before loading new episode
   // This prevents dual audio issue when switching episodes
   if (player) {
+    unmountPlayerLockControl()
+    detachPlayerTouchGestures()
     console.log('🗑️ Destroying old Plyr instance before loading new episode...')
     player.destroy()
     player = null
@@ -656,6 +673,216 @@ async function savePosition() {
       console.error('Failed to save position:', err)
     }
   }
+}
+
+function resetTouchGestureState() {
+  lastTouchGestureAt = 0
+  lastTouchGesturePoint = null
+}
+
+function getPlayerLockIconMarkup(isLocked: boolean) {
+  if (isLocked) {
+    return `
+      <svg class="player-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M17 8h-1V6a4 4 0 0 0-7.75-1.38" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+        <rect x="5" y="8" width="14" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M10 13.5a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+      </svg>
+    `
+  }
+
+  return `
+    <svg class="player-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 10V7a4 4 0 1 1 8 0v3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+      <rect x="5" y="10" width="14" height="9" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+    </svg>
+  `
+}
+
+function getPlyrControlsElement() {
+  const container = player?.elements?.container
+  if (!(container instanceof HTMLElement)) {
+    return null
+  }
+
+  return container.querySelector('.plyr__controls') as HTMLElement | null
+}
+
+function handlePlayerLockControlClick(event: Event) {
+  event.preventDefault()
+  event.stopPropagation()
+  togglePlayerInteractionLock()
+}
+
+function unmountPlayerLockControl() {
+  if (!playerLockControlButton) {
+    return
+  }
+
+  playerLockControlButton.removeEventListener('click', handlePlayerLockControlClick)
+  playerLockControlButton.remove()
+  playerLockControlButton = null
+}
+
+function syncPlayerLockControl() {
+  const controls = getPlyrControlsElement()
+  if (controls) {
+    controls.classList.toggle('plyr__controls--lock-mode', playerInteractionLocked.value)
+  }
+
+  if (!playerLockControlButton) {
+    return
+  }
+
+  const actionLabel = playerInteractionLocked.value ? '解锁屏幕' : '锁定屏幕'
+  playerLockControlButton.classList.toggle('is-active', playerInteractionLocked.value)
+  playerLockControlButton.setAttribute('aria-pressed', String(playerInteractionLocked.value))
+  playerLockControlButton.setAttribute('aria-label', actionLabel)
+  playerLockControlButton.setAttribute('title', actionLabel)
+  playerLockControlButton.innerHTML = getPlayerLockIconMarkup(playerInteractionLocked.value)
+}
+
+function mountPlayerLockControl() {
+  const controls = getPlyrControlsElement()
+  if (!controls) {
+    return
+  }
+
+  if (!playerLockControlButton) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'plyr__control player-lock-control'
+    button.addEventListener('click', handlePlayerLockControlClick)
+    playerLockControlButton = button
+  }
+
+  const fullscreenControl = controls.querySelector('[data-plyr="fullscreen"]')
+  if (fullscreenControl?.parentElement === controls) {
+    controls.insertBefore(playerLockControlButton, fullscreenControl)
+  } else if (playerLockControlButton.parentElement !== controls) {
+    controls.appendChild(playerLockControlButton)
+  }
+
+  syncPlayerLockControl()
+}
+
+function handleLockedPlayerInteraction(event: Event) {
+  const target = event.target
+  const isLockToggle = target instanceof Element && Boolean(target.closest('.player-lock-control'))
+
+  if (isLockToggle) {
+    return
+  }
+
+  if (!playerInteractionLocked.value) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function togglePlayerInteractionLock() {
+  playerInteractionLocked.value = !playerInteractionLocked.value
+  resetTouchGestureState()
+  syncPlayerLockControl()
+  uiStore.showNotification(
+    playerInteractionLocked.value ? '播放器已锁定，触摸操作已禁用' : '播放器已解锁',
+    playerInteractionLocked.value ? 'warning' : 'success',
+    1200
+  )
+}
+
+function detachPlayerTouchGestures() {
+  if (!touchGestureSurface) {
+    return
+  }
+
+  touchGestureSurface.removeEventListener('touchend', handlePlayerTouchEnd)
+  touchGestureSurface = null
+  resetTouchGestureState()
+}
+
+function isTouchGestureOnPlayerControls(target: EventTarget | null) {
+  return target instanceof Element && Boolean(
+    target.closest('.plyr__controls, .plyr__control, .plyr__menu, .plyr__progress')
+  )
+}
+
+function handlePlayerTouchEnd(event: TouchEvent) {
+  if (
+    !player ||
+    playerInteractionLocked.value ||
+    event.changedTouches.length !== 1 ||
+    isTouchGestureOnPlayerControls(event.target)
+  ) {
+    return
+  }
+
+  const touch = event.changedTouches[0]
+  const now = Date.now()
+  const isWithinDoubleTapDelay = now - lastTouchGestureAt <= DOUBLE_TAP_DELAY_MS
+  const isWithinDoubleTapDistance = lastTouchGesturePoint
+    ? Math.hypot(
+        touch.clientX - lastTouchGesturePoint.x,
+        touch.clientY - lastTouchGesturePoint.y
+      ) <= DOUBLE_TAP_MAX_DISTANCE_PX
+    : false
+
+  lastTouchGestureAt = now
+  lastTouchGesturePoint = {
+    x: touch.clientX,
+    y: touch.clientY
+  }
+
+  if (!isWithinDoubleTapDelay || !isWithinDoubleTapDistance) {
+    return
+  }
+
+  event.preventDefault()
+
+  const gestureSurface = touchGestureSurface || videoElement.value || playerContainer.value
+  if (!gestureSurface) {
+    togglePlayPause()
+    resetTouchGestureState()
+    return
+  }
+
+  const { left, width } = gestureSurface.getBoundingClientRect()
+  const relativeX = touch.clientX - left
+
+  if (width > 0) {
+    if (relativeX < width * 0.3) {
+      seekBackward()
+    } else if (relativeX > width * 0.7) {
+      seekForward()
+    } else {
+      togglePlayPause()
+    }
+  } else {
+    togglePlayPause()
+  }
+
+  resetTouchGestureState()
+}
+
+function attachPlayerTouchGestures() {
+  detachPlayerTouchGestures()
+
+  const container = player?.elements?.container
+  const gestureSurface = (
+    container instanceof HTMLElement
+      ? container.querySelector('.plyr__video-wrapper')
+      : null
+  ) as HTMLElement | null
+
+  touchGestureSurface = gestureSurface || videoElement.value || playerContainer.value
+
+  if (!touchGestureSurface) {
+    return
+  }
+
+  touchGestureSurface.addEventListener('touchend', handlePlayerTouchEnd, { passive: false })
 }
 
 function togglePlayPause() {
@@ -987,6 +1214,7 @@ onUnmounted(() => {
   if (statusTickInterval) {
     clearInterval(statusTickInterval)
   }
+  unmountPlayerLockControl()
   if (responsiveLayoutFrame !== null) {
     cancelAnimationFrame(responsiveLayoutFrame)
     responsiveLayoutFrame = null
@@ -996,6 +1224,7 @@ onUnmounted(() => {
     responsiveLayoutObserver = null
   }
   if (player) {
+    detachPlayerTouchGestures()
     player.destroy()
     player = null  // Clear the reference to allow re-initialization
   }
@@ -1066,6 +1295,8 @@ function initializePlyr(initialUrl?: string) {
   // Note: We assume player has already been destroyed by loadEpisode()
   // This function should only be called when player is null
   if (player) {
+    unmountPlayerLockControl()
+    detachPlayerTouchGestures()
     console.warn('⚠️ Plyr already exists when initializePlyr() was called. This should not happen.')
     console.warn('⚠️ Destroying existing player and reinitializing...')
     player.destroy()
@@ -1112,6 +1343,7 @@ function initializePlyr(initialUrl?: string) {
     })
 
     console.log('✅ Plyr instance created:', !!player)
+    mountPlayerLockControl()
 
     if (initialUrl) {
       console.log('🎞️ Setting initial Plyr source:', initialUrl.substring(0, 60))
@@ -1125,6 +1357,7 @@ function initializePlyr(initialUrl?: string) {
     const nativeVideo = (player.elements as any).video as HTMLVideoElement | undefined
     if (nativeVideo) {
       videoElement.value = nativeVideo
+      attachPlayerTouchGestures()
       let networkRetryCount = 0
       const MAX_NETWORK_RETRIES = 3
 
@@ -1301,12 +1534,16 @@ function initializePlyr(initialUrl?: string) {
     })
 
     player.on('ended', onVideoEnd)
+    player.on('enterfullscreen' as any, mountPlayerLockControl)
+    player.on('exitfullscreen' as any, mountPlayerLockControl)
 
     // Schedule automatic URL refresh before expiration
     scheduleUrlRefresh()
 
     // Auto-resume from saved position after Plyr is ready
     player.on('ready', () => {
+      mountPlayerLockControl()
+      attachPlayerTouchGestures()
       console.log('✅ Plyr ready, checking for saved position...')
       const savedPos = savedPositionForResume.value
       const savedEp = savedPositionEpisode.value
@@ -1449,6 +1686,7 @@ function initializePlyr(initialUrl?: string) {
   align-items: center;
   justify-content: center;
   margin: 0 auto;
+  position: relative;
 }
 
 .video-frame,
@@ -1456,6 +1694,7 @@ function initializePlyr(initialUrl?: string) {
   width: 100%;
   aspect-ratio: 16/9;
   display: block;
+  position: relative;
   background: #000;
   max-height: var(--player-max-height);
   border-radius: 14px;
@@ -1465,6 +1704,91 @@ function initializePlyr(initialUrl?: string) {
 
 .video-frame {
   border: none;
+}
+
+.plyr-wrapper,
+.video-element {
+  touch-action: manipulation;
+}
+
+:deep(.player-lock-control) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  padding: 0.3rem;
+  transition:
+    opacity 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+:deep(.player-lock-control:hover) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+:deep(.player-lock-control.is-active) {
+  color: rgba(255, 205, 197, 0.92);
+}
+
+:deep(.player-lock-icon) {
+  width: 0.92rem;
+  height: 0.92rem;
+  display: block;
+}
+
+.is-interaction-locked {
+  pointer-events: none;
+  opacity: 0.42;
+  filter: saturate(0.75);
+}
+
+.watch-view.player-locked :deep(.plyr__controls) {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+  pointer-events: auto !important;
+  justify-content: flex-end !important;
+  inset: auto 0 0 auto !important;
+  width: auto !important;
+  padding: max(0.45rem, env(safe-area-inset-bottom, 0px)) max(0.45rem, env(safe-area-inset-right, 0px)) !important;
+  background: transparent !important;
+}
+
+.watch-view.player-locked :deep(.plyr__video-wrapper) {
+  pointer-events: none !important;
+}
+
+.watch-view.player-locked :deep(.plyr__control--overlaid),
+.watch-view.player-locked :deep(.plyr__menu) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.watch-view.player-locked :deep(.plyr__controls.plyr__controls--lock-mode > *:not(.player-lock-control)) {
+  display: none !important;
+}
+
+.watch-view.player-locked :deep(.plyr__controls.plyr__controls--lock-mode .player-lock-control) {
+  border-radius: 999px;
+  padding: 0.24rem;
+  opacity: 0.58;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(9, 12, 20, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+}
+
+.watch-view.player-locked :deep(.plyr__controls.plyr__controls--lock-mode .player-lock-control:hover),
+.watch-view.player-locked :deep(.plyr__controls.plyr__controls--lock-mode .player-lock-control:focus-visible) {
+  opacity: 0.9;
+  background: rgba(9, 12, 20, 0.32);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: scale(1.03);
 }
 
 .video-frame-error {
@@ -1858,6 +2182,11 @@ function initializePlyr(initialUrl?: string) {
   width: 100% !important;
 }
 
+:deep(.plyr__video-wrapper),
+:deep(.plyr__poster) {
+  touch-action: manipulation;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .watch-view {
@@ -1872,6 +2201,16 @@ function initializePlyr(initialUrl?: string) {
 
   .video-container {
     padding: 0.45rem 0 0.8rem;
+  }
+
+  :deep(.player-lock-control) {
+    min-width: 2.1rem;
+    padding-inline: 0.2rem;
+  }
+
+  :deep(.player-lock-icon) {
+    width: 0.96rem;
+    height: 0.96rem;
   }
 
   .video-title {
