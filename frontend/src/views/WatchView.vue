@@ -195,6 +195,7 @@ let player: Plyr | null = null
 const savedPositionForResume = ref<number | null>(null)
 const savedPositionEpisode = ref<{ season: number; episode: number } | null>(null)
 let isWaitingForResume = false
+let pendingEpisodeAutoplay = false
 
 // Guard to prevent concurrent episode loading
 let isLoadingEpisode = false
@@ -349,6 +350,18 @@ async function loadEpisode() {
   isLoadingEpisode = true
   loading.value = true
   error.value = null
+  isWaitingForResume = false
+  savedPositionForResume.value = null
+  savedPositionEpisode.value = null
+  currentTime.value = 0
+  duration.value = 0
+  playerStore.updateTime(0)
+  playerStore.updateDuration(0)
+
+  if (saveInterval) {
+    clearInterval(saveInterval)
+    saveInterval = null
+  }
 
   // CRITICAL: Destroy old Plyr instance before loading new episode
   // This prevents dual audio issue when switching episodes
@@ -459,7 +472,11 @@ async function setupPlayer() {
   }
 }
 
-function selectEpisode(ep: number) {
+function selectEpisode(ep: number, options: { autoplay?: boolean } = {}) {
+  if (options.autoplay ?? true) {
+    pendingEpisodeAutoplay = true
+  }
+
   episode.value = ep
   jumpEpisode.value = ep
 
@@ -985,13 +1002,17 @@ function onVideoEnd() {
 }
 
 function autoplay(delay: number = 0) {
+  const forcePlayback = pendingEpisodeAutoplay
+  pendingEpisodeAutoplay = false
+
   // Check if auto-play is enabled
   // because ready event may fire before loadEpisode sets the flag
-  let shouldPlay = autoPlayEnabled.value
+  let shouldPlay = forcePlayback || autoPlayEnabled.value
   if (isRefreshReload) {
     shouldPlay = playingBeforeRefresh
   }
   console.log('▶️ Auto-play check:', {
+    forcePlayback,
     autoPlayEnabled: autoPlayEnabled.value,
     isRefreshReload,
     playingBeforeRefresh,
@@ -1571,7 +1592,8 @@ function initializePlyr(initialUrl?: string) {
           // Check if saved position is near end (within 30 seconds)
           if (duration && duration > 1 && savedPos >= duration - 30) {
             console.log('⚠️ Episode already completed, starting from beginning')
-  
+            isWaitingForResume = false
+
             // Resume playback after seek
             autoplay()
             return
@@ -1582,7 +1604,8 @@ function initializePlyr(initialUrl?: string) {
             player.currentTime = savedPos
             console.log('✅ Resumed from saved position:', formatTime(savedPos), duration ? `/ ${formatTime(duration)}` : '')
             uiStore.showNotification(`恢复上次播放位置: ${formatTime(savedPos)}`, 'info')
-  
+            isWaitingForResume = false
+
             // Resume playback after seek
             autoplay()
           }
