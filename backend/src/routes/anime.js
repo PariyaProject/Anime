@@ -2,24 +2,34 @@ const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
 const { AnimeListUrlConstructor, ApiParameterValidator } = require('../urlConstructor');
-const { httpClient } = require('../httpClient');
 const { getAnimeIndexManager } = require('../animeIndexManager');
 const { requireAuth } = require('../AuthManager');
+const { fetchUpstreamHtml } = require('../upstreamAccess');
 
 // Initialize URL constructor
 const urlConstructor = new AnimeListUrlConstructor();
+
+async function loadUpstreamPage(url, options = {}) {
+    const html = await fetchUpstreamHtml(url, options);
+    return cheerio.load(html);
+}
+
+function sendRouteError(res, error, fallbackMessage = '请求上游站点失败') {
+    res.status(error?.statusCode || 500).json({
+        success: false,
+        error: error?.message || fallbackMessage,
+        code: error?.code || undefined
+    });
+}
 
 
 // 获取动画真实集数的辅助函数（无缓存，始终获取最新数据）
 async function getAnimeEpisodeCount(animeId) {
     try {
         const detailUrl = `https://www.cycani.org/bangumi/${animeId}.html`;
-
-        const response = await httpClient.get(detailUrl, {
-            timeout: 3000 // 减少到3秒超时
+        const $ = await loadUpstreamPage(detailUrl, {
+            timeout: 3000
         });
-
-        const $ = cheerio.load(response.data);
         const episodes = [];
 
         // 解析所有集数链接
@@ -130,11 +140,9 @@ router.get('/api/anime-list', requireAuth, async (req, res) => {
 
         console.log(`🔍 获取动画列表: ${targetUrl}`);
 
-        const response = await httpClient.get(targetUrl, {
+        const $ = await loadUpstreamPage(targetUrl, {
             timeout: 15000
         });
-
-        const $ = cheerio.load(response.data);
         const animeList = [];
 
         // Parse anime list with improved selectors
@@ -347,10 +355,9 @@ router.get('/api/anime-list', requireAuth, async (req, res) => {
                 const nextUrl = urlConstructor.construct({
                     search, genre, year, letter, sort, channel, page: sourcePage + 1
                 });
-                const nextResponse = await httpClient.get(nextUrl, {
+                const $next = await loadUpstreamPage(nextUrl, {
                     timeout: 15000
                 });
-                const $next = cheerio.load(nextResponse.data);
 
                 // Parse next page with same logic
                 for (const element of $('.public-list-box').toArray()) {
@@ -441,10 +448,7 @@ router.get('/api/anime-list', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error('❌ 获取动画列表失败:', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        sendRouteError(res, error, '获取动画列表失败');
     }
 });
 
@@ -479,10 +483,7 @@ router.get('/api/weekly-schedule', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error('❌ 获取每周番剧时间表失败:', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        sendRouteError(res, error, '获取每周番剧时间表失败');
     }
 });
 
@@ -503,11 +504,9 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
         const weeklyUrl = 'https://www.cycani.org/index.php/label/weekday.html';
 
         try {
-            const response = await httpClient.get(weeklyUrl, {
+            const $ = await loadUpstreamPage(weeklyUrl, {
                 timeout: 10000
             });
-
-            const $ = cheerio.load(response.data);
 
             // Parse weekly schedule from the page
             // Look for content that might contain daily schedules
@@ -593,11 +592,9 @@ async function scrapeWeeklySchedule(dayFilter = 'all') {
         // If weekly page doesn't work, try homepage with week-module-X divs
         if (Object.values(scheduleData).every(dayList => dayList.length === 0)) {
             try {
-                const homeResponse = await httpClient.get('https://www.cycani.org/', {
+                const $ = await loadUpstreamPage('https://www.cycani.org/', {
                     timeout: 10000
                 });
-
-                const $ = cheerio.load(homeResponse.data);
 
                 // Map week-module-X divs to days
                 const dayMapping = {
@@ -706,11 +703,9 @@ router.get('/api/search-anime', requireAuth, async (req, res) => {
 
         // 使用搜索接口
         const searchUrl = `https://www.cycani.org/search?wd=${encodeURIComponent(q)}`;
-        const response = await httpClient.get(searchUrl, {
+        const $ = await loadUpstreamPage(searchUrl, {
             timeout: 15000
         });
-
-        const $ = cheerio.load(response.data);
         const searchResults = [];
 
         // 解析搜索结果
@@ -749,10 +744,7 @@ router.get('/api/search-anime', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error('❌ 搜索动画失败 (legacy):', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        sendRouteError(res, error, '搜索动画失败');
     }
 });
 
@@ -882,11 +874,9 @@ router.get('/api/anime/:animeId', requireAuth, async (req, res) => {
 
         console.log(`🔍 获取动画详情: ${detailUrl}`);
 
-        const response = await httpClient.get(detailUrl, {
+        const $ = await loadUpstreamPage(detailUrl, {
             timeout: 15000
         });
-
-        const $ = cheerio.load(response.data);
 
         // 调试输出 - 检查HTML结构
         console.log(`🔍 调试信息 - 页面标题: ${$('title').text().trim()}`);
@@ -1116,10 +1106,7 @@ router.get('/api/anime/:animeId', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error('❌ 获取动画详情失败:', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        sendRouteError(res, error, '获取动画详情失败');
     }
 });
 

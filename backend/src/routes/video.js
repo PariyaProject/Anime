@@ -1,12 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
-const { httpClient, getEnhancedHeaders } = require('../httpClient');
+const { getEnhancedHeaders } = require('../httpClient');
 const axios = require('axios');
+const CryptoJS = require('crypto-js');
 const { browserPool, puppeteer } = require('../puppeteerPool');
 const { requireAuth } = require('../AuthManager');
 const { videoUrlCacheManager } = require('../VideoUrlCacheManager');
+const { UpstreamAccessError, applyBrowserNetworkProfile, fetchUpstreamHtml } = require('../upstreamAccess');
 function isValidVideoUrl(url) { return url && url.startsWith('http'); }
+
+// Extracted from the current player.cycanime.com setting.js decryption flow.
+const PLAYER_DECRYPTION_SALT = 'YLwJVbXw77pk2eOrAnFdBo2c3mWkLtodMni2wk81GCnP94ZltW';
+
+function sendRouteError(res, error, fallbackMessage = '请求上游站点失败') {
+    res.status(error?.statusCode || 500).json({
+        success: false,
+        error: error?.message || fallbackMessage,
+        code: error?.code || undefined
+    });
+}
 
 // API路由 - 获取剧集信息
 router.get('/api/episode/:bangumiId/:season/:episode', requireAuth, async (req, res) => {
@@ -57,10 +70,7 @@ router.get('/api/episode/:bangumiId/:season/:episode', requireAuth, async (req, 
 
     } catch (error) {
         console.error('❌ 获取剧集信息失败:', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        sendRouteError(res, error, '获取剧集信息失败');
     }
 });
 
@@ -92,10 +102,7 @@ router.get('/api/refresh-video-url/:animeId/:season/:episode', requireAuth, asyn
 
     } catch (error) {
         console.error('❌ 刷新视频URL失败:', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        sendRouteError(res, error, '刷新视频URL失败');
     }
 });
 
@@ -244,11 +251,10 @@ function parseEpisodeData($) {
 }
 
 async function fetchEpisodeMetadata(targetUrl) {
-    const response = await httpClient.get(targetUrl, {
+    const html = await fetchUpstreamHtml(targetUrl, {
         timeout: 10000
     });
-
-    const $ = cheerio.load(response.data);
+    const $ = cheerio.load(html);
     return parseEpisodeData($);
 }
 
@@ -372,9 +378,18 @@ async function parsePlayerPage(videoId, refererUrl = 'https://www.cycani.org/') 
         console.log(`🎬 解析播放器页面: ${playerUrl}`);
         console.log(`📌 使用 Referer: ${refererUrl}`);
 
-        // 方法1: 尝试使用Puppeteer从video元素直接读取解密后的URL
+        // 方法1: 直接解密播放器 HTML 中的 config.url，避免依赖跨域 iframe 行为
+        console.log('📡 尝试HTTP+AES解密方法...');
+        const realVideoUrl = await parseWithAxios(playerUrl, refererUrl);
+
+        if (realVideoUrl) {
+            console.log(`✅ HTTP方法成功: ${realVideoUrl.substring(0, 100) + '...'}`);
+            return realVideoUrl;
+        }
+
+        // 方法2: 仍保留 Puppeteer 作为兜底，兼容后续播放器实现变化
         if (puppeteer) {
-            console.log('🤖 使用Puppeteer从video元素读取URL...');
+            console.log('🤖 HTTP解密未命中，尝试使用Puppeteer从video元素读取URL...');
             const videoUrl = await getVideoUrlFromPuppeteer(playerUrl, refererUrl);
             if (videoUrl) {
                 console.log(`✅ Puppeteer成功: ${videoUrl.substring(0, 80)}...`);
@@ -383,19 +398,13 @@ async function parsePlayerPage(videoId, refererUrl = 'https://www.cycani.org/') 
             console.log('⚠️ Puppeteer方法失败');
         }
 
-        // 方法2: HTTP方法作为备用（目前解密不工作，但保留以备将来使用）
-        console.log('📡 尝试HTTP+AES解密方法...');
-        const realVideoUrl = await parseWithAxios(playerUrl);
-
-        if (realVideoUrl) {
-            console.log(`✅ HTTP方法成功: ${realVideoUrl.substring(0, 100) + '...'}`);
-            return realVideoUrl;
-        }
-
         console.log('❌ 所有方法都失败');
         return null;
 
     } catch (error) {
+        if (error instanceof UpstreamAccessError) {
+            throw error;
+        }
         console.error('解析播放器页面失败:', error.message);
         return null;
     }
@@ -412,10 +421,10 @@ async function getVideoUrlFromPuppeteer(playerUrl, refererUrl = 'https://www.cyc
     let page = null;
     try {
         // 从池中获取浏览器实例
-        const browser = await browserPool.getBrowser();
+        const browser = await browserPool.getBrowser({ useProxy: true });
 
         page = await browser.newPage();
-        await page.setUserAgent(getEnhancedHeaders()['User-Agent']);
+        await applyBrowserNetworkProfile(page, refererUrl, refererUrl, true);
 
         console.log(`📄 访问剧集页面: ${refererUrl}`);
 
@@ -486,15 +495,28 @@ async function getVideoUrlFromPuppeteer(playerUrl, refererUrl = 'https://www.cyc
 }
 
 // 使用Axios解析页面 (备用方案)
-async function parseWithAxios(playerUrl) {
+async function parseWithAxios(playerUrl, refererUrl = 'https://www.cycani.org/') {
     try {
         console.log(`🌐 获取播放器页面: ${playerUrl}`);
-        const response = await httpClient.get(playerUrl, {
-            timeout: 10000
+        const origin = new URL(refererUrl).origin;
+        const html = await fetchUpstreamHtml(playerUrl, {
+            timeout: 10000,
+            allowBrowserFallback: false,
+            useProxy: true,
+            headers: {
+                Referer: refererUrl,
+                Origin: origin
+            }
         });
 
-        const $ = cheerio.load(response.data);
+        const $ = cheerio.load(html);
         console.log('📄 页面标题:', $('title').text());
+
+        const decryptedConfigUrl = decryptPlayerConfigUrl($, html);
+        if (decryptedConfigUrl) {
+            console.log('✅ 方法0 (config.url 解密): 找到视频源');
+            return decryptedConfigUrl;
+        }
 
         // 方法1: 直接查找video标签
         const videoElements = $('video');
@@ -509,7 +531,7 @@ async function parseWithAxios(playerUrl) {
         }
 
         // 方法2: 从HTML中直接提取URL
-        const htmlContent = response.data;
+        const htmlContent = html;
         const urlMatches = htmlContent.match(/https:\/\/[^"\s]+\.(?:mp4|m3u8|webm|flv)[^"\s]*/gi);
         if (urlMatches && urlMatches.length > 0) {
             const videoSrc = urlMatches.find(url =>
@@ -544,9 +566,68 @@ async function parseWithAxios(playerUrl) {
         return null;
 
     } catch (error) {
+        if (error instanceof UpstreamAccessError) {
+            throw error;
+        }
         console.error('❌ Axios解析失败:', error.message);
         return null;
     }
+}
+
+function decryptPlayerConfigUrl($, html) {
+    try {
+        const encryptedUrl = extractPlayerConfigUrl(html);
+        if (!encryptedUrl) {
+            return null;
+        }
+
+        const viewportMetaId = $('meta[name="viewport"]').attr('id') || '';
+        const charsetMetaId = $('meta[charset="UTF-8"]').attr('id') || $('meta[charset]').attr('id') || '';
+        const viewportSeed = viewportMetaId.replace(/^now_/, '');
+        const charsetSeed = charsetMetaId.replace(/^now_/, '');
+
+        if (!viewportSeed || !charsetSeed || viewportSeed.length !== charsetSeed.length) {
+            return null;
+        }
+
+        const orderedSeed = charsetSeed
+            .split('')
+            .map((digit, index) => ({
+                id: Number.parseInt(digit, 10),
+                text: viewportSeed[index] || ''
+            }))
+            .filter((entry) => Number.isFinite(entry.id) && entry.text)
+            .sort((left, right) => left.id - right.id)
+            .map((entry) => entry.text)
+            .join('');
+
+        if (!orderedSeed) {
+            return null;
+        }
+
+        const md5 = CryptoJS.MD5(`${orderedSeed}${PLAYER_DECRYPTION_SALT}`).toString();
+        const key = CryptoJS.enc.Utf8.parse(md5.slice(16));
+        const iv = CryptoJS.enc.Utf8.parse(md5.slice(0, 16));
+        const decrypted = CryptoJS.AES.decrypt(encryptedUrl, key, {
+            iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        }).toString(CryptoJS.enc.Utf8);
+
+        return decrypted && decrypted.startsWith('http') ? decrypted : null;
+    } catch (error) {
+        console.warn('⚠️ config.url 解密失败:', error.message);
+        return null;
+    }
+}
+
+function extractPlayerConfigUrl(html) {
+    if (!html) {
+        return null;
+    }
+
+    const urlMatch = html.match(/"url"\s*:\s*"([^"]+)"/);
+    return urlMatch?.[1] || null;
 }
 
 // 视频URL解密函数

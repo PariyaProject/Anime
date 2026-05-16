@@ -101,6 +101,16 @@ cp .env.example .env.local
 
 Then edit `.env.local` and keep your preferred ports there. This file is ignored by Git, so it is safe for machine-local development preferences.
 
+If your local network can open normal `cycani.org` pages but the video player endpoint needs a proxy, add these to `.env.local`:
+
+```dotenv
+UPSTREAM_PROXY_URL=http://127.0.0.1:7897
+PUPPETEER_PROXY_URL=http://127.0.0.1:7897
+UPSTREAM_PROXY_HOSTS=player.cycanime.com
+```
+
+These settings are only used by the backend video parsing flow during `npm run dev`.
+
 For Docker deployment, use `.env` instead. `docker compose` reads `.env`, while the local dev script reads `.env.local`.
 
 ### Access

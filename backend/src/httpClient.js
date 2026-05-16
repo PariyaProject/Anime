@@ -4,6 +4,7 @@
  */
 
 const axios = require('axios');
+const { getAxiosProxyConfig } = require('./upstreamProxy');
 
 /**
  * Pool of realistic User-Agent strings
@@ -106,7 +107,7 @@ const RETRY_CONFIG = {
     initialDelay: 1000,
     maxDelay: 10000,
     backoffMultiplier: 2,
-    retryableStatusCodes: [403, 429, 503, 504],
+    retryableStatusCodes: [429, 502, 503, 504],
     retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED']
 };
 
@@ -155,9 +156,15 @@ function createHttpClient(options = {}) {
                 ...config.headers // Allow overriding specific headers
             };
 
+            const proxy = config.useUpstreamProxy === true
+                ? getAxiosProxyConfig(config.url)
+                : { enabled: false, config: false, label: null };
+            config.proxy = proxy.config;
+
             // Log the request (except for image proxy to reduce noise)
             if (!config.url.includes('/api/image-proxy')) {
-                console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}`);
+                const proxyLabel = proxy.enabled ? ` via ${proxy.label}` : '';
+                console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}${proxyLabel}`);
             }
 
             return config;

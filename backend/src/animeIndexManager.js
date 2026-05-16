@@ -8,7 +8,7 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
-const { httpClient } = require('./httpClient');
+const { fetchUpstreamHtml } = require('./upstreamAccess');
 const { AnimeListUrlConstructor } = require('./urlConstructor');
 
 // Index file location
@@ -376,11 +376,10 @@ class AnimeIndexManager {
      */
     async scrapeAnimeList(url) {
         try {
-            const response = await httpClient.get(url, {
+            const html = await fetchUpstreamHtml(url, {
                 timeout: 15000
             });
-
-            const $ = cheerio.load(response.data);
+            const $ = cheerio.load(html);
             const animeList = [];
 
             for (const element of $('.public-list-box').toArray()) {

@@ -44,6 +44,9 @@ Create a `.env` file in your project directory:
 NODE_ENV=production
 PORT=3006
 RATE_LIMIT_DELAY=1000
+UPSTREAM_PROXY_URL=
+UPSTREAM_PROXY_HOSTS=player.cycanime.com
+PUPPETEER_PROXY_URL=
 ANIME_DATA_DIR=./config
 SUPERADMIN_USERNAME=admin
 SUPERADMIN_PASSWORD=anime-admin-2026
@@ -68,6 +71,9 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT:-3006}
       - RATE_LIMIT_DELAY=${RATE_LIMIT_DELAY:-1000}
+      - UPSTREAM_PROXY_URL=${UPSTREAM_PROXY_URL:-}
+      - UPSTREAM_PROXY_HOSTS=${UPSTREAM_PROXY_HOSTS:-player.cycanime.com}
+      - PUPPETEER_PROXY_URL=${PUPPETEER_PROXY_URL:-}
       - SUPERADMIN_USERNAME=${SUPERADMIN_USERNAME:-admin}
       - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:-anime-admin-2026}
       - AUTH_COOKIE_INSECURE=${AUTH_COOKIE_INSECURE:-0}
@@ -250,6 +256,9 @@ docker-compose up -d
 | NODE_ENV | production | Node.js environment |
 | PORT | 3006 | Server port |
 | RATE_LIMIT_DELAY | 1000 | Request rate limit (ms) |
+| UPSTREAM_PROXY_URL | empty | Optional HTTP/HTTPS proxy used by the video parser when it accesses blocked player endpoints |
+| UPSTREAM_PROXY_HOSTS | `player.cycanime.com` | Comma-separated host suffixes that should use `UPSTREAM_PROXY_URL` |
+| PUPPETEER_PROXY_URL | empty | Optional browser proxy override for proxied video parsing runs |
 | SUPERADMIN_USERNAME | admin | Seeded superadmin username |
 | SUPERADMIN_PASSWORD | anime-admin-2026 | Seeded superadmin password |
 | AUTH_COOKIE_INSECURE | 0 | Allow non-HTTPS auth cookies when explicitly needed |
