@@ -1,5 +1,7 @@
 const DEFAULT_PROXY_HOST_SUFFIXES = [
-    'player.cycanime.com'
+    'player.cycanime.com',
+    'cycanime.com',
+    'cycani.org'
 ];
 
 function parseCommaSeparatedEnv(name) {

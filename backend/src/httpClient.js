@@ -156,7 +156,7 @@ function createHttpClient(options = {}) {
                 ...config.headers // Allow overriding specific headers
             };
 
-            const proxy = config.useUpstreamProxy === true
+            const proxy = config.useUpstreamProxy !== false
                 ? getAxiosProxyConfig(config.url)
                 : { enabled: false, config: false, label: null };
             config.proxy = proxy.config;

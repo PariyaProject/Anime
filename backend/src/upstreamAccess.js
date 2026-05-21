@@ -126,7 +126,7 @@ async function fetchUpstreamHtmlWithBrowser(url, options = {}) {
     const {
         timeout = 15000,
         refererUrl = '',
-        useProxy = false
+        useProxy = true
     } = options;
 
     if (!browserPool) {
@@ -185,7 +185,7 @@ async function fetchUpstreamHtml(url, options = {}) {
         allowBrowserFallback = true,
         refererUrl = '',
         skipRetry = false,
-        useProxy = false
+        useProxy = true
     } = options;
 
     let response;
