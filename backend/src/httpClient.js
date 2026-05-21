@@ -77,15 +77,18 @@ class RateLimiter {
             const domain = urlObj.hostname;
             const now = Date.now();
             const lastTime = this.lastRequestTime.get(domain) || 0;
-            const elapsed = now - lastTime;
 
-            if (elapsed < this.minDelay) {
-                const waitTime = this.minDelay - elapsed;
+            // Calculate the earliest time this request is allowed to fire
+            const allowedTime = Math.max(now, lastTime + this.minDelay);
+            
+            // Reserve this time slot synchronously so concurrent requests are queued
+            this.lastRequestTime.set(domain, allowedTime);
+
+            const waitTime = allowedTime - now;
+            if (waitTime > 0) {
                 console.log(`⏳ Rate limiting: waiting ${waitTime}ms before request to ${domain}`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
             }
-
-            this.lastRequestTime.set(domain, Date.now());
         } catch (e) {
             // Invalid URL, proceed without rate limiting
         }

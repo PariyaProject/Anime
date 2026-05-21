@@ -216,7 +216,15 @@ async function fetchUpstreamHtml(url, options = {}) {
     });
 
     if (response.status >= 200 && response.status < 300 && analysis.type === 'ok') {
-        return response.data;
+        let finalData = response.data;
+        if (typeof finalData === 'string' && finalData.startsWith('"') && finalData.endsWith('"')) {
+            try {
+                finalData = JSON.parse(finalData);
+            } catch (e) {
+                // ignore
+            }
+        }
+        return finalData;
     }
 
     if (analysis.type === 'challenge' && allowBrowserFallback) {
