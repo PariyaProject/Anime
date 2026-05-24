@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
-const { getEnhancedHeaders } = require('../httpClient');
-const axios = require('axios');
+const { httpClient, getEnhancedHeaders } = require('../httpClient');
 const CryptoJS = require('crypto-js');
 const { browserPool, puppeteer } = require('../puppeteerPool');
 const { requireAuth } = require('../AuthManager');
@@ -157,9 +156,7 @@ router.get('/api/stream', requireAuth, async (req, res) => {
 
         console.log(`🚀 开始视频流代理: ${url}`);
 
-        const response = await axios({
-            method: 'GET',
-            url: url,
+        const response = await httpClient.get(url, {
             headers: {
                 ...getEnhancedHeaders(url),
                 'Referer': 'https://player.cycanime.com/',

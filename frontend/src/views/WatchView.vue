@@ -2,7 +2,7 @@
   <div ref="watchViewRoot" class="watch-view" :class="{ 'player-locked': playerInteractionLocked }">
     <div class="watch-layout">
       <!-- Loading State with Skeleton -->
-      <div v-if="loading" class="theater-mode" style="opacity: 0.7; pointer-events: none;">
+      <div v-if="loading" class="theater-mode" style="opacity: 0.7; pointer-events: none">
         <div ref="videoContainer" class="video-container">
           <div ref="videoWrapper" class="video-wrapper">
             <el-skeleton class="video-skeleton" animated>
@@ -15,18 +15,29 @@
         <div class="side-panel">
           <el-skeleton style="width: 100%" animated>
             <template #template>
-              <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                <el-skeleton-item variant="image" style="width: 100px; height: 140px; border-radius: 4px;" />
+              <div style="display: flex; gap: 1rem; margin-bottom: 2rem">
+                <el-skeleton-item
+                  variant="image"
+                  style="width: 100px; height: 140px; border-radius: 4px"
+                />
                 <div style="flex: 1">
-                  <el-skeleton-item variant="text" style="width: 80%; height: 24px; margin-bottom: 10px;" />
-                  <el-skeleton-item variant="text" style="width: 40%; margin-bottom: 10px;" />
+                  <el-skeleton-item
+                    variant="text"
+                    style="width: 80%; height: 24px; margin-bottom: 10px"
+                  />
+                  <el-skeleton-item variant="text" style="width: 40%; margin-bottom: 10px" />
                   <el-skeleton-item variant="text" style="width: 100%" />
                   <el-skeleton-item variant="text" style="width: 90%" />
                 </div>
               </div>
-              <div style="margin-top: 2rem;">
-                <el-skeleton-item variant="h3" style="width: 30%; margin-bottom: 10px;" />
-                <el-skeleton-item variant="p" style="width: 100%; height: 20px; margin-bottom: 5px;" v-for="i in 5" :key="i" />
+              <div style="margin-top: 2rem">
+                <el-skeleton-item variant="h3" style="width: 30%; margin-bottom: 10px" />
+                <el-skeleton-item
+                  variant="p"
+                  style="width: 100%; height: 20px; margin-bottom: 5px"
+                  v-for="i in 5"
+                  :key="i"
+                />
               </div>
             </template>
           </el-skeleton>
@@ -52,21 +63,18 @@
               @pointerdown.capture="handleLockedPlayerInteraction"
               @touchstart.capture="handleLockedPlayerInteraction"
             >
-              <video
-                ref="videoElement"
-                :poster="posterImage"
-                class="video-element"
-                playsinline
-              >
+              <video ref="videoElement" :poster="posterImage" class="video-element" playsinline>
                 您的浏览器不支持视频播放。
               </video>
             </div>
-            <div v-else class="video-frame video-frame-error">
-              暂时无法加载可播放的视频源。
-            </div>
+            <div v-else class="video-frame video-frame-error">暂时无法加载可播放的视频源。</div>
           </div>
 
-          <div ref="videoMetaBlock" class="video-title-overlay" :class="{ 'is-interaction-locked': playerInteractionLocked }">
+          <div
+            ref="videoMetaBlock"
+            class="video-title-overlay"
+            :class="{ 'is-interaction-locked': playerInteractionLocked }"
+          >
             <h1 class="video-title">{{ episodeTitle }}</h1>
             <p class="video-meta">
               <span v-if="animeTitle">{{ animeTitle }}</span>
@@ -75,8 +83,17 @@
             </p>
           </div>
 
-          <div ref="controlBar" class="control-bar" :class="{ 'is-interaction-locked': playerInteractionLocked }">
-            <button class="btn-control" @click="playPrevious" :disabled="!hasPrevious" title="上一集">
+          <div
+            ref="controlBar"
+            class="control-bar"
+            :class="{ 'is-interaction-locked': playerInteractionLocked }"
+          >
+            <button
+              class="btn-control"
+              @click="playPrevious"
+              :disabled="!hasPrevious"
+              title="上一集"
+            >
               ← 上一集
             </button>
             <label class="autoplay-toggle">
@@ -92,7 +109,12 @@
 
         <div class="side-panel" :class="{ 'is-interaction-locked': playerInteractionLocked }">
           <div class="panel-section anime-info">
-            <img :src="displayCoverImage" :alt="animeTitle" class="anime-cover" @error="handleImageError" />
+            <img
+              :src="displayCoverImage"
+              :alt="animeTitle"
+              class="anime-cover"
+              @error="handleImageError"
+            />
             <div class="anime-details">
               <h3 class="anime-title">{{ animeTitle || '加载中...' }}</h3>
               <div class="anime-tags">
@@ -100,7 +122,9 @@
                 <span class="tag">{{ animeYear || '未知' }}</span>
                 <span class="tag">{{ totalEpisodes || '?' }} 集</span>
               </div>
-              <p v-if="animeDescription" class="anime-description" :title="animeDescription">{{ animeDescription }}</p>
+              <p v-if="animeDescription" class="anime-description" :title="animeDescription">
+                {{ animeDescription }}
+              </p>
               <router-link
                 :to="{ name: 'AnimeDetail', params: { animeId: currentAnimeId || animeId } }"
                 class="detail-link"
@@ -113,7 +137,9 @@
           <div class="panel-section link-status-section">
             <div class="progress-header">播放链接</div>
             <div class="link-status-summary">
-              <span class="link-status-badge" :class="videoLinkStatusClass">{{ videoLinkStatusText }}</span>
+              <span class="link-status-badge" :class="videoLinkStatusClass">{{
+                videoLinkStatusText
+              }}</span>
               <span class="link-status-expiration">{{ videoLinkExpiresText }}</span>
             </div>
             <div class="link-status-meta">{{ videoLinkFetchedText }}</div>
@@ -124,14 +150,22 @@
             <div class="progress-track">
               <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
             </div>
-            <div class="progress-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</div>
+            <div class="progress-time">
+              {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+            </div>
           </div>
 
           <div class="panel-section episode-list">
             <div class="episode-header">
               <span>选集</span>
               <div class="jump-box">
-                <input v-model.number="jumpEpisode" type="number" placeholder="集数" :min="1" class="jump-input" />
+                <input
+                  v-model.number="jumpEpisode"
+                  type="number"
+                  placeholder="集数"
+                  :min="1"
+                  class="jump-input"
+                />
                 <button class="jump-btn" @click="jumpToEpisode">跳转</button>
               </div>
             </div>
@@ -248,6 +282,10 @@ let lastTouchGesturePoint: { x: number; y: number } | null = null
 const statusNow = ref(Date.now())
 const DOUBLE_TAP_DELAY_MS = 280
 const DOUBLE_TAP_MAX_DISTANCE_PX = 36
+const RESUME_MIN_POSITION_SECONDS = 5
+const PROGRESS_SAVE_INTERVAL_MS = 10 * 1000
+
+type ResumeResult = 'resumed' | 'skipped' | 'failed'
 
 const episodeTitle = computed(() => {
   if (!playerStore.currentEpisodeData) return ''
@@ -263,13 +301,11 @@ const progress = computed(() => {
   return (currentTime.value / duration.value) * 100
 })
 
-const videoUrlExpiresAt = computed(() =>
-  playerStore.currentEpisodeData?.videoUrlExpiresAt ?? playerStore.expiresAt ?? null
+const videoUrlExpiresAt = computed(
+  () => playerStore.currentEpisodeData?.videoUrlExpiresAt ?? playerStore.expiresAt ?? null
 )
 
-const videoUrlFetchedAt = computed(() =>
-  playerStore.currentEpisodeData?.videoUrlFetchedAt ?? null
-)
+const videoUrlFetchedAt = computed(() => playerStore.currentEpisodeData?.videoUrlFetchedAt ?? null)
 
 const videoLinkStatusText = computed(() =>
   playerStore.currentEpisodeData?.videoUrlCacheHit ? '复用后端缓存' : '新解析链接'
@@ -416,7 +452,7 @@ async function loadEpisode() {
         data.episode
       )
       const savedPos = savedPosition || 0
-      if (savedPos > 5) {
+      if (savedPos > RESUME_MIN_POSITION_SECONDS) {
         console.log('📌 Saved position found:', formatTime(savedPos))
         savedPositionForResume.value = savedPos
         savedPositionEpisode.value = { season: Number(data.season), episode: Number(data.episode) }
@@ -453,10 +489,17 @@ async function loadEpisode() {
  * - Episode change: updates source on existing Plyr instance.
  */
 async function setupPlayer() {
-  const url = videoUrl.value
+  let url = videoUrl.value
   if (!url) {
     console.warn('⚠️ No video URL available for player setup')
     return
+  }
+
+  // Use HTML5 Media Fragments to let the browser natively handle the initial seek!
+  if (savedPositionForResume.value && savedPositionForResume.value > RESUME_MIN_POSITION_SECONDS) {
+    const time = Math.floor(savedPositionForResume.value)
+    url = url.includes('#') ? url.replace(/#.*$/, `#t=${time}`) : `${url}#t=${time}`
+    console.log(`🔗 Appended media fragment to URL: #t=${time}`)
   }
 
   if (player) {
@@ -622,18 +665,16 @@ function updateResponsiveLayout() {
   const sidePadding = viewportWidth <= 768 ? 16 : 32
   const titleMarginTop = getVerticalMargin(videoMetaBlock.value, 'top')
   const titleBoundaryBuffer = viewportWidth <= 768 ? 10 : 14
-  const widthPreference = viewportWidth >= 2200
-    ? viewportWidth * 0.86
-    : viewportWidth >= 1600
-      ? viewportWidth * 0.82
-      : viewportWidth >= 1200
-        ? viewportWidth * 0.78
-        : viewportWidth - sidePadding
-  const availableHeight = viewportHeight
-    - wrapperTop
-    - titleMarginTop
-    - titleHeight
-    - titleBoundaryBuffer
+  const widthPreference =
+    viewportWidth >= 2200
+      ? viewportWidth * 0.86
+      : viewportWidth >= 1600
+        ? viewportWidth * 0.82
+        : viewportWidth >= 1200
+          ? viewportWidth * 0.78
+          : viewportWidth - sidePadding
+  const availableHeight =
+    viewportHeight - wrapperTop - titleMarginTop - titleHeight - titleBoundaryBuffer
 
   const safeMaxHeight = Math.max(180, Math.floor(availableHeight))
   const safeMaxWidth = Math.max(
@@ -647,7 +688,7 @@ function updateResponsiveLayout() {
       )
     )
   )
-  const safeHeight = Math.max(158, Math.floor(safeMaxWidth * 9 / 16))
+  const safeHeight = Math.max(158, Math.floor((safeMaxWidth * 9) / 16))
 
   root.style.setProperty('--player-width', `${safeMaxWidth}px`)
   root.style.setProperty('--player-height', `${safeHeight}px`)
@@ -667,6 +708,103 @@ function scheduleResponsiveLayoutUpdate() {
     responsiveLayoutFrame = null
     updateResponsiveLayout()
   })
+}
+
+function getNativeVideoElement(): HTMLVideoElement | null {
+  const nativeVideo = (player?.elements as any)?.video
+  if (nativeVideo instanceof HTMLVideoElement) {
+    return nativeVideo
+  }
+
+  return videoElement.value
+}
+
+function isFinitePositiveNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+}
+
+function getMediaDuration(video: HTMLVideoElement | null): number {
+  const videoDuration = video?.duration
+  if (isFinitePositiveNumber(videoDuration)) {
+    return videoDuration
+  }
+
+  const playerDuration = player?.duration
+  if (isFinitePositiveNumber(playerDuration)) {
+    return playerDuration
+  }
+
+  return 0
+}
+
+function getPlaybackTime(video: HTMLVideoElement | null): number {
+  const videoTime = video?.currentTime
+  if (typeof videoTime === 'number' && Number.isFinite(videoTime)) {
+    return videoTime
+  }
+
+  const playerTime = player?.currentTime
+  if (typeof playerTime === 'number' && Number.isFinite(playerTime)) {
+    return playerTime
+  }
+
+  return 0
+}
+
+async function resumeToPosition(
+  savedPosition: number,
+  reason: 'initial' | 'url-refresh'
+): Promise<ResumeResult> {
+  const video = getNativeVideoElement()
+  if (!video || savedPosition <= RESUME_MIN_POSITION_SECONDS) {
+    return 'skipped'
+  }
+
+  // The actual seek is handled natively by the browser via the #t= parameter in the URL.
+  // We just need to sync the UI state and show the notification.
+  const targetPosition = savedPosition
+
+  console.log('📍 Relying on native Media Fragments for seek:', {
+    reason,
+    target: formatTime(targetPosition)
+  })
+
+  isWaitingForResume = false
+
+  currentTime.value = targetPosition
+  playerStore.updateTime(targetPosition)
+
+  console.log('✅ Resumed from saved position, target:', formatTime(targetPosition))
+  uiStore.showNotification(`恢复上次播放位置: ${formatTime(targetPosition)}`, 'info')
+
+  return 'resumed'
+}
+
+async function resumeThenAutoplay(savedPosition: number, reason: 'initial' | 'url-refresh') {
+  // Set flag early to prevent the initial zero-position play event from overwriting history
+  isWaitingForResume = true
+
+  // Start playback immediately. This forces Safari's HLS engine to start buffering
+  // and parsing the playlist, which makes the target position seekable.
+  autoplay()
+
+  const result = await resumeToPosition(savedPosition, reason)
+  if (result === 'failed') {
+    isRefreshReload = false
+
+    // If resume fails, reset to beginning to prevent the player from getting stuck
+    const video = getNativeVideoElement()
+    if (video) {
+      try {
+        video.currentTime = 0
+        if (player) player.currentTime = 0
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  return result
 }
 
 async function savePosition() {
@@ -821,8 +959,9 @@ function detachPlayerTouchGestures() {
 }
 
 function isTouchGestureOnPlayerControls(target: EventTarget | null) {
-  return target instanceof Element && Boolean(
-    target.closest('.plyr__controls, .plyr__control, .plyr__menu, .plyr__progress')
+  return (
+    target instanceof Element &&
+    Boolean(target.closest('.plyr__controls, .plyr__control, .plyr__menu, .plyr__progress'))
   )
 }
 
@@ -888,9 +1027,7 @@ function attachPlayerTouchGestures() {
 
   const container = player?.elements?.container
   const gestureSurface = (
-    container instanceof HTMLElement
-      ? container.querySelector('.plyr__video-wrapper')
-      : null
+    container instanceof HTMLElement ? container.querySelector('.plyr__video-wrapper') : null
   ) as HTMLElement | null
 
   touchGestureSurface = gestureSurface || videoElement.value || playerContainer.value
@@ -936,7 +1073,7 @@ function seekForward() {
           duration: duration.value
         },
         newPosition,
-        0  // No threshold - always save on keyboard seek
+        0 // No threshold - always save on keyboard seek
       )
       console.log('💾 Position saved after keyboard seek')
     }
@@ -967,7 +1104,7 @@ function seekBackward() {
           duration: duration.value
         },
         newPosition,
-        0  // No threshold - always save on keyboard seek
+        0 // No threshold - always save on keyboard seek
       )
       console.log('💾 Position saved after keyboard seek')
     }
@@ -975,6 +1112,24 @@ function seekBackward() {
 }
 
 function onVideoEnd() {
+  if (isWaitingForResume) {
+    console.warn('⚠️ Ended event fired during resume process, ignoring to prevent accidental skip.')
+    return
+  }
+
+  const video = getNativeVideoElement()
+  if (video) {
+    const current = getPlaybackTime(video)
+    const total = getMediaDuration(video)
+    // If ended fired when we are still more than 10 seconds away from the end, it's likely a stream/buffer error, not a real completion
+    if (total > 0 && total - current > 10) {
+      console.warn(
+        `⚠️ Ended event fired prematurely at ${current}s (duration ${total}s), ignoring to prevent accidental skip.`
+      )
+      return
+    }
+  }
+
   // Save position before loading next episode (mark as completed)
   if (duration.value > 0) {
     historyStore.savePositionImmediate(
@@ -990,7 +1145,7 @@ function onVideoEnd() {
         duration: duration.value
       },
       duration.value,
-      0  // No threshold for video end (always save)
+      0 // No threshold for video end (always save)
     )
   }
 
@@ -1069,7 +1224,9 @@ function scheduleUrlRefresh() {
     return
   }
 
-  console.log(`⏰ URL expires in ${Math.floor(timeUntilExpiration / 1000)}s, scheduling refresh in ${Math.floor(refreshDelay / 1000)}s`)
+  console.log(
+    `⏰ URL expires in ${Math.floor(timeUntilExpiration / 1000)}s, scheduling refresh in ${Math.floor(refreshDelay / 1000)}s`
+  )
 
   refreshUrlTimeout = window.setTimeout(async () => {
     console.log('⏰ Auto-refreshing URL before expiration...')
@@ -1110,7 +1267,7 @@ async function refreshVideoUrlSeamlessly() {
           duration: duration.value
         },
         currentPosition,
-        0  // No threshold - always save before refresh
+        0 // No threshold - always save before refresh
       )
       console.log('💾 Position saved to backend:', formatTime(currentPosition))
     } catch (err) {
@@ -1130,26 +1287,31 @@ async function refreshVideoUrlSeamlessly() {
 
     console.log('✅ Got fresh URL:', freshUrl.substring(0, 80) + '...')
 
-    // Update Plyr source with the fresh URL
     if (player && currentPosition > 0) {
-      player.source = {
-        type: 'video',
-        sources: [{ src: freshUrl, type: 'video/mp4' }]
-      }
-
       isRefreshReload = true
       playingBeforeRefresh = wasPlaying
+
+      const time = Math.floor(currentPosition)
+      const freshUrlWithTime = freshUrl.includes('#')
+        ? freshUrl.replace(/#.*$/, `#t=${time}`)
+        : `${freshUrl}#t=${time}`
+
+      // Update Plyr source with the fresh URL, then reuse the same verified
+      // resume flow as initial playback.
+      player.source = {
+        type: 'video',
+        sources: [{ src: freshUrlWithTime, type: 'video/mp4' }]
+      }
+
       savedPositionForResume.value = currentPosition
       savedPositionEpisode.value = { season: season.value, episode: episode.value }
 
-      // Use loadedmetadata event (fires when duration is available)
-      // Poll for duration to be available before setting currentTime
-      player.once('loadedmetadata', () => {
+      const resumeResult = await resumeThenAutoplay(currentPosition, 'url-refresh')
+      if (resumeResult !== 'failed') {
         uiStore.showNotification('视频链接已刷新', 'success')
+      }
 
-        // Schedule next refresh after successful URL refresh
-        scheduleUrlRefresh()
-      })
+      scheduleUrlRefresh()
     }
   } catch (error: any) {
     console.error('❌ Failed to refresh video URL:', error.message)
@@ -1175,7 +1337,7 @@ const handlePageHide = () => {
         duration: duration.value
       },
       currentTime.value,
-      0  // No threshold for page exit (always save)
+      0 // No threshold for page exit (always save)
     )
     console.log('💾 Position saved on page exit')
   }
@@ -1186,9 +1348,9 @@ onMounted(async () => {
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
-    'Space': togglePlayPause,
-    'ArrowRight': seekForward,
-    'ArrowLeft': seekBackward,
+    Space: togglePlayPause,
+    ArrowRight: seekForward,
+    ArrowLeft: seekBackward,
     'Ctrl+ArrowRight': playNext
   })
 
@@ -1219,7 +1381,6 @@ onMounted(async () => {
 
     // Load episode data
     await loadEpisode()
-
   } catch (err) {
     console.error('Error initializing player:', err)
   }
@@ -1247,7 +1408,7 @@ onUnmounted(() => {
   if (player) {
     detachPlayerTouchGestures()
     player.destroy()
-    player = null  // Clear the reference to allow re-initialization
+    player = null // Clear the reference to allow re-initialization
   }
 
   // Cleanup event listeners to prevent memory leaks
@@ -1277,21 +1438,25 @@ onBeforeRouteLeave((to, from, next) => {
         duration: duration.value
       },
       currentTime.value,
-      0  // No threshold - always save on navigation
+      0 // No threshold - always save on navigation
     )
     console.log('💾 Position saved on route navigation guard')
   }
-  next()  // Don't block navigation
+  next() // Don't block navigation
 })
 
-watch(() => route.query, () => {
-  if (route.params.animeId === animeId.value) {
-    season.value = Number(route.query.season) || 1
-    episode.value = Number(route.query.episode) || 1
-    jumpEpisode.value = episode.value
-    loadEpisode()
-  }
-}, { deep: true })
+watch(
+  () => route.query,
+  () => {
+    if (route.params.animeId === animeId.value) {
+      season.value = Number(route.query.season) || 1
+      episode.value = Number(route.query.episode) || 1
+      jumpEpisode.value = episode.value
+      loadEpisode()
+    }
+  },
+  { deep: true }
+)
 
 watch(
   [loading, error, videoUrl, animeTitle, episodeTitle],
@@ -1385,12 +1550,20 @@ function initializePlyr(initialUrl?: string) {
       nativeVideo.addEventListener('error', async () => {
         const code = nativeVideo.error?.code
         console.error('❌ Video error code:', code, nativeVideo.error?.message)
-        if (code === MediaError.MEDIA_ERR_NETWORK || code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+        if (
+          code === MediaError.MEDIA_ERR_NETWORK ||
+          code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+        ) {
           if (networkRetryCount < MAX_NETWORK_RETRIES) {
             networkRetryCount++
             const delay = 1500 * networkRetryCount // exponential backoff: 1.5s, 3s, 4.5s
-            console.log(`🔁 Network error – retry ${networkRetryCount}/${MAX_NETWORK_RETRIES} in ${delay}ms...`)
-            uiStore.showNotification(`网络错误，正在重试... (${networkRetryCount}/${MAX_NETWORK_RETRIES})`, 'warning')
+            console.log(
+              `🔁 Network error – retry ${networkRetryCount}/${MAX_NETWORK_RETRIES} in ${delay}ms...`
+            )
+            uiStore.showNotification(
+              `网络错误，正在重试... (${networkRetryCount}/${MAX_NETWORK_RETRIES})`,
+              'warning'
+            )
             setTimeout(() => {
               if (nativeVideo) {
                 nativeVideo.load() // re-trigger load with same src
@@ -1425,12 +1598,15 @@ function initializePlyr(initialUrl?: string) {
         }, 10000)
       })
       nativeVideo.addEventListener('playing', () => {
-        if (stallTimeout) { clearTimeout(stallTimeout); stallTimeout = null }
+        if (stallTimeout) {
+          clearTimeout(stallTimeout)
+          stallTimeout = null
+        }
         networkRetryCount = 0 // reset on successful play
       })
     }
 
-    player.on('timeupdate', (event) => {
+    player.on('timeupdate', event => {
       const plyr = event.detail.plyr
       currentTime.value = plyr.currentTime
       duration.value = plyr.duration
@@ -1461,7 +1637,7 @@ function initializePlyr(initialUrl?: string) {
           duration: duration.value
         },
         currentTime.value,
-        0  // No threshold - always save on play
+        0 // No threshold - always save on play
       )
     })
 
@@ -1481,7 +1657,7 @@ function initializePlyr(initialUrl?: string) {
             duration: duration.value
           },
           currentTime.value,
-          5  // 5 second threshold for play/pause
+          5 // 5 second threshold for play/pause
         )
       }
     })
@@ -1504,7 +1680,7 @@ function initializePlyr(initialUrl?: string) {
             duration: duration.value
           },
           newPosition,
-          0  // No threshold - always save on seek completion
+          0 // No threshold - always save on seek completion
         )
       }
     })
@@ -1526,7 +1702,7 @@ function initializePlyr(initialUrl?: string) {
             duration: duration.value
           },
           newPosition,
-          0  // No threshold - always save on button press
+          0 // No threshold - always save on button press
         )
         console.log('💾 Position saved after fast forward')
       }
@@ -1548,7 +1724,7 @@ function initializePlyr(initialUrl?: string) {
             duration: duration.value
           },
           newPosition,
-          0  // No threshold - always save on button press
+          0 // No threshold - always save on button press
         )
         console.log('💾 Position saved after rewind')
       }
@@ -1570,46 +1746,18 @@ function initializePlyr(initialUrl?: string) {
       const savedEp = savedPositionEpisode.value
 
       // Check if saved position is for current episode
-      const isCurrentEpisode = savedEp && savedEp.season === season.value && savedEp.episode === episode.value
+      const isCurrentEpisode =
+        savedEp && savedEp.season === season.value && savedEp.episode === episode.value
 
-      if (savedPos && savedPos > 5 && isCurrentEpisode) {
+      if (savedPos && savedPos > RESUME_MIN_POSITION_SECONDS && isCurrentEpisode) {
         console.log('📍 Resuming to saved position:', formatTime(savedPos), 'for episode', savedEp)
-        isWaitingForResume = true
 
         // Claim the pending resume immediately so duplicate ready events
-        // cannot schedule the same resume notification twice.
+        // cannot run the same seek twice.
         savedPositionForResume.value = null
         savedPositionEpisode.value = null
 
-        // Wait a bit for duration to be available, then seek
-        setTimeout(() => {
-          const duration = player?.duration || videoElement.value?.duration
-  
-          if (!duration || !isFinite(duration) || duration === 0) {
-            console.log('⏳ Duration not loaded yet, will try to seek anyway')
-          }
-  
-          // Check if saved position is near end (within 30 seconds)
-          if (duration && duration > 1 && savedPos >= duration - 30) {
-            console.log('⚠️ Episode already completed, starting from beginning')
-            isWaitingForResume = false
-
-            // Resume playback after seek
-            autoplay()
-            return
-          }
-  
-          // Seek to saved position
-          if (player) {
-            player.currentTime = savedPos
-            console.log('✅ Resumed from saved position:', formatTime(savedPos), duration ? `/ ${formatTime(duration)}` : '')
-            uiStore.showNotification(`恢复上次播放位置: ${formatTime(savedPos)}`, 'info')
-            isWaitingForResume = false
-
-            // Resume playback after seek
-            autoplay()
-          }
-        }, 500)
+        void resumeThenAutoplay(savedPos, 'initial')
       } else {
         if (isWaitingForResume) {
           console.log('⏳ Resume flow already in progress, skipping fallback autoplay')
@@ -1631,8 +1779,7 @@ function initializePlyr(initialUrl?: string) {
       }
     })
 
-    // Fallback interval: 5 minutes (was 30 seconds)
-    // This is a safety net in case events don't fire properly
+    // Heartbeat save: keeps crash/kill recovery close to the real position.
     saveInterval = window.setInterval(() => {
       if (currentTime.value > 0) {
         historyStore.savePositionImmediate(
@@ -1648,10 +1795,10 @@ function initializePlyr(initialUrl?: string) {
             duration: duration.value
           },
           currentTime.value,
-          60  // 60 second threshold for fallback (only save if moved > 1 min)
+          5
         )
       }
-    }, 5 * 60 * 1000)  // 5 minutes
+    }, PROGRESS_SAVE_INTERVAL_MS)
 
     console.log('✅ Plyr fully initialized with event-driven save listeners')
   } catch (err) {
@@ -1777,7 +1924,8 @@ function initializePlyr(initialUrl?: string) {
   justify-content: flex-end !important;
   inset: auto 0 0 auto !important;
   width: auto !important;
-  padding: max(0.45rem, env(safe-area-inset-bottom, 0px)) max(0.45rem, env(safe-area-inset-right, 0px)) !important;
+  padding: max(0.45rem, env(safe-area-inset-bottom, 0px))
+    max(0.45rem, env(safe-area-inset-right, 0px)) !important;
   background: transparent !important;
 }
 
@@ -1791,7 +1939,8 @@ function initializePlyr(initialUrl?: string) {
   pointer-events: none !important;
 }
 
-.watch-view.player-locked :deep(.plyr__controls.plyr__controls--lock-mode > *:not(.player-lock-control)) {
+.watch-view.player-locked
+  :deep(.plyr__controls.plyr__controls--lock-mode > *:not(.player-lock-control)) {
   display: none !important;
 }
 
@@ -1806,8 +1955,10 @@ function initializePlyr(initialUrl?: string) {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
 }
 
-.watch-view.player-locked :deep(.plyr__controls.plyr__controls--lock-mode .player-lock-control:hover),
-.watch-view.player-locked :deep(.plyr__controls.plyr__controls--lock-mode .player-lock-control:focus-visible) {
+.watch-view.player-locked
+  :deep(.plyr__controls.plyr__controls--lock-mode .player-lock-control:hover),
+.watch-view.player-locked
+  :deep(.plyr__controls.plyr__controls--lock-mode .player-lock-control:focus-visible) {
   opacity: 0.9;
   background: rgba(9, 12, 20, 0.32);
   border-color: rgba(255, 255, 255, 0.18);
@@ -1910,7 +2061,7 @@ function initializePlyr(initialUrl?: string) {
   cursor: pointer;
 }
 
-.autoplay-toggle input[type="checkbox"] {
+.autoplay-toggle input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -2021,7 +2172,9 @@ function initializePlyr(initialUrl?: string) {
   color: var(--text-primary);
   text-decoration: none;
   background: var(--bg-secondary);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .detail-link:hover {

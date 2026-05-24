@@ -103,7 +103,8 @@ vi.mock('plyr', () => ({
     })
     playing = false
     muted = false
-    currentTime = 0
+    blockSeek = false
+    private currentTimeValue = 0
     duration = 0
     sourceValue: any = null
     elements = {
@@ -112,6 +113,19 @@ vi.mock('plyr', () => ({
     }
 
     constructor() {
+      Object.defineProperty(this.elements.video, 'currentTime', {
+        configurable: true,
+        get: () => this.currentTimeValue,
+        set: (value: number) => {
+          if (!this.blockSeek) {
+            this.currentTimeValue = value
+          }
+        }
+      })
+      Object.defineProperty(this.elements.video, 'readyState', {
+        configurable: true,
+        get: () => 4
+      })
       mockPlyrInstances.push(this)
     }
 
@@ -121,6 +135,16 @@ vi.mock('plyr', () => ({
 
     get source() {
       return this.sourceValue
+    }
+
+    set currentTime(value: number) {
+      if (!this.blockSeek) {
+        this.currentTimeValue = value
+      }
+    }
+
+    get currentTime() {
+      return this.currentTimeValue
     }
 
     emit(event: string) {
@@ -318,5 +342,28 @@ describe('WatchView Component', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     expect(secondPlayer.play).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not autoplay from the beginning when resume seek cannot be verified', async () => {
+    mockHistoryStore.getLastPosition.mockResolvedValue(120)
+
+    const wrapper = mount(WatchView, mountOptions)
+    activeWrapper = wrapper
+    await waitForPlyrInstances(1)
+
+    const firstPlayer = mockPlyrInstances[0]
+    firstPlayer.duration = 1500
+    firstPlayer.blockSeek = true
+    firstPlayer.emit('ready')
+
+    await vi.advanceTimersByTimeAsync(15000)
+    await flushViewUpdates()
+
+    expect(firstPlayer.currentTime).toBe(0)
+    expect(firstPlayer.play).not.toHaveBeenCalled()
+    expect(mockUiStore.showNotification).toHaveBeenCalledWith(
+      expect.stringContaining('恢复播放位置失败'),
+      'warning'
+    )
   })
 })
