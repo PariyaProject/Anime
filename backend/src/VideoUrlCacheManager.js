@@ -18,8 +18,8 @@ class VideoUrlCacheManager {
         this.inFlight = new Map();
     }
 
-    buildKey(bangumiId, season, episode) {
-        return `${bangumiId}:${season}:${episode}`;
+    buildKey(source, bangumiId, season, episode) {
+        return `${source || 'cycani'}:${bangumiId}:${season}:${episode}`;
     }
 
     peek(key) {

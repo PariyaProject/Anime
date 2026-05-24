@@ -15,7 +15,7 @@ function buildExportFilename(username = '') {
 // 观看历史API路由
 router.post('/api/watch-history', requireAuth, async (req, res) => {
     try {
-        const { animeInfo, episodeInfo, position = 0, sourceDeviceId = '', watchDate } = req.body;
+        const { sourceId, animeInfo, episodeInfo, position = 0, sourceDeviceId = '', watchDate } = req.body;
 
         if (!animeInfo || !episodeInfo) {
             return res.status(400).json({
@@ -26,6 +26,7 @@ router.post('/api/watch-history', requireAuth, async (req, res) => {
 
         const watchRecord = await WatchHistoryManager.addToWatchHistory(
             req.authUser.id,
+            sourceId,
             animeInfo,
             episodeInfo,
             position,
@@ -152,8 +153,10 @@ router.get('/api/last-position/:animeId/:season/:episode', async (req, res) => {
         }
 
         const { animeId, season, episode } = req.params;
+        const { source } = req.query;
         const position = await WatchHistoryManager.getLastPosition(
             req.authUser.id,
+            source,
             animeId,
             parseInt(season),
             parseInt(episode)

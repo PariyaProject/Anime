@@ -1,4 +1,5 @@
 export interface WatchRecord {
+  sourceId?: string
   animeId: string
   animeTitle: string
   animeCover: string
@@ -14,6 +15,7 @@ export interface WatchRecord {
 export interface PositionRecord {
   position: number
   lastUpdated: string
+  sourceId?: string
 }
 
 export interface HistoryResponse {

@@ -21,6 +21,10 @@
             @click="setChannel('movie')"
           >剧场</router-link>
         </div>
+
+        <!-- Source Selector -->
+        <SourceSelector />
+
         <!-- Watch History Dropdown -->
         <div class="dropdown" v-if="hasContinueWatching">
           <button
@@ -155,11 +159,14 @@ import { useUiStore } from '@/stores/ui'
 import { useHistoryStore } from '@/stores/history'
 import { useServerStatus } from '@/composables/useServerStatus'
 import { useGroupedHistory, type GroupedAnime } from '@/composables/useGroupedHistory'
+import { usePluginStore } from '@/stores/plugin.store'
+import SourceSelector from './SourceSelector.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const historyStore = useHistoryStore()
+const pluginStore = usePluginStore()
 const serverStatus = useServerStatus(30000, false)
 
 const historyDropdownOpen = ref(false)
@@ -229,6 +236,13 @@ async function handleLogout() {
 
 function resumeWatching(anime: GroupedAnime) {
   historyDropdownOpen.value = false
+
+  if (anime.sourceId && anime.sourceId !== pluginStore.activeSourceId) {
+    pluginStore.setActiveSource(anime.sourceId)
+    window.location.href = `/watch/${anime.animeId}?season=${anime.season}&episode=${anime.latestEpisode.episode}`
+    return
+  }
+
   router.push({
     name: 'Watch',
     params: {

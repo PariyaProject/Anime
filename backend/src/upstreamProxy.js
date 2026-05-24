@@ -1,8 +1,12 @@
-const DEFAULT_PROXY_HOST_SUFFIXES = [
-    'player.cycanime.com',
-    'cycanime.com',
-    'cycani.org'
-];
+
+// This will be populated later dynamically from plugins, but keep a fallback
+let dynamicProxyHostSuffixes = ['cycanime.com', 'cycani.org', 'player.cycanime.com'];
+
+function setDynamicProxyHosts(hosts) {
+    if (hosts && hosts.length > 0) {
+        dynamicProxyHostSuffixes = hosts;
+    }
+}
 
 function parseCommaSeparatedEnv(name) {
     return String(process.env[name] || '')
@@ -46,7 +50,7 @@ function shouldUseProxyForHostname(hostname) {
         .map(normalizeHostPattern);
     const hostPatterns = configuredPatterns.length > 0
         ? configuredPatterns
-        : DEFAULT_PROXY_HOST_SUFFIXES;
+        : dynamicProxyHostSuffixes;
 
     return hostPatterns.some((pattern) => (
         pattern === '*'
@@ -160,7 +164,9 @@ function getPuppeteerLaunchArgs(useProxy = false) {
 }
 
 module.exports = {
+    shouldUseProxyForHostname,
     getAxiosProxyConfig,
     getPuppeteerLaunchArgs,
-    getPuppeteerProxySettings
+    getPuppeteerProxySettings,
+    setDynamicProxyHosts
 };

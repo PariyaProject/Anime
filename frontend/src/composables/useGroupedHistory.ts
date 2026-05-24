@@ -18,6 +18,7 @@ export interface WatchedEpisode {
  * Represents an anime with grouped watched episodes
  */
 export interface GroupedAnime {
+  sourceId?: string
   animeId: string
   animeTitle: string
   animeCover: string
@@ -33,6 +34,7 @@ export interface GroupedAnime {
  * Interface for localStorage position records
  */
 interface LocalPositionRecord {
+  sourceId?: string
   animeId: string
   animeTitle: string
   animeCover: string
@@ -69,9 +71,13 @@ function readLocalStorageWatchPositions(): Map<string, LocalPositionRecord> {
               continue
             }
 
-            // Extract compound key from localStorage key
-            // Key format: watch_position_${animeId}_${season}_${episode}
-            const compoundKey = key.substring(PREFIX.length)
+            // Key format: watch_position_${sourceId}_${animeId}_${season}_${episode}
+            // For backward compatibility, if sourceId is missing, assume 'cycani'
+            let compoundKey = key.substring(PREFIX.length)
+            if (compoundKey.split('_').length === 3) {
+              parsed.sourceId = 'cycani'
+              compoundKey = `cycani_${compoundKey}`
+            }
             result.set(compoundKey, parsed)
           }
         } catch (e) {
@@ -123,7 +129,8 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
     // Create a map of backend records by compound key
     const mergedMap = new Map<string, WatchRecord>()
     for (const record of records) {
-      const key = `${record.animeId}_${record.season}_${record.episode}`
+      const sourceId = record.sourceId || 'cycani'
+      const key = `${sourceId}_${record.animeId}_${record.season}_${record.episode}`
       mergedMap.set(key, record)
     }
 
@@ -135,6 +142,7 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
     for (const [key, entry] of localStorageEntries) {
       const existing = mergedMap.get(key)
       const localRecord = {
+        sourceId: entry.sourceId || 'cycani',
         animeId: entry.animeId,
         animeTitle: existing?.animeTitle || entry.animeTitle,
         animeCover: existing?.animeCover || entry.animeCover,
@@ -175,9 +183,10 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
     // Create a map for grouping
     const groupMap = new Map<string, WatchedEpisode[]>()
 
-    // Group episodes by animeId_season
+    // Group episodes by sourceId_animeId_season
     for (const record of records) {
-      const key = `${record.animeId}_${record.season}`
+      const sourceId = record.sourceId || 'cycani'
+      const key = `${sourceId}_${record.animeId}_${record.season}`
 
       if (!groupMap.has(key)) {
         groupMap.set(key, [])
@@ -202,7 +211,7 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
     for (const [key, episodes] of groupMap.entries()) {
       // Use the first record to get anime info (all records in group have same anime info)
       const firstRecord = records.find(
-        r => `${r.animeId}_${r.season}` === key
+        r => `${r.sourceId || 'cycani'}_${r.animeId}_${r.season}` === key
       )
 
       if (!firstRecord) continue
@@ -212,6 +221,7 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
       const hasLocalOnly = episodes.some(ep => ep.isLocalOnly)
 
       result.push({
+        sourceId: firstRecord.sourceId || 'cycani',
         animeId: firstRecord.animeId,
         animeTitle: firstRecord.animeTitle,
         animeCover: firstRecord.animeCover,
@@ -231,11 +241,11 @@ export function useGroupedHistory(watchRecords: ComputedRef<WatchRecord[]> | Wat
   })
 
   /**
-   * Get grouped anime by anime ID and season
+   * Get grouped anime by source ID, anime ID and season
    */
-  function getGroupedAnime(animeId: string, season: number): GroupedAnime | undefined {
+  function getGroupedAnime(sourceId: string, animeId: string, season: number): GroupedAnime | undefined {
     return groupedAnime.value.find(
-      anime => anime.animeId === animeId && anime.season === season
+      anime => (anime.sourceId || 'cycani') === sourceId && anime.animeId === animeId && anime.season === season
     )
   }
 

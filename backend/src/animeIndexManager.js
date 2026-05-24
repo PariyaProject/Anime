@@ -1,53 +1,16 @@
-/**
- * Anime Index Manager
- * Manages local anime index for fast search without CAPTCHA requirements.
- * Uses category browsing to build and maintain the index.
- */
-
 const fs = require('fs').promises;
-const fsSync = require('fs');
 const path = require('path');
-const cheerio = require('cheerio');
-const { fetchUpstreamHtml } = require('./upstreamAccess');
-const { AnimeListUrlConstructor } = require('./urlConstructor');
+const { pluginManager } = require('./plugins/PluginManager');
 
-// Index file location
 const INDEX_FILE = path.join(__dirname, '..', 'config', 'anime-index.json');
 
-// Default empty index structure
 const DEFAULT_INDEX = {
-    version: '1.0',
+    version: '2.0',
     lastUpdated: null,
     totalAnime: 0,
     anime: {}
 };
 
-// Category combinations for initial index build
-// NOTE: cycani.org URL structure only supports ONE filter at a time
-// So we only scrape by year (which already includes all types: TV, 电影, OVA)
-const CATEGORIES = {
-    years: (() => {
-        const currentYear = new Date().getFullYear()
-        const startYear = 1980  // Website has data from 1980
-        const years = []
-        for (let year = currentYear; year >= startYear; year--) {
-            years.push(year)
-        }
-        return years
-    })(),
-    maxPages: 10  // Maximum pages to scrape per year (safety limit)
-    // Total: 46 years (1980-2025) × ~10 pages × ~48 anime = ~20,000+ anime expected
-};
-
-// Safety buffer for incremental updates
-const SAFETY_BUFFER_SIZE = 10;
-
-// Minimum time between build attempts (5 minutes)
-const MIN_BUILD_INTERVAL = 5 * 60 * 1000;
-
-/**
- * Anime Index Manager Class
- */
 class AnimeIndexManager {
     constructor() {
         this.index = null;
@@ -57,9 +20,6 @@ class AnimeIndexManager {
         this.lastBuildAttempt = null;
     }
 
-    /**
-     * Ensure config directory exists
-     */
     async ensureConfigDirectory() {
         try {
             const configDir = path.dirname(INDEX_FILE);
@@ -71,18 +31,12 @@ class AnimeIndexManager {
         }
     }
 
-    /**
-     * Load index from disk
-     */
     async loadIndex() {
         try {
-            // Check if file exists
             await fs.access(INDEX_FILE);
-
             const content = await fs.readFile(INDEX_FILE, 'utf8');
             const data = JSON.parse(content);
 
-            // Validate structure
             if (!data || typeof data !== 'object' || !data.anime) {
                 console.warn('⚠️ Invalid index structure, using default');
                 return this.getEmptyIndex();
@@ -91,34 +45,18 @@ class AnimeIndexManager {
             console.log(`✅ Loaded anime index: ${data.totalAnime || 0} entries`);
             return data;
         } catch (error) {
-            if (error.code === 'ENOENT') {
-                console.log('📄 Index file not found, will create new index');
-                return this.getEmptyIndex();
-            }
-            console.error('❌ Failed to load index:', error.message);
             return this.getEmptyIndex();
         }
     }
 
-    /**
-     * Save index to disk with atomic write
-     */
     async saveIndex(indexData) {
         try {
             await this.ensureConfigDirectory();
-
-            // Update timestamp and count
             indexData.lastUpdated = new Date().toISOString();
             indexData.totalAnime = Object.keys(indexData.anime).length;
-
-            // Write to temporary file first, then rename (atomic operation)
             const tempFile = INDEX_FILE + '.tmp';
-            const jsonString = JSON.stringify(indexData, null, 2);
-
-            await fs.writeFile(tempFile, jsonString, 'utf8');
+            await fs.writeFile(tempFile, JSON.stringify(indexData, null, 2), 'utf8');
             await fs.rename(tempFile, INDEX_FILE);
-
-            console.log(`💾 Saved index: ${indexData.totalAnime} entries to ${INDEX_FILE}`);
             return true;
         } catch (error) {
             console.error('❌ Failed to save index:', error.message);
@@ -126,25 +64,14 @@ class AnimeIndexManager {
         }
     }
 
-    /**
-     * Get empty index structure
-     */
     getEmptyIndex() {
         return JSON.parse(JSON.stringify(DEFAULT_INDEX));
     }
 
-    /**
-     * Get index statistics
-     */
     getIndexStats() {
         if (!this.index) {
-            return {
-                totalAnime: 0,
-                lastUpdated: null,
-                isBuilding: this.isBuilding
-            };
+            return { totalAnime: 0, lastUpdated: null, isBuilding: this.isBuilding };
         }
-
         return {
             totalAnime: Object.keys(this.index.anime).length,
             lastUpdated: this.index.lastUpdated,
@@ -152,490 +79,139 @@ class AnimeIndexManager {
         };
     }
 
-    /**
-     * Initialize index (load from disk or create new)
-     */
     async initialize() {
-        // Load from disk first
         const loadedIndex = await this.loadIndex();
-
-        // Check if loaded index has data
         const loadedCount = Object.keys(loadedIndex.anime || {}).length;
 
         if (loadedCount > 0) {
-            // Index exists on disk
-            console.log(`📊 Index loaded from disk: ${loadedCount} anime`);
             this.index = loadedIndex;
-            // Don't reset isBuilding here - let the caller decide whether to build
         } else {
-            // No index on disk
-            console.log(`📋 No index found on disk, ready to build`);
             this.index = loadedIndex;
-            // Reset isBuilding only if index is truly empty
             if (Object.keys(this.index.anime || {}).length === 0) {
                 this.isBuilding = false;
             }
         }
-
         return this.index;
     }
 
-    /**
-     * Build initial index from category browsing
-     * Scrapes all genre × year combinations
-     * @param {string} channel - Channel name (tv, movie, 4k, guoman) to build index for
-     */
-    async buildInitialIndex(channel = 'tv') {
-        if (this.isBuilding) {
-            console.log('⚠️ Index build already in progress, skipping');
+    async buildInitialIndex(sourceId = null) {
+        if (this.isBuilding) return;
+
+        const source = sourceId || pluginManager.getDefaultSourceId();
+        const plugin = pluginManager.getPlugin(source);
+        if (!plugin) {
+            console.error(`❌ Plugin not found: ${source}`);
             return;
         }
 
-        // Load existing index if not loaded
-        if (!this.index) {
-            await this.initialize();
-        }
-
-        // For multi-channel build, don't skip if index exists - append to it
-        const existingCount = Object.keys(this.index.anime || {}).length;
-        const isAppendBuild = existingCount > 0 && channel !== 'tv';
-
-        if (!isAppendBuild) {
-            // Check minimum interval between builds (only for initial TV build)
-            if (this.lastBuildAttempt) {
-                const timeSinceLastBuild = Date.now() - this.lastBuildAttempt;
-                if (timeSinceLastBuild < MIN_BUILD_INTERVAL) {
-                    const waitTime = Math.ceil((MIN_BUILD_INTERVAL - timeSinceLastBuild) / 1000);
-                    console.log(`⚠️ Last build attempt was ${waitTime}s ago, please wait before rebuilding`);
-                    return;
-                }
-            }
-
-            // Check if there's already data on disk (don't rebuild if exists)
-            try {
-                if (existingCount > 0 && channel === 'tv') {
-                    console.log(`ℹ️ Index already exists with ${existingCount} entries, skipping TV build`);
-                    this.isBuilding = false;
-                    this.lastBuildAttempt = null; // Reset since we're not building
-                    return;
-                }
-            } catch (error) {
-                console.log('ℹ️ No existing index found, starting fresh build');
-            }
-        }
+        if (!this.index) await this.initialize();
 
         this.isBuilding = true;
         this.lastBuildAttempt = Date.now();
-
-        if (!isAppendBuild) {
-            this.index = this.getEmptyIndex();
-        }
-
-        const channelName = channel === 'tv' ? 'TV' : channel === 'movie' ? '剧场' : channel;
-        console.log(`🔨 Building ${channelName} anime index${isAppendBuild ? ' (appending to existing)' : ''}...`);
-        console.log(`📋 Years to scrape: ${CATEGORIES.years.length} years`);
-        console.log(`📄 Max pages per year: ${CATEGORIES.maxPages}`);
-        this.totalBuildSteps = CATEGORIES.years.length;
-        this.buildProgress = 0;
+        console.log(`🔨 Building index from source: ${source}...`);
 
         let totalScraped = 0;
+        const currentYear = new Date().getFullYear();
+        const startYear = 1980;
+        const years = [];
+        for (let y = currentYear; y >= startYear; y--) years.push(y);
+
+        this.totalBuildSteps = years.length;
+        this.buildProgress = 0;
 
         try {
-            // Scrape each year
-            for (const year of CATEGORIES.years) {
+            for (const year of years) {
                 this.buildProgress++;
-                let yearScraped = 0;
-
                 console.log(`📄 [${this.buildProgress}/${this.totalBuildSteps}] Scraping year ${year}...`);
 
-                // Scrape multiple pages for each year
-                for (let page = 1; page <= CATEGORIES.maxPages; page++) {
+                for (let page = 1; page <= 10; page++) {
                     try {
-                        const url = this.buildCategoryUrl('', year, page, channel);
+                        const result = await plugin.getAnimeList({ year: String(year) }, page);
+                        const animeList = result.animeList || [];
+                        if (animeList.length === 0) break;
 
-                        const animeList = await this.scrapeAnimeList(url);
-
-                        // If no anime found, we've reached the end
-                        if (animeList.length === 0) {
-                            console.log(`   ⏹️ Page ${page}: No anime found, stopping pagination`);
-                            break;
-                        }
-
-                        // Add to index
                         let pageNew = 0;
                         for (const anime of animeList) {
-                            if (!this.index.anime[anime.id]) {
-                                this.index.anime[anime.id] = {
-                                    id: anime.id,
-                                    title: anime.title,
-                                    cover: anime.cover,
-                                    year: String(year),
-                                    type: anime.type || 'TV',
-                                    status: anime.status || '未知',
-                                    episodes: anime.episodes || '未知',
-                                    score: anime.score || '0',
-                                    url: anime.url,
-                                    channel: channel,  // Store channel to distinguish TV vs theater
+                            const key = `${source}_${anime.id}`;
+                            if (!this.index.anime[key]) {
+                                this.index.anime[key] = {
+                                    ...anime,
+                                    sourceId: source,
                                     indexedAt: new Date().toISOString()
                                 };
                                 totalScraped++;
                                 pageNew++;
                             }
                         }
-
-                        const pageStatus = pageNew > 0 ? `(+${pageNew} new)` : `(all existing)`;
-                        console.log(`   ✅ Page ${page}: ${animeList.length} anime ${pageStatus}`);
-                        yearScraped += animeList.length;
-
-                        // If all anime were duplicates, stop pagination
-                        if (pageNew === 0 && page > 1) {
-                            console.log(`   ⏹️ No new anime on page ${page}, stopping pagination`);
-                            break;
-                        }
-
+                        if (pageNew === 0 && page > 1) break;
                     } catch (error) {
-                        // If 404 or other error, stop pagination for this year
-                        if (error.response?.status === 404) {
-                            console.log(`   ⏹️ Page ${page}: Not found (404), stopping pagination`);
-                            break;
-                        }
-                        console.error(`   ❌ Failed to scrape year ${year} page ${page}:`, error.message);
-                        // Continue to next page on other errors
+                        break;
                     }
                 }
-
-                console.log(`   📊 Year ${year}: ${yearScraped} total anime (${totalScraped} unique)`);
             }
-
-            // Save to disk
             await this.saveIndex(this.index);
-
-            console.log(`✅ ${channelName} index build complete: ${totalScraped} anime indexed`);
+            console.log(`✅ Index build complete: ${totalScraped} new anime indexed`);
         } catch (error) {
             console.error(`❌ Index build failed: ${error.message}`);
-            // Save partial progress even if build failed
-            try {
-                await this.saveIndex(this.index);
-                console.log(`💾 Partial index saved: ${totalScraped} entries`);
-            } catch (saveError) {
-                console.error(`❌ Failed to save partial index: ${saveError.message}`);
-            }
         } finally {
-            // Always reset isBuilding flag
             this.isBuilding = false;
         }
     }
 
-    /**
-     * Get channel ID from channel name
-     * @param {string} channel - Channel name (tv, movie, 4k, guoman)
-     * @returns {number} Channel ID
-     */
-    getChannelId(channel = 'tv') {
-        const urlConstructor = new AnimeListUrlConstructor();
-        const channelMap = urlConstructor.getChannelMap();
-        return channelMap[channel] || channelMap.default;
-    }
-
-    /**
-     * Build category URL for scraping
-     * Uses the correct cycani.org URL structure: /show/{channelId}/{filter}.html
-     * Supports pagination: /show/{channelId}/year/{year}/page/{page}.html
-     * @param {string} genre - Genre filter
-     * @param {number|string} year - Year filter
-     * @param {number} page - Page number
-     * @param {string} channel - Channel name (tv, movie, 4k, guoman)
-     */
-    buildCategoryUrl(genre, year, page = 1, channel = 'tv') {
-        const baseUrl = 'https://www.cycani.org';
-        const channelId = this.getChannelId(channel);
-
-        // Start with base channel URL
-        let url = `${baseUrl}/show/${channelId}.html`;
-
-        // Apply primary filter (only one at a time)
-        if (genre) {
-            url = `${baseUrl}/show/${channelId}/class/${encodeURIComponent(genre)}.html`;
-            // Add pagination if needed
-            if (page > 1) {
-                url = url.replace('.html', `/page/${page}.html`);
-            }
-        } else if (year) {
-            url = `${baseUrl}/show/${channelId}/year/${year}.html`;
-            // Add pagination if needed
-            if (page > 1) {
-                url = url.replace('.html', `/page/${page}.html`);
-            }
-        }
-
-        return url;
-    }
-
-    /**
-     * Scrape anime list from URL
-     */
-    async scrapeAnimeList(url) {
-        try {
-            const html = await fetchUpstreamHtml(url, {
-                timeout: 15000
-            });
-            const $ = cheerio.load(html);
-            const animeList = [];
-
-            for (const element of $('.public-list-box').toArray()) {
-                const $box = $(element);
-                const $link = $box.find('a[href*="/bangumi/"]');
-                const $img = $box.find('img');
-                const $subtitle = $box.find('.public-list-subtitle');
-
-                if ($link.length && $img.length) {
-                    const href = $link.attr('href');
-                    const animeId = href?.match(/\/bangumi\/(\d+)\.html/);
-
-                    if (animeId && animeId[1]) {
-                        const title = $img.attr('alt') || $link.attr('title') || '';
-                        let imgSrc = $img.attr('data-src') || $img.attr('src') || '';
-
-                        let subtitleText = $subtitle.text().trim();
-                        let episodes = '未知';
-                        let status = '连载中';
-
-                        if (subtitleText) {
-                            const episodeMatches = subtitleText.match(/(\d+)集/);
-                            if (episodeMatches) {
-                                episodes = episodeMatches[1];
-                            }
-
-                            if (subtitleText.includes('已完结') || subtitleText.includes('全')) {
-                                status = '已完结';
-                            }
-                        }
-
-                        // Parse score
-                        let score = '7.5';
-                        const scoreSelectors = ['.public-list-prb i', '.public-list-prb', '.rating i', '.rating'];
-                        for (const selector of scoreSelectors) {
-                            const $score = $box.find(selector);
-                            if ($score.length) {
-                                const scoreText = $score.text().trim();
-                                const scoreMatch = scoreText.match(/(\d+\.?\d*)/);
-                                if (scoreMatch) {
-                                    score = scoreMatch[1];
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (title) {
-                            animeList.push({
-                                id: animeId[1],
-                                title: title,
-                                cover: imgSrc,
-                                url: `https://www.cycani.org${href}`,
-                                type: 'TV',
-                                year: '',
-                                episodes: episodes,
-                                status: status,
-                                score: score
-                            });
-                        }
-                    }
-                }
-            }
-
-            return animeList;
-        } catch (error) {
-            console.error(`Failed to scrape ${url}:`, error.message);
-            return [];
-        }
-    }
-
-    /**
-     * Search anime in local index
-     * Returns results sorted by relevance
-     *
-     * Matching strategy (progressive strictness):
-     * - Query length < 2: return empty (too short)
-     * - Query length >= 2: exact > starts-with > contains
-     * - Maximum 50 results, sorted by relevance
-     *
-     * Note: Contains match is enabled for 2+ character queries to ensure
-     * theater anime (with "剧场版" prefix) are found when searching for keywords
-     */
     search(query) {
-        if (!this.index || !query || query.trim().length < 2) {
-            return [];
-        }
+        if (!this.index || !query || query.trim().length < 2) return [];
 
         const normalizedQuery = query.toLowerCase().trim();
         const queryLength = normalizedQuery.length;
         const results = [];
-
-        // Progressive matching: allow contains match for queries of 2+ characters
-        // This ensures theater anime (with "剧场版" prefix) are found when searching for keywords like "鬼灭"
         const allowContainsMatch = queryLength >= 2;
         const allowStartsWithMatch = queryLength >= 2;
 
-        for (const animeId in this.index.anime) {
-            const anime = this.index.anime[animeId];
-            const title = anime.title.toLowerCase();
-
+        for (const key in this.index.anime) {
+            const anime = this.index.anime[key];
+            const title = (anime.title || '').toLowerCase();
             let score = 0;
 
-            // Exact match (highest priority)
-            if (title === normalizedQuery) {
-                score = 100;
-            }
-            // Starts with query (medium priority)
-            else if (allowStartsWithMatch && title.startsWith(normalizedQuery)) {
-                score = 80;
-            }
-            // Contains query (lowest priority, only for longer queries)
-            else if (allowContainsMatch && title.includes(normalizedQuery)) {
-                score = 60;
-            }
+            if (title === normalizedQuery) score = 100;
+            else if (allowStartsWithMatch && title.startsWith(normalizedQuery)) score = 80;
+            else if (allowContainsMatch && title.includes(normalizedQuery)) score = 60;
 
-            if (score > 0) {
-                results.push({ ...anime, _relevance: score });
-            }
+            if (score > 0) results.push({ ...anime, _relevance: score });
         }
 
-        // Sort by relevance descending
         results.sort((a, b) => b._relevance - a._relevance);
-
-        // Remove internal relevance score and limit results
         return results.slice(0, 50).map(({ _relevance, ...anime }) => anime);
     }
 
-    /**
-     * Incrementally update index with new anime
-     * Checks all anime in the list against the index
-     * Adds any anime that doesn't exist in the index
-     *
-     * This is called on EVERY /api/anime-list request to actively grow the index
-     * @param {Array} animeList - List of anime to add to index
-     * @param {string} channel - Channel name (tv, movie, 4k, guoman) for these anime
-     */
-    async incrementalUpdate(animeList, channel = 'tv') {
-        // Skip update if index is building or doesn't exist
-        if (!this.index || this.isBuilding) {
-            console.log(`⏭️ Incremental update skipped: index is ${!this.index ? 'not loaded' : 'building'}`);
-            return { added: 0, skipped: true };
-        }
-
-        console.log(`🔄 Checking ${animeList.length} anime for incremental update (channel: ${channel})...`);
+    async incrementalUpdate(animeList, sourceId = 'cycani') {
+        if (!this.index || this.isBuilding) return { added: 0, skipped: true };
 
         let newAnimeCount = 0;
-        let existingAnimeCount = 0;
-
-        // Check ALL anime in the list (no early termination)
         for (const anime of animeList) {
-            const animeId = anime.id;
-
-            if (!this.index.anime[animeId]) {
-                // New anime - add to index with channel field
-                this.index.anime[animeId] = {
-                    id: animeId,
-                    title: anime.title,
-                    cover: anime.cover,
-                    year: anime.year || '',
-                    type: anime.type || 'TV',
-                    status: anime.status || '未知',
-                    episodes: anime.episodes || '未知',
-                    score: anime.score || '0',
-                    url: anime.url,
-                    channel: channel,  // Store channel to distinguish TV vs theater anime
+            const key = `${sourceId}_${anime.id}`;
+            if (!this.index.anime[key]) {
+                this.index.anime[key] = {
+                    ...anime,
+                    sourceId,
                     indexedAt: new Date().toISOString()
                 };
                 newAnimeCount++;
-            } else {
-                existingAnimeCount++;
             }
         }
 
-        // Save if new anime were added
         if (newAnimeCount > 0) {
-            console.log(`📈 Incremental update: +${newAnimeCount} new anime (${existingAnimeCount} existing)`);
             try {
                 await this.saveIndex(this.index);
-            } catch (error) {
-                console.error(`⚠️ Failed to save incremental update: ${error.message}`);
-            }
-        } else {
-            // Reduce log noise - only log when something interesting happened
-            if (animeList.length > 20) {
-                // Only log if it's a substantial list
-                console.log(`✅ All ${animeList.length} anime already in index`);
-            }
+            } catch (error) {}
         }
-
         return { added: newAnimeCount, skipped: false };
-    }
-
-    /**
-     * Add single anime to index
-     * @param {Object} anime - Anime object to add
-     * @param {string} channel - Channel name (tv, movie, 4k, guoman)
-     */
-    async addAnime(anime, channel = 'tv') {
-        if (!this.index) {
-            return false;
-        }
-
-        if (!this.index.anime[anime.id]) {
-            this.index.anime[anime.id] = {
-                id: anime.id,
-                title: anime.title,
-                cover: anime.cover || '',
-                year: anime.year || '',
-                type: anime.type || 'TV',
-                status: anime.status || '未知',
-                episodes: anime.episodes || '未知',
-                score: anime.score || '0',
-                url: anime.url || '',
-                channel: channel,  // Store channel field
-                indexedAt: new Date().toISOString()
-            };
-
-            await this.saveIndex(this.index);
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if anime exists in index
-     */
-    hasAnime(animeId) {
-        return this.index && this.index.anime && !!this.index.anime[animeId];
-    }
-
-    /**
-     * Get anime by ID
-     */
-    getAnime(animeId) {
-        if (!this.index || !this.index.anime) {
-            return null;
-        }
-        return this.index.anime[animeId] || null;
     }
 }
 
-// Singleton instance
 let animeIndexManager = null;
-
-/**
- * Get or create anime index manager singleton
- */
 function getAnimeIndexManager() {
-    if (!animeIndexManager) {
-        animeIndexManager = new AnimeIndexManager();
-    }
+    if (!animeIndexManager) animeIndexManager = new AnimeIndexManager();
     return animeIndexManager;
 }
 
-module.exports = {
-    AnimeIndexManager,
-    getAnimeIndexManager
-};
+module.exports = { AnimeIndexManager, getAnimeIndexManager };

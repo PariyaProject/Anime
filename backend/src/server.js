@@ -7,8 +7,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 
-// Import URL constructor utilities
-const { AnimeListUrlConstructor, ApiParameterValidator } = require('./urlConstructor');
+// URL constructor utilities replaced by plugin system
 // Import enhanced HTTP client with rate limiting and retry logic
 const { httpClient, getEnhancedHeaders } = require('./httpClient');
 // Import anime index manager for local search
@@ -16,6 +15,8 @@ const { getAnimeIndexManager } = require('./animeIndexManager');
 const { attachAuthUser, AuthManager } = require('./AuthManager');
 const { AdminManager } = require('./AdminManager');
 const { browserPool } = require('./puppeteerPool');
+const { pluginManager } = require('./plugins/PluginManager');
+const { setDynamicProxyHosts } = require('./upstreamProxy');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -144,11 +145,13 @@ const animeRoutes = require('./routes/anime');
 const videoRoutes = require('./routes/video');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const pluginRoutes = require('./routes/plugins');
 app.use('/', systemRoutes);
 app.use('/', animeRoutes);
 app.use('/', videoRoutes);
 app.use('/', authRoutes);
 app.use('/', adminRoutes);
+app.use('/', pluginRoutes);
 const historyRoutes = require('./routes/history');
 app.use('/', historyRoutes);
 
@@ -204,6 +207,12 @@ const server = app.listen(PORT, HOST, async () => {
     await AuthManager.ensureSuperAdminFromEnv();
     AuthManager.clearExpiredSessions();
     console.log(`✅ Data storage initialization complete`);
+
+    // ============================================================
+    // Plugin System Initialization
+    // ============================================================
+    await pluginManager.initialize();
+    setDynamicProxyHosts(pluginManager.getAllProxyDomains());
 
     // ============================================================
     // Anime Index Initialization

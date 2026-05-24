@@ -63,6 +63,22 @@ export const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    // Inject active source into all requests
+    const activeSource = localStorage.getItem('active_source') || 'cycani'
+    
+    // Don't inject for auth/admin routes
+    const isAuthOrAdmin = config.url?.startsWith('/api/auth') || config.url?.startsWith('/api/admin')
+    
+    if (!isAuthOrAdmin) {
+      if (config.method === 'get') {
+        config.params = { ...(config.params || {}), source: activeSource }
+      } else if (config.method === 'post' || config.method === 'put') {
+        if (config.data && typeof config.data === 'object' && !config.data.sourceId) {
+          config.data.sourceId = activeSource
+        }
+      }
+    }
+    
     return config
   },
   (error) => {

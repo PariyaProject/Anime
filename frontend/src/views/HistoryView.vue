@@ -185,6 +185,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHistoryStore } from '@/stores/history'
 import { useUiStore } from '@/stores/ui'
+import { usePluginStore } from '@/stores/plugin.store'
 import { useGroupedHistory } from '@/composables/useGroupedHistory'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorMessage from '@/components/common/ErrorMessage.vue'
@@ -194,6 +195,7 @@ import type { WatchRecord } from '@/types/history.types'
 const router = useRouter()
 const historyStore = useHistoryStore()
 const uiStore = useUiStore()
+const pluginStore = usePluginStore()
 
 // Use static SVG file from backend server (via Vite proxy in dev)
 const placeholderImage = '/placeholder/placeholder-300x180.svg'
@@ -233,6 +235,7 @@ const historyItems = computed(() => {
         duration: episode.duration,
         watchDate: episode.watchDate,
         completed: episode.completed,
+        sourceId: anime.sourceId,
         isLocalOnly: episode.isLocalOnly  // 保留 isLocalOnly 标志
       })
     }
@@ -362,6 +365,12 @@ async function handleImportFile(event: Event) {
 }
 
 function resumeWatching(item: WatchRecord) {
+  if (item.sourceId && item.sourceId !== pluginStore.activeSourceId) {
+    pluginStore.setActiveSource(item.sourceId)
+    window.location.href = `/watch/${item.animeId}?season=${item.season}&episode=${item.episode}`
+    return
+  }
+
   router.push({
     name: 'Watch',
     params: {
@@ -370,7 +379,6 @@ function resumeWatching(item: WatchRecord) {
     query: {
       season: item.season.toString(),
       episode: item.episode.toString()
-      // Note: startTime is no longer needed - backend API will return the saved position
     }
   })
 }

@@ -55,8 +55,9 @@ function createSchema(database) {
             watch_date TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             source_device_id TEXT DEFAULT '',
+            source_id TEXT NOT NULL DEFAULT 'cycani',
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            UNIQUE (user_id, anime_id, season, episode)
+            UNIQUE (user_id, source_id, anime_id, season, episode)
         );
 
         CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
@@ -64,7 +65,7 @@ function createSchema(database) {
         CREATE INDEX IF NOT EXISTS idx_watch_progress_user_watch_date
             ON watch_progress(user_id, watch_date DESC);
         CREATE INDEX IF NOT EXISTS idx_watch_progress_lookup
-            ON watch_progress(user_id, anime_id, season, episode);
+            ON watch_progress(user_id, source_id, anime_id, season, episode);
 
         CREATE TABLE IF NOT EXISTS invite_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,6 +115,7 @@ function createSchema(database) {
     ensureColumn(database, 'users', 'disabled_at', 'disabled_at TEXT');
     ensureColumn(database, 'users', 'disabled_reason', "disabled_reason TEXT NOT NULL DEFAULT ''");
     ensureColumn(database, 'users', 'disabled_by', 'disabled_by INTEGER REFERENCES users(id) ON DELETE SET NULL');
+    ensureColumn(database, 'watch_progress', 'source_id', "source_id TEXT NOT NULL DEFAULT 'cycani'");
 }
 
 function ensureConfigDirectory() {

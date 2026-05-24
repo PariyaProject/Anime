@@ -4,9 +4,9 @@
 
 # Anime
 
-A self-hosted anime browsing and streaming workspace for `cycani.org`, built with an Express backend and a Vue 3 frontend.
+A self-hosted, multi-source anime browsing and streaming workspace built with an Express backend and a Vue 3 frontend.
 
-It focuses on a practical local setup: scrape the latest catalog, browse from a dedicated UI, keep watch history in sync, and resume playback with saved progress.
+Originally designed for `cycani.org`, the project now features a **dynamic Plugin Architecture** and a **Low-code UI Engine**. You can easily drop in new scraper plugins to fetch catalogs, watch videos, and seamlessly sync playback history across different video sources—all isolated safely within a local SQLite database.
 
 ## Preview
 
@@ -18,12 +18,14 @@ The current login view ships with a dedicated landing layout, invite-ready auth 
 
 ## Features
 
-- **Cross-origin proxy**: Access cycani.org content through a local proxy
-- **Real-time anime scraping**: Up-to-date anime list with proper episode counts
+- **Multi-source Plugin Architecture**: Easily switch between video sources or drop in new scrapers without altering the core app
+- **Low-code Dynamic UI**: The frontend layout (banners, schedules, grids) is dynamically assembled based on the active plugin's manifest
+- **Cross-origin proxy**: Access restricted content through a locally hosted proxy
+- **Real-time anime scraping**: Up-to-date anime lists with robust fallback mechanisms
+- **Seamless Cross-source Resumption**: Automatically switches back to the original video source when continuing playback from history
 - **Private site access**: Login, invite-based registration, and admin-managed access control
-- **Watch history management**: Track your viewing progress and resume from where you left off
+- **Watch history management**: Isolated playback history per plugin source via SQLite
 - **Modern Vue 3 frontend**: Responsive SPA with dark mode, keyboard shortcuts, and virtual scrolling
-- **Position memory**: Automatic saving of playback position every 30 seconds
 - **Project branding ready**: README logo, browser tab icons, Apple touch icon, and web app manifest
 - **Unified development experience**: Single commands to manage frontend and backend services
 
@@ -165,32 +167,13 @@ Anime/
 
 ## Data Storage
 
-Watch history and position data are stored in `config/watch-history.json`:
+The project uses a local **SQLite Database** (`backend/data/app.db`) for robust, relational data storage.
 
-```json
-{
-  "default": {
-    "userId": "default",
-    "watchHistory": [
-      {
-        "animeId": "5998",
-        "animeTitle": "赛马娘 芦毛灰姑娘 第2部分",
-        "season": 1,
-        "episode": 1,
-        "position": 245,
-        "watchDate": "2025-12-21T09:00:00.000Z",
-        "completed": false
-      }
-    ],
-    "lastPositions": {
-      "5998_1_1": {
-        "position": 245,
-        "lastUpdated": "2025-12-21T09:00:00.000Z"
-      }
-    }
-  }
-}
-```
+Key data models include:
+- **Watch History & Progress**: Safely tracks your viewing progress. Includes a `source_id` field to completely isolate history records across different video source plugins.
+- **User Management**: Manages user accounts, login sessions, and invite codes.
+
+*(Legacy JSON files like `config/watch-history.json` and `config/anime-index.json` are still generated as fallback backups or search indexes, but the primary source of truth is SQLite.)*
 
 ## Configuration
 

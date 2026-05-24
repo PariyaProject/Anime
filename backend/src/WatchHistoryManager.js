@@ -45,7 +45,8 @@ function mapProgressRow(row) {
         position: Number(row.position_seconds || 0),
         duration: Number(row.duration_seconds || 0),
         watchDate: row.watch_date,
-        completed: Boolean(row.completed)
+        completed: Boolean(row.completed),
+        sourceId: row.source_id || 'cycani'
     };
 }
 
@@ -66,7 +67,8 @@ function mapExistingRowToRecord(row) {
         watchDate: normalizeIsoTimestamp(row.watch_date),
         updatedAt: normalizeIsoTimestamp(row.updated_at || row.watch_date),
         completed: Boolean(row.completed),
-        sourceDeviceId: row.source_device_id || ''
+        sourceDeviceId: row.source_device_id || '',
+        sourceId: row.source_id || 'cycani'
     };
 }
 
@@ -100,7 +102,8 @@ function pickPreferredRecord(current, incoming) {
         watchDate: mergedWatchDate,
         updatedAt: mergedWatchDate,
         completed: mergedCompleted,
-        sourceDeviceId: newerRecord.sourceDeviceId || current.sourceDeviceId || incoming.sourceDeviceId || ''
+        sourceDeviceId: newerRecord.sourceDeviceId || current.sourceDeviceId || incoming.sourceDeviceId || '',
+        sourceId: newerRecord.sourceId || current.sourceId || incoming.sourceId || 'cycani'
     };
 }
 
@@ -132,7 +135,8 @@ function normalizeImportedRecord(record) {
         watchDate,
         updatedAt: watchDate,
         completed: Boolean(record.completed || toCompleted(position, duration)),
-        sourceDeviceId: String(record.sourceDeviceId || '')
+        sourceDeviceId: String(record.sourceDeviceId || ''),
+        sourceId: String(record.sourceId || 'cycani')
     };
 }
 
@@ -184,7 +188,7 @@ function normalizeImportedRecords(payload) {
             continue;
         }
 
-        const key = `${normalized.animeId}_${normalized.season}_${normalized.episode}`;
+        const key = `${normalized.sourceId}_${normalized.animeId}_${normalized.season}_${normalized.episode}`;
         const existing = dedupedRecords.get(key);
         dedupedRecords.set(key, existing ? pickPreferredRecord(existing, normalized) : normalized);
     }
@@ -229,7 +233,7 @@ class WatchHistoryManager {
         return true;
     }
 
-    static async addToWatchHistory(userId, animeInfo, episodeInfo, position = 0, sourceDeviceId = '', watchDate = null) {
+    static async addToWatchHistory(userId, sourceId, animeInfo, episodeInfo, position = 0, sourceDeviceId = '', watchDate = null) {
         if (!userId) {
             throw new Error('userId is required');
         }
@@ -249,11 +253,12 @@ class WatchHistoryManager {
         const requestedDuration = Number(episodeInfo.duration || 0);
         const now = nowIso();
         const incomingDate = watchDate ? normalizeIsoTimestamp(watchDate, now) : now;
+        const sId = sourceId || 'cycani';
         const existingRow = database.prepare(`
             SELECT position_seconds, duration_seconds, completed, updated_at, watch_date
             FROM watch_progress
-            WHERE user_id = ? AND anime_id = ? AND season = ? AND episode = ?
-        `).get(Number(userId), String(animeInfo.id), season, episode);
+            WHERE user_id = ? AND source_id = ? AND anime_id = ? AND season = ? AND episode = ?
+        `).get(Number(userId), sId, String(animeInfo.id), season, episode);
         const existingPosition = Number(existingRow?.position_seconds || 0);
         const existingDuration = Number(existingRow?.duration_seconds || 0);
         const suspiciousEarlyOverwrite = requestedDuration <= 0
@@ -293,54 +298,76 @@ class WatchHistoryManager {
             }
         }
 
-        database.prepare(`
-            INSERT INTO watch_progress (
-                user_id,
-                anime_id,
-                anime_title,
-                anime_cover,
+        if (existingRow) {
+            database.prepare(`
+                UPDATE watch_progress SET
+                    anime_title = ?,
+                    anime_cover = ?,
+                    episode_title = ?,
+                    position_seconds = ?,
+                    duration_seconds = ?,
+                    completed = ?,
+                    watch_date = ?,
+                    updated_at = ?,
+                    source_device_id = ?
+                WHERE user_id = ? AND source_id = ? AND anime_id = ? AND season = ? AND episode = ?
+            `).run(
+                animeInfo.title || '未知动画',
+                animeInfo.cover || '',
+                episodeInfo.title || `第${episode}集`,
+                safePosition,
+                safeDuration,
+                completed,
+                finalWatchDate,
+                finalUpdatedAt,
+                sourceDeviceId || '',
+                Number(userId),
+                sId,
+                String(animeInfo.id),
+                season,
+                episode
+            );
+        } else {
+            database.prepare(`
+                INSERT INTO watch_progress (
+                    user_id,
+                    source_id,
+                    anime_id,
+                    anime_title,
+                    anime_cover,
+                    season,
+                    episode,
+                    episode_title,
+                    position_seconds,
+                    duration_seconds,
+                    completed,
+                    watch_date,
+                    updated_at,
+                    source_device_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                Number(userId),
+                sId,
+                String(animeInfo.id),
+                animeInfo.title || '未知动画',
+                animeInfo.cover || '',
                 season,
                 episode,
-                episode_title,
-                position_seconds,
-                duration_seconds,
+                episodeInfo.title || `第${episode}集`,
+                safePosition,
+                safeDuration,
                 completed,
-                watch_date,
-                updated_at,
-                source_device_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(user_id, anime_id, season, episode)
-            DO UPDATE SET
-                anime_title = excluded.anime_title,
-                anime_cover = excluded.anime_cover,
-                episode_title = excluded.episode_title,
-                position_seconds = excluded.position_seconds,
-                duration_seconds = excluded.duration_seconds,
-                completed = excluded.completed,
-                watch_date = excluded.watch_date,
-                updated_at = excluded.updated_at,
-                source_device_id = excluded.source_device_id
-        `).run(
-            Number(userId),
-            String(animeInfo.id),
-            animeInfo.title || '未知动画',
-            animeInfo.cover || '',
-            season,
-            episode,
-            episodeInfo.title || `第${episode}集`,
-            safePosition,
-            safeDuration,
-            completed,
-            finalWatchDate,
-            finalUpdatedAt,
-            sourceDeviceId || ''
-        );
+                finalWatchDate,
+                finalUpdatedAt,
+                sourceDeviceId || ''
+            );
+        }
 
         const row = database.prepare(`
             SELECT *
             FROM watch_progress
-            WHERE user_id = ? AND anime_id = ? AND season = ? AND episode = ?
-        `).get(Number(userId), String(animeInfo.id), season, episode);
+            WHERE user_id = ? AND source_id = ? AND anime_id = ? AND season = ? AND episode = ?
+        `).get(Number(userId), sId, String(animeInfo.id), season, episode);
 
         return mapProgressRow(row);
     }
@@ -362,17 +389,18 @@ class WatchHistoryManager {
         return rows.map(mapProgressRow);
     }
 
-    static async getLastPosition(userId, animeId, season, episode) {
+    static async getLastPosition(userId, sourceId, animeId, season, episode) {
         if (!userId) {
             return { position: 0 };
         }
 
+        const sId = sourceId || 'cycani';
         const database = getDatabase();
         const row = database.prepare(`
             SELECT position_seconds, updated_at
             FROM watch_progress
-            WHERE user_id = ? AND anime_id = ? AND season = ? AND episode = ?
-        `).get(Number(userId), String(animeId), Number(season), Number(episode));
+            WHERE user_id = ? AND source_id = ? AND anime_id = ? AND season = ? AND episode = ?
+        `).get(Number(userId), sId, String(animeId), Number(season), Number(episode));
 
         if (!row) {
             return { position: 0 };
@@ -443,15 +471,30 @@ class WatchHistoryManager {
         const selectExistingStatement = database.prepare(`
             SELECT *
             FROM watch_progress
-            WHERE user_id = ? AND anime_id = ? AND season = ? AND episode = ?
+            WHERE user_id = ? AND source_id = ? AND anime_id = ? AND season = ? AND episode = ?
         `);
         const deleteUserHistoryStatement = database.prepare(`
             DELETE FROM watch_progress
             WHERE user_id = ?
         `);
-        const upsertStatement = database.prepare(`
+        const updateStatement = database.prepare(`
+            UPDATE watch_progress SET
+                anime_title = ?,
+                anime_cover = ?,
+                episode_title = ?,
+                position_seconds = ?,
+                duration_seconds = ?,
+                completed = ?,
+                watch_date = ?,
+                updated_at = ?,
+                source_device_id = ?
+            WHERE user_id = ? AND source_id = ? AND anime_id = ? AND season = ? AND episode = ?
+        `);
+
+        const insertStatement = database.prepare(`
             INSERT INTO watch_progress (
                 user_id,
+                source_id,
                 anime_id,
                 anime_title,
                 anime_cover,
@@ -464,18 +507,7 @@ class WatchHistoryManager {
                 watch_date,
                 updated_at,
                 source_device_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(user_id, anime_id, season, episode)
-            DO UPDATE SET
-                anime_title = excluded.anime_title,
-                anime_cover = excluded.anime_cover,
-                episode_title = excluded.episode_title,
-                position_seconds = excluded.position_seconds,
-                duration_seconds = excluded.duration_seconds,
-                completed = excluded.completed,
-                watch_date = excluded.watch_date,
-                updated_at = excluded.updated_at,
-                source_device_id = excluded.source_device_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const countStatement = database.prepare(`
             SELECT COUNT(*) AS count
@@ -492,6 +524,7 @@ class WatchHistoryManager {
                 const existingRow = mode === 'merge'
                     ? selectExistingStatement.get(
                         Number(userId),
+                        importedRecord.sourceId,
                         importedRecord.animeId,
                         importedRecord.season,
                         importedRecord.episode
@@ -502,21 +535,41 @@ class WatchHistoryManager {
                     ? pickPreferredRecord(mapExistingRowToRecord(existingRow), importedRecord)
                     : importedRecord;
 
-                upsertStatement.run(
-                    Number(userId),
-                    finalRecord.animeId,
-                    finalRecord.animeTitle,
-                    finalRecord.animeCover,
-                    finalRecord.season,
-                    finalRecord.episode,
-                    finalRecord.episodeTitle,
-                    finalRecord.position,
-                    finalRecord.duration,
-                    finalRecord.completed ? 1 : 0,
-                    finalRecord.watchDate,
-                    finalRecord.updatedAt,
-                    finalRecord.sourceDeviceId || ''
-                );
+                if (existingRow) {
+                    updateStatement.run(
+                        finalRecord.animeTitle,
+                        finalRecord.animeCover,
+                        finalRecord.episodeTitle,
+                        finalRecord.position,
+                        finalRecord.duration,
+                        finalRecord.completed ? 1 : 0,
+                        finalRecord.watchDate,
+                        finalRecord.updatedAt,
+                        finalRecord.sourceDeviceId || '',
+                        Number(userId),
+                        finalRecord.sourceId,
+                        finalRecord.animeId,
+                        finalRecord.season,
+                        finalRecord.episode
+                    );
+                } else {
+                    insertStatement.run(
+                        Number(userId),
+                        finalRecord.sourceId,
+                        finalRecord.animeId,
+                        finalRecord.animeTitle,
+                        finalRecord.animeCover,
+                        finalRecord.season,
+                        finalRecord.episode,
+                        finalRecord.episodeTitle,
+                        finalRecord.position,
+                        finalRecord.duration,
+                        finalRecord.completed ? 1 : 0,
+                        finalRecord.watchDate,
+                        finalRecord.updatedAt,
+                        finalRecord.sourceDeviceId || ''
+                    );
+                }
             }
 
             const countRow = countStatement.get(Number(userId));
