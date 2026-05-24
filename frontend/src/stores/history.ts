@@ -270,6 +270,7 @@ export const useHistoryStore = defineStore('history', () => {
     lastSavedPositions.value = {}
     loading.value = false
     error.value = null
+    historyService.clearAllLocalPositions()
   }
 
   return {

@@ -225,6 +225,24 @@ function clearFromLocal(animeId: string, season: number, episode: number): void 
   }
 }
 
+/**
+ * Clear all positions from localStorage (e.g. on logout)
+ */
+function clearAllLocalPositions(): void {
+  try {
+    const keysToDelete: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(LS_KEY_PREFIX)) {
+        keysToDelete.push(key)
+      }
+    }
+    keysToDelete.forEach(key => localStorage.removeItem(key))
+  } catch (err) {
+    console.error('❌ Failed to clear all localStorage:', err)
+  }
+}
+
 function parseDownloadFilename(contentDisposition?: string): string {
   if (!contentDisposition) {
     return `watch-history-${new Date().toISOString().slice(0, 10)}.json`
@@ -303,13 +321,15 @@ export const historyService = {
     animeInfo: AnimeInfo,
     episodeInfo: EpisodeInfo,
     position: number,
-    sourceDeviceId?: string
+    sourceDeviceId?: string,
+    watchDate?: string
   ): Promise<void> {
     await api.post<BackendResponse<WatchRecord>>('/api/watch-history', {
       animeInfo,
       episodeInfo,
       position,
-      sourceDeviceId
+      sourceDeviceId,
+      watchDate
     })
   },
 
@@ -408,6 +428,13 @@ export const historyService = {
     clearFromLocal(animeId, season, episode)
   },
 
+  /**
+   * Clear all positions from localStorage
+   */
+  clearAllLocalPositions(): void {
+    clearAllLocalPositions()
+  },
+
   async syncLocalPositionsToBackend(sourceDeviceId = 'browser'): Promise<number> {
     const localPositions = readAllLocalPositions()
       .sort((a, b) => new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime())
@@ -427,7 +454,8 @@ export const historyService = {
           duration: entry.duration
         },
         entry.position,
-        sourceDeviceId
+        sourceDeviceId,
+        entry.lastUpdated
       )
       syncedCount += 1
     }

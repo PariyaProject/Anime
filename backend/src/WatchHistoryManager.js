@@ -229,7 +229,7 @@ class WatchHistoryManager {
         return true;
     }
 
-    static async addToWatchHistory(userId, animeInfo, episodeInfo, position = 0, sourceDeviceId = '') {
+    static async addToWatchHistory(userId, animeInfo, episodeInfo, position = 0, sourceDeviceId = '', watchDate = null) {
         if (!userId) {
             throw new Error('userId is required');
         }
@@ -248,8 +248,9 @@ class WatchHistoryManager {
         const requestedPosition = Number(position || 0);
         const requestedDuration = Number(episodeInfo.duration || 0);
         const now = nowIso();
+        const incomingDate = watchDate ? normalizeIsoTimestamp(watchDate, now) : now;
         const existingRow = database.prepare(`
-            SELECT position_seconds, duration_seconds, completed
+            SELECT position_seconds, duration_seconds, completed, updated_at, watch_date
             FROM watch_progress
             WHERE user_id = ? AND anime_id = ? AND season = ? AND episode = ?
         `).get(Number(userId), String(animeInfo.id), season, episode);
@@ -260,20 +261,37 @@ class WatchHistoryManager {
             && existingPosition > 5;
 
         // Guard against accidental regressions to zero caused by early player events.
-        const safePosition = (requestedPosition <= 1 && existingPosition > 1) || suspiciousEarlyOverwrite
+        let safePosition = (requestedPosition <= 1 && existingPosition > 1) || suspiciousEarlyOverwrite
             ? existingPosition
             : requestedPosition;
 
         // Duration is often unknown early in playback; never let an empty duration
         // wipe out a previously known one.
-        const safeDuration = requestedDuration > 0
+        let safeDuration = requestedDuration > 0
             ? requestedDuration
             : existingDuration;
 
-        const completed = (
+        let completed = (
             toCompleted(safePosition, safeDuration) ||
             (Boolean(existingRow?.completed) && safePosition >= existingPosition)
         ) ? 1 : 0;
+
+        let finalWatchDate = incomingDate;
+        let finalUpdatedAt = incomingDate;
+
+        if (existingRow) {
+            const incomingTime = new Date(incomingDate).getTime();
+            const existingTime = new Date(existingRow.updated_at || existingRow.watch_date).getTime();
+            
+            if (incomingTime < existingTime) {
+                // Incoming sync is older than the existing record. Do not downgrade timestamps or progress.
+                safePosition = Math.max(safePosition, existingPosition);
+                safeDuration = Math.max(safeDuration, existingDuration);
+                completed = (existingRow.completed || toCompleted(safePosition, safeDuration)) ? 1 : 0;
+                finalWatchDate = existingRow.watch_date;
+                finalUpdatedAt = existingRow.updated_at;
+            }
+        }
 
         database.prepare(`
             INSERT INTO watch_progress (
@@ -313,8 +331,8 @@ class WatchHistoryManager {
             safePosition,
             safeDuration,
             completed,
-            now,
-            now,
+            finalWatchDate,
+            finalUpdatedAt,
             sourceDeviceId || ''
         );
 
