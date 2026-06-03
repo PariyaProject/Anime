@@ -1,7 +1,7 @@
 <template>
   <nav class="navbar" role="navigation" aria-label="主导航">
     <div class="navbar-container">
-      <router-link to="/" class="brand" aria-label="首页">
+      <router-link :to="{ path: '/', query: currentChannel === 'movie' ? { channel: 'movie' } : undefined }" class="brand" aria-label="首页">
         动画
       </router-link>
 
@@ -9,13 +9,13 @@
         <!-- Channel Tabs -->
         <div class="channel-tabs">
           <router-link
-            to="/"
+            :to="{ path: '/', query: undefined }"
             class="channel-tab"
             :class="{ active: currentChannel === 'tv' }"
             @click="setChannel('tv')"
           >TV</router-link>
           <router-link
-            to="/"
+            :to="{ path: '/', query: { channel: 'movie' } }"
             class="channel-tab"
             :class="{ active: currentChannel === 'movie' }"
             @click="setChannel('movie')"

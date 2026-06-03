@@ -451,7 +451,29 @@ async function loadEpisode() {
         data.season,
         data.episode
       )
-      const savedPos = savedPosition || 0
+      let savedPos = savedPosition || 0
+
+      if (savedPos > RESUME_MIN_POSITION_SECONDS) {
+        if (!historyStore.hasHistory) {
+          try {
+            await historyStore.loadWatchHistory()
+          } catch (e) {
+            console.warn('Failed to load watch history for completion check', e)
+          }
+        }
+        
+        const historyRecord = historyStore.watchHistory.find(
+          r => String(r.animeId) === String(animeId.value) && 
+               Number(r.season) === Number(data.season) && 
+               Number(r.episode) === Number(data.episode)
+        )
+        
+        if (historyRecord && historyRecord.completed) {
+          console.log('📌 Episode is marked as completed, ignoring saved position and starting from 0')
+          savedPos = 0
+        }
+      }
+
       if (savedPos > RESUME_MIN_POSITION_SECONDS) {
         console.log('📌 Saved position found:', formatTime(savedPos))
         savedPositionForResume.value = savedPos
@@ -1151,6 +1173,16 @@ function onVideoEnd() {
 
   if (autoPlayNext.value && hasNext.value) {
     setTimeout(() => {
+      // Double check if we are still at the end, in case loadedmetadata has reset the time to 0
+      const currentVideo = getNativeVideoElement()
+      if (currentVideo) {
+        const current = getPlaybackTime(currentVideo)
+        const total = getMediaDuration(currentVideo)
+        if (total > 0 && total - current > 10) {
+          console.log('Skipping auto-play next because video is no longer at the end (likely reset)')
+          return
+        }
+      }
       playNext()
     }, 1000)
   }
@@ -1306,10 +1338,7 @@ async function refreshVideoUrlSeamlessly() {
       savedPositionForResume.value = currentPosition
       savedPositionEpisode.value = { season: season.value, episode: episode.value }
 
-      const resumeResult = await resumeThenAutoplay(currentPosition, 'url-refresh')
-      if (resumeResult !== 'failed') {
-        uiStore.showNotification('视频链接已刷新', 'success')
-      }
+      uiStore.showNotification('视频链接已刷新', 'success')
 
       scheduleUrlRefresh()
     }
@@ -1546,6 +1575,25 @@ function initializePlyr(initialUrl?: string) {
       attachPlayerTouchGestures()
       let networkRetryCount = 0
       const MAX_NETWORK_RETRIES = 3
+
+      nativeVideo.addEventListener('loadedmetadata', () => {
+        const duration = nativeVideo.duration
+        const savedPos = savedPositionForResume.value
+        const savedEp = savedPositionEpisode.value
+        const isCurrentEpisode = savedEp && savedEp.season === season.value && savedEp.episode === episode.value
+
+        if (duration > 0 && savedPos && isCurrentEpisode) {
+          if (savedPos >= duration - 5) {
+            console.log('📍 Saved position is at the end of the video. Ignoring resume and starting from 0')
+            savedPositionForResume.value = null
+            savedPositionEpisode.value = null
+            nativeVideo.currentTime = 0
+            if (player) {
+              player.currentTime = 0
+            }
+          }
+        }
+      })
 
       nativeVideo.addEventListener('error', async () => {
         const code = nativeVideo.error?.code
