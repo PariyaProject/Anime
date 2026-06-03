@@ -397,17 +397,18 @@ class WatchHistoryManager {
         const sId = sourceId || 'cycani';
         const database = getDatabase();
         const row = database.prepare(`
-            SELECT position_seconds, updated_at
+            SELECT position_seconds, duration_seconds, updated_at
             FROM watch_progress
             WHERE user_id = ? AND source_id = ? AND anime_id = ? AND season = ? AND episode = ?
         `).get(Number(userId), sId, String(animeId), Number(season), Number(episode));
 
         if (!row) {
-            return { position: 0 };
+            return { position: 0, duration: 0 };
         }
 
         return {
             position: Number(row.position_seconds || 0),
+            duration: Number(row.duration_seconds || 0),
             lastUpdated: row.updated_at
         };
     }

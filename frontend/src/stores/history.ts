@@ -244,10 +244,14 @@ export const useHistoryStore = defineStore('history', () => {
     animeId: string,
     season: number,
     episode: number
-  ): Promise<number | null> {
+  ): Promise<{ position: number; duration: number } | null> {
     try {
       const positionRecord = await historyService.getLastPosition(animeId, season, episode)
-      return positionRecord?.position || null
+      if (!positionRecord) return null
+      return {
+        position: positionRecord.position || 0,
+        duration: positionRecord.duration || 0
+      }
     } catch (err) {
       console.error('Failed to get last position:', err)
       return null

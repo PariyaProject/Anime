@@ -14,6 +14,7 @@ export interface WatchRecord {
 
 export interface PositionRecord {
   position: number
+  duration: number
   lastUpdated: string
   sourceId?: string
 }

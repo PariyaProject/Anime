@@ -446,32 +446,21 @@ async function loadEpisode() {
       }
 
       // Fetch saved position for auto-resume
-      const savedPosition = await historyStore.getLastPosition(
+      const positionRecord = await historyStore.getLastPosition(
         animeId.value,
         data.season,
         data.episode
       )
-      let savedPos = savedPosition || 0
+      
+      let savedPos = positionRecord?.position || 0
+      const savedDuration = positionRecord?.duration || 0
 
-      if (savedPos > RESUME_MIN_POSITION_SECONDS) {
-        if (!historyStore.hasHistory) {
-          try {
-            await historyStore.loadWatchHistory()
-          } catch (e) {
-            console.warn('Failed to load watch history for completion check', e)
-          }
-        }
-        
-        const historyRecord = historyStore.watchHistory.find(
-          r => String(r.animeId) === String(animeId.value) && 
-               Number(r.season) === Number(data.season) && 
-               Number(r.episode) === Number(data.episode)
-        )
-        
-        if (historyRecord && historyRecord.completed) {
-          console.log('📌 Episode is marked as completed, ignoring saved position and starting from 0')
-          savedPos = 0
-        }
+      // If the saved position is at the very end of the video, it means the user already 
+      // finished this episode. We ignore the saved position and start from 0 to prevent 
+      // an infinite auto-play next loop.
+      if (savedPos > 0 && savedDuration > 0 && savedPos >= savedDuration - 10) {
+        console.log('📌 Saved position is at the end of the video, ignoring saved position and starting from 0')
+        savedPos = 0
       }
 
       if (savedPos > RESUME_MIN_POSITION_SECONDS) {
