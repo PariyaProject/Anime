@@ -138,12 +138,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWeeklySchedule } from '@/composables/useWeeklySchedule'
 import type { WeeklyAnime } from '@/types/anime.types'
 
 const emit = defineEmits<{
   'select-anime': [animeId: string]
 }>()
+
+const router = useRouter()
 
 const {
   loading,
@@ -195,6 +198,10 @@ const previewStyle = computed(() => ({
 
 function selectAnime(anime: WeeklyAnime) {
   emit('select-anime', anime.id)
+  router.push({
+    name: 'AnimeDetail',
+    params: { animeId: anime.id.toString() }
+  })
 }
 
 function showPreview(event: MouseEvent, anime: WeeklyAnime) {
